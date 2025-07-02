@@ -12,19 +12,17 @@ async function loadUsers() {
 }
 
 // 🔐 Password hashing
-async function hashPassword(password) {
-  const msgUint8 = new TextEncoder().encode(password)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
+function hashPassword(password) {
+  const shaObj = new jsSHA("SHA-256", "TEXT")
+  shaObj.update(password)
+  return shaObj.getHash("HEX")
 }
 
 // 👤 Login
 async function verifyLogin() {
   const uname = document.getElementById('username').value.trim()
   const pw = document.getElementById('password').value
-  const hash = await hashPassword(pw)
+  const hash = hashPassword(pw)
   const msg = document.getElementById('loginMessage')
 
   const user = users.find(u => u.username === uname && u.hash === hash)
@@ -101,7 +99,7 @@ async function addNewUser() {
     return
   }
 
-  const hash = await hashPassword(password)
+  const hash = hashPassword(password)
   await saveUserToServer(username, hash, role)
   msg.textContent = `✅ User "${username}" added to server.`
 
