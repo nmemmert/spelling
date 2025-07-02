@@ -87,3 +87,39 @@ body.galaxy button {
 body.nature button {
   background-color: #81c784;
 }
+.banner {
+  padding: 0.5em;
+  text-align: center;
+  font-weight: bold;
+  color: white;
+}
+
+.banner.admin {
+  background-color: #b22222; /* Firebrick red */
+}
+
+.banner.student {
+  background-color: #1e90ff; /* Dodger blue */
+}
+
+.hidden {
+  display: none;
+}
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #333;
+  color: #fff;
+  padding: 0.75em 1.25em;
+  border-radius: 5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 999;
+}
+
+.toast.show {
+  opacity: 1;
+  pointer-events: auto;
+}

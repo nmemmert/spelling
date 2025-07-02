@@ -53,38 +53,84 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 // 🧑‍🏫 Admin setup
 async function setupSession(user) {
+  // 🔒 Hide everything first for clean slate
   document.getElementById('loginPanel').classList.add('hidden')
+  document.getElementById('adminPanel').classList.add('hidden')
+  document.getElementById('studentPanel').classList.add('hidden')
+
+  // 🔓 Show navigation and user info
   document.getElementById('nav').classList.remove('hidden')
   document.getElementById('userInfo').textContent = `${user.username} (${user.role})`
 
+  // 🎨 Role-colored banner setup
+  const roleBanner = document.getElementById('roleBanner')
+  roleBanner.classList.remove('hidden', 'admin', 'student')
+  roleBanner.classList.add(user.role)
+  roleBanner.textContent = user.role === "admin"
+    ? "👨‍🏫 Admin Access Enabled"
+    : "🎓 Student Mode Active"
+
+  // 🙈 Hide/show Student Panel button appropriately
+  const studentBtn = document.getElementById('studentBtn')
   if (user.role === "admin") {
+    studentBtn.classList.remove('hidden')
     document.getElementById('adminBtn').classList.remove('hidden')
+    console.log("🛠 Logged in as Admin")
     await showAdmin()
-    await loadUsers()
-    displayUserDropdown()
-    populateWordUserDropdown()
-  } else {
+  } else if (user.role === "student") {
+    studentBtn.classList.add('hidden')
     document.getElementById('adminBtn').classList.add('hidden')
+    console.log("🎓 Logged in as Student")
     showStudent()
+  } else {
+    console.warn("❓ Unknown role:", user.role)
+    logoutUser()
+    alert("Unknown role detected. Logging out for security.")
+    return
   }
+
+  // 📣 Toast message
+  showToast(`Welcome, ${user.role}!`)
 }
 
-
 function logoutUser() {
+  // Clear stored user session
   localStorage.removeItem('loggedInUser')
-  document.getElementById('loginPanel').classList.remove('hidden')
-  document.getElementById('nav').classList.add('hidden')
+
+  // 🔄 Reset all visible panels
   document.getElementById('adminPanel').classList.add('hidden')
   document.getElementById('studentPanel').classList.add('hidden')
+  document.getElementById('nav').classList.add('hidden')
+  document.getElementById('loginPanel').classList.remove('hidden')
+  document.getElementById('username').value = ''
+  document.getElementById('password').value = ''
+
+  // 🧼 Reset role banner styling and content
+  const roleBanner = document.getElementById('roleBanner')
+  roleBanner.classList.add('hidden')
+  roleBanner.classList.remove('admin', 'student')
+  roleBanner.textContent = ''
+
+  // Optional: reset login message (if present)
+  const loginMessage = document.getElementById('loginMessage')
+  if (loginMessage) loginMessage.textContent = ''
 }
 
 async function showAdmin() {
+  const user = JSON.parse(localStorage.getItem('loggedInUser'))
+  if (!user || user.role !== "admin") {
+    console.warn("⛔ Access denied: not an admin")
+    return
+  }
+
   document.getElementById('adminPanel').classList.remove('hidden')
   document.getElementById('studentPanel').classList.add('hidden')
-  loadWords()
+
+  await loadWords()
   displayWordList()
   await loadUsers()
   displayUserDropdown()
+  populateWordUserDropdown()
 }
 
 // ➕ Add User
@@ -340,4 +386,13 @@ async function loadWordsForSelectedUser() {
   const res = await fetch(`/getWordList?user=${encodeURIComponent(selectedUser)}`)
   allWords = await res.json()
   displayWordList()
+}
+function showToast(message, duration = 3000) {
+  const toast = document.getElementById("toast")
+  toast.textContent = message
+  toast.classList.add("show")
+
+  setTimeout(() => {
+    toast.classList.remove("show")
+  }, duration)
 }
