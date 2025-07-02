@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spelling App with Roles</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <h1>Spelling Practice</h1>
+
+  <!-- 👤 Login Panel -->
+  <div id="loginPanel">
+    <h2>User Login</h2>
+    <form onsubmit="event.preventDefault(); verifyLogin();">
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Login</button>
+    </form>
+    <p id="loginMessage"></p>
+  </div>
+
+  <!-- 🔀 Navigation -->
+  <div id="nav" class="hidden">
+    <p><strong id="userInfo"></strong></p>
+    <button onclick="showAdmin()" id="adminBtn" class="hidden">Admin Panel</button>
+    <button onclick="showStudent()">Student Panel</button>
+    <button onclick="logoutUser()">Log Out</button>
+  </div>
+
+  <!-- 👨‍🏫 Admin Panel -->
+  <div id="adminPanel" class="hidden">
+    <h2>Add New User</h2>
+
+<form onsubmit="event.preventDefault(); addNewUser();">
+  <input type="text" id="newUsername" placeholder="Username" required />
+  <input type="password" id="newPassword" placeholder="Password" required />
+  <select id="newRole">
+    <option value="student">Student</option>
+    <option value="admin">Admin</option>
+  </select>
+  <button type="submit">Add User</button>
+</form>
+  <!-- Manage Users -->
+    <h3>Manage Users</h3>
+      <select id="userDropdown" onchange="selectUserAction(this.value)">
+      <option value="">-- Select a user --</option>
+      </select>
+  <!-- edit words -->
+    <h3>Edit Word List for:</h3>
+     <select id="wordUserSelect" onchange="loadWordsForSelectedUser()">
+     <option value="">-- Select a user --</option>
+     </select>
+  
+ <!-- Theme -->
+<div style="margin: 1em 0;">
+  <label for="themeSelect"><strong>Select Theme:</strong></label><br/>
+  <select id="themeSelect" onchange="changeTheme(this.value)">
+    <option value="playground">Playground</option>
+    <option value="chalkboard">Chalkboard</option>
+    <option value="galaxy">Galaxy</option>
+    <option value="nature">Nature</option>
+  </select>
+</div>
+
+
+    <h2>Enter Spelling Words</h2>
+    <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
+    <button onclick="saveWords()">Save Word List</button>
+    <button onclick="clearWords()">Clear Saved Words</button>
+
+    <h3>Or Upload a Word File</h3>
+    <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
+    <p><strong>Current Word List:</strong></p>
+    <ul id="wordListDisplay"></ul>
+  </div>
+
+  <!-- 👩‍🎓 Student Panel -->
+  <div id="studentPanel" class="hidden">
+    <button onclick="startGame()">Start Practice</button>
+
+    <div id="wordBox" class="hidden">
+      <div id="word" class="word-box"></div>
+    </div>
+
+    <div id="inputSection" class="hidden">
+      <input type="text" id="userInput" placeholder="Spell the word" />
+      <button onclick="submitAnswer()">Submit</button>
+    </div>
+
+    <div id="summary" class="hidden"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

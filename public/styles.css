@@ -1,0 +1,89 @@
+body {
+  font-family: sans-serif;
+  text-align: center;
+  padding: 2rem;
+  margin: 0;
+}
+
+/* 🎨 Theme Styles */
+body.playground {
+  background: #fef9e7;
+  color: #333;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+}
+
+body.chalkboard {
+  background: #222;
+  color: #f0f0f0;
+  font-family: 'Courier New', monospace;
+}
+
+body.galaxy {
+  background: radial-gradient(circle at center, #0d0d2b, #1a1a3f);
+  color: #b3e5fc;
+  font-family: 'Orbitron', sans-serif;
+}
+
+body.nature {
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-family: 'Georgia', serif;
+}
+
+/* 🔘 UI Controls */
+button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  margin: 0.4rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+button:hover {
+  transform: scale(1.05);
+}
+
+input, textarea, select {
+  font-size: 1rem;
+  padding: 0.5rem;
+  margin: 0.5rem;
+  border: 2px solid #ccc;
+  border-radius: 5px;
+}
+
+/* 🔳 Panels */
+.hidden {
+  display: none;
+}
+#wordBox {
+  margin-top: 5rem;
+}
+.word-box {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  color: #2196f3;
+  text-shadow: 1px 1px #ccc;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+li {
+  margin: 0.25rem 0;
+}
+
+/* 🎭 Theme-specific button colors */
+body.chalkboard button {
+  background-color: #555;
+}
+body.galaxy button {
+  background-color: #6200ea;
+}
+body.nature button {
+  background-color: #81c784;
+}
