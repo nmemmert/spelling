@@ -49,5 +49,9 @@ app.post('/saveWordList', (req, res) => {
   fs.writeFileSync('public/wordlists.json', JSON.stringify(data, null, 2))
   res.send(`✅ Word list saved for ${username}`)
 })
+app.get('/getResults', (req, res) => {
+  const results = JSON.parse(fs.readFileSync('public/results.json', 'utf-8'))
+  res.json(results)
+})
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`))

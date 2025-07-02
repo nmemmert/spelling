@@ -30,51 +30,41 @@
     <button onclick="logoutUser()">Log Out</button>
   </div>
 
-  <!-- 👨‍🏫 Admin Panel -->
   <div id="adminPanel" class="hidden">
-    <h2>Add New User</h2>
+  <h2>👨‍🏫 Admin Panel</h2>
 
-<form onsubmit="event.preventDefault(); addNewUser();">
-  <input type="text" id="newUsername" placeholder="Username" required />
-  <input type="password" id="newPassword" placeholder="Password" required />
-  <select id="newRole">
-    <option value="student">Student</option>
-    <option value="admin">Admin</option>
-  </select>
-  <button type="submit">Add User</button>
-</form>
+  <!-- Tab Controls -->
+  <div id="adminTabs">
+    <button onclick="switchTab('tabUsers')" class="active">👤 Manage Users</button>
+    <button onclick="switchTab('tabWords')">📝 Word Lists</button>
+    <button onclick="switchTab('tabResults')">📊 Results</button>
+    <button onclick="switchTab('tabTheme')">🎨 Theme</button>
+  </div>
 
-<!-- Manage Users -->
-    <h3>Delete Users</h3>
-      <select id="userDropdown" onchange="selectUserAction(this.value)">
-      <option value="">-- Select a user --</option>
+  <!-- Manage Users -->
+  <div id="tabUsers" class="adminTab">
+    <h3>Add New User</h3>
+    <form onsubmit="event.preventDefault(); addNewUser();">
+      <input type="text" id="newUsername" placeholder="Username" required />
+      <input type="password" id="newPassword" placeholder="Password" required />
+      <select id="newRole">
+        <option value="student">Student</option>
+        <option value="admin">Admin</option>
       </select>
- <!-- Edit words -->
-<h3>Edit Word List for:</h3>
-<select id="wordUserSelect" class="word-user-dropdown" onchange="loadWordsForSelectedUser()">
-  <option value="">-- Select a user --</option>
-</select>
+      <button type="submit">Add User</button>
+    </form>
 
- <!-- View Word List by User -->
-<h3>📋 View Word List by User:</h3>
-<select id="viewUserSelect" class="word-user-dropdown" onchange="displayWordListForSelectedUser()">
-  <option value="">-- Select a user --</option>
-</select>
+    <h3>Delete Users</h3>
+    <select id="userDropdown" onchange="selectUserAction(this.value)">
+      <option value="">-- Select a user --</option>
+    </select>
+  </div>
 
-<ul id="userWordListDisplay"></ul>
-
- <!-- Theme -->
-<div style="margin: 1em 0;">
-  <label for="themeSelect"><strong>Select Theme:</strong></label><br/>
-  <select id="themeSelect" onchange="changeTheme(this.value)">
-    <option value="playground">Playground</option>
-    <option value="chalkboard">Chalkboard</option>
-    <option value="galaxy">Galaxy</option>
-    <option value="nature">Nature</option>
-  </select>
-</div>
-
-
+  <!-- Word Lists -->
+  <div id="tabWords" class="adminTab hidden">
+    <h3>Edit Word List for:</h3>
+    <select id="wordUserSelect" class="word-user-dropdown" onchange="loadWordsForSelectedUser()">
+      <option value="">-- Select a user --</option>
     <h2>Enter Spelling Words</h2>
     <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
     <button onclick="saveWords()">Save Word List</button>
@@ -84,6 +74,41 @@
     <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
     <p><strong>Current Word List:</strong></p>
     <ul id="wordListDisplay"></ul>
+    </select>
+
+    <h3>📋 View Word List by User:</h3>
+    <select id="viewUserSelect" class="word-user-dropdown" onchange="displayWordListForSelectedUser()">
+      <option value="">-- Select a user --</option>
+    </select>
+
+    <ul id="userWordListDisplay"></ul>
+
+    <h3>Enter Spelling Words</h3>
+    <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
+    <button onclick="saveWords()">Save Word List</button>
+    <button onclick="clearWords()">Clear Saved Words</button>
+
+    <h3>Or Upload a Word File</h3>
+    <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
+    <ul id="wordListDisplay"></ul>
+  </div>
+
+  <!-- Student Results -->
+  <div id="tabResults" class="adminTab hidden">
+    <h3>🧾 Student Results Overview</h3>
+    <button onclick="loadStudentResults()">Refresh Results</button>
+    <ul id="resultsList"></ul>
+  </div>
+
+  <!-- Theme Selection -->
+  <div id="tabTheme" class="adminTab hidden">
+    <h3>🎨 Select Theme</h3>
+    <select id="themeSelect" onchange="changeTheme(this.value)">
+      <option value="playground">Playground</option>
+      <option value="chalkboard">Chalkboard</option>
+      <option value="galaxy">Galaxy</option>
+      <option value="nature">Nature</option>
+    </select>
   </div>
 
   <!-- 👩‍🎓 Student Panel -->

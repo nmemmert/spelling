@@ -440,3 +440,45 @@ async function displayWordListForSelectedUser() {
     console.error("Failed to load word list for user:", username, err)
   }
 }
+async function loadStudentResults() {
+  const list = document.getElementById("resultsList")
+  list.innerHTML = ''
+
+  try {
+    const res = await fetch('/getResults')
+    const results = await res.json()
+
+    if (!Object.keys(results).length) {
+      list.innerHTML = '<li><em>No results available yet.</em></li>'
+      return
+    }
+
+    for (const [username, result] of Object.entries(results)) {
+      const li = document.createElement('li')
+      li.innerHTML = `<strong>${username}</strong> — Score: ${result.score}, Completed: ${result.completed ? '✅' : '❌'}<br>
+        Answers: ${result.answers.join(', ')}`
+      list.appendChild(li)
+    }
+  } catch (err) {
+    console.error("🔴 Failed to load results:", err)
+    list.innerHTML = '<li style="color:red">Error loading results.</li>'
+  }
+}
+function switchTab(targetId) {
+  // Hide all tabs
+  document.querySelectorAll('.adminTab').forEach(tab => tab.classList.add('hidden'))
+
+  // Remove active class from buttons
+  document.querySelectorAll('#adminTabs button').forEach(btn => btn.classList.remove('active'))
+
+  // Show the selected tab
+  document.getElementById(targetId).classList.remove('hidden')
+
+  // Highlight active tab button
+  const buttons = document.querySelectorAll('#adminTabs button')
+  buttons.forEach(btn => {
+    if (btn.getAttribute('onclick')?.includes(targetId)) {
+      btn.classList.add('active')
+    }
+  })
+}

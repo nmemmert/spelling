@@ -123,3 +123,36 @@ body.nature button {
   opacity: 1;
   pointer-events: auto;
 }
+#adminTabs {
+  margin: 1em 0;
+}
+#adminTabs button {
+  margin-right: 8px;
+  padding: 10px 16px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+#adminTabs button:hover {
+  background-color: #e0f2ff;
+  color: #000;
+}
+
+#adminTabs button.active {
+  background-color: #ffffff;
+  color: #000;
+  border-bottom: 2px solid #fff;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+.adminTab {
+  display: none;
+}
+.adminTab:not(.hidden) {
+  display: block;
+}
