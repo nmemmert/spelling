@@ -93,6 +93,7 @@ async function addNewUser() {
   const password = document.getElementById("newPassword").value
   const role = document.getElementById("newRole").value
   const msg = document.getElementById("userAddMessage")
+  const hashPreview = document.getElementById("hashPreview")
 
   if (!username || !password) {
     msg.textContent = "Please fill out all fields."
@@ -100,13 +101,27 @@ async function addNewUser() {
   }
 
   const hash = hashPassword(password)
-  await saveUserToServer(username, hash, role)
-  msg.textContent = `✅ User "${username}" added to server.`
 
-  document.getElementById("newUsername").value = ''
-  document.getElementById("newPassword").value = ''
-  await loadUsers()
-  displayUserDropdown()
+  // Live hash preview (optional visual confirmation for admin)
+  if (hashPreview) {
+    hashPreview.textContent = hash
+  }
+
+  try {
+    await saveUserToServer(username, hash, role)
+    msg.textContent = `✅ User "${username}" added to server.`
+
+    // Clear fields after success
+    document.getElementById("newUsername").value = ''
+    document.getElementById("newPassword").value = ''
+    if (hashPreview) hashPreview.textContent = '[auto]'
+    
+    await loadUsers()
+    displayUserDropdown()
+  } catch (e) {
+    msg.textContent = "❌ Failed to add user."
+    console.error("Add user error:", e)
+  }
 }
 
 async function saveUserToServer(username, hash, role) {
