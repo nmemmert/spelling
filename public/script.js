@@ -454,9 +454,19 @@ async function loadStudentResults() {
     }
 
     for (const [username, result] of Object.entries(results)) {
-      const li = document.createElement('li')
-      li.innerHTML = `<strong>${username}</strong> — Score: ${result.score}, Completed: ${result.completed ? '✅' : '❌'}<br>
-        Answers: ${result.answers.join(', ')}`
+      const li = document.createElement("li")
+
+      // Build detailed answer breakdown
+      let answersHTML = ''
+      result.answers.forEach(entry => {
+        const status = entry.correct ? '✅' : '❌'
+        answersHTML += `${status} ${entry.word}<br>`
+      })
+
+      li.innerHTML = `
+        <strong>${username}</strong> — Score: ${result.score}, Completed: ${result.completed ? '✅' : '❌'}<br>
+        <em>Answers:</em><br>${answersHTML}
+      `
       list.appendChild(li)
     }
   } catch (err) {

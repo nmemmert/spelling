@@ -1,4 +1,11 @@
 {
-  "student1": { "score": 8, "completed": true, "answers": ["cat", "dog", "fish"] },
-  "nate":     { "score": 10, "completed": true, "answers": ["grace", "truth", "peace"] }
+  "student1": {
+    "score": 8,
+    "completed": true,
+    "answers": [
+      { "word": "apple", "correct": true },
+      { "word": "banana", "correct": false },
+      { "word": "grape", "correct": true }
+    ]
+  }
 }
