@@ -61,37 +61,29 @@
   </div>
 
   <!-- Word Lists -->
-  <div id="tabWords" class="adminTab hidden">
-    <h3>Edit Word List for:</h3>
-    <select id="wordUserSelect" class="word-user-dropdown" onchange="loadWordsForSelectedUser()">
-      <option value="">-- Select a user --</option>
-    <h2>Enter Spelling Words</h2>
-    <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
-    <button onclick="saveWords()">Save Word List</button>
-    <button onclick="clearWords()">Clear Saved Words</button>
+<div id="tabWords" class="adminTab hidden">
+  <h3>Edit Word List for:</h3>
+  <select id="wordUserSelect" class="word-user-dropdown" onchange="loadWordsForSelectedUser()">
+    <option value="">-- Select a user --</option>
+  </select>
 
-    <h3>Or Upload a Word File</h3>
-    <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
-    <p><strong>Current Word List:</strong></p>
-    <ul id="wordListDisplay"></ul>
-    </select>
+  <h2>Enter Spelling Words</h2>
+  <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
+  <button onclick="saveWords()">Save Word List</button>
+  <button onclick="clearWords()">Clear Saved Words</button>
 
-    <h3>📋 View Word List by User:</h3>
-    <select id="viewUserSelect" class="word-user-dropdown" onchange="displayWordListForSelectedUser()">
-      <option value="">-- Select a user --</option>
-    </select>
+  <h3>Or Upload a Word File</h3>
+  <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
+  <p><strong>Current Word List:</strong></p>
+  <ul id="wordListDisplay"></ul>
 
-    <ul id="userWordListDisplay"></ul>
+  <h3>📋 View Word List by User:</h3>
+  <select id="viewUserSelect" class="word-user-dropdown" onchange="displayWordListForSelectedUser()">
+    <option value="">-- Select a user --</option>
+  </select>
 
-    <h3>Enter Spelling Words</h3>
-    <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
-    <button onclick="saveWords()">Save Word List</button>
-    <button onclick="clearWords()">Clear Saved Words</button>
-
-    <h3>Or Upload a Word File</h3>
-    <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
-    <ul id="wordListDisplay"></ul>
-  </div>
+  <ul id="userWordListDisplay"></ul>
+</div>
 
   <!-- Student Results -->
   <div id="tabResults" class="adminTab hidden">
