@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  spelling-app:
+    build: .
+    container_name: spelling-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./public/users.json:/app/public/users.json
+      - ./public/wordlists.json:/app/public/wordlists.json
+    restart: unless-stopped
