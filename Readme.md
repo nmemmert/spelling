@@ -12,7 +12,10 @@ Clone and run from anywhere using Docker Compose:
 git clone https://git.necloud.us/nmemmert/Spelling.git
 cd Spelling
 docker-compose up --build
+```
+
 Then visit: 👉 http://localhost:3000
+
 
 ## 👥 Default Login
 
