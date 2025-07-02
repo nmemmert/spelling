@@ -158,10 +158,7 @@ function changeTheme(themeName) {
 }
 
 // 📚 Word list
-function loadWords() {
-  const saved = localStorage.getItem('spellingWords')
-  allWords = saved ? JSON.parse(saved) : []
-}
+
 
 function saveWords() {
   const text = document.getElementById('wordInput').value.trim()
