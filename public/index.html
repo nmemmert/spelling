@@ -45,16 +45,24 @@
 </form>
 
 <!-- Manage Users -->
-    <h3>Manage Users</h3>
+    <h3>Delete Users</h3>
       <select id="userDropdown" onchange="selectUserAction(this.value)">
       <option value="">-- Select a user --</option>
       </select>
-  <!-- edit words -->
-    <h3>Edit Word List for:</h3>
-     <select id="wordUserSelect" onchange="loadWordsForSelectedUser()">
-     <option value="">-- Select a user --</option>
-     </select>
-  
+ <!-- Edit words -->
+<h3>Edit Word List for:</h3>
+<select id="wordUserSelect" class="word-user-dropdown" onchange="loadWordsForSelectedUser()">
+  <option value="">-- Select a user --</option>
+</select>
+
+ <!-- View Word List by User -->
+<h3>📋 View Word List by User:</h3>
+<select id="viewUserSelect" class="word-user-dropdown" onchange="displayWordListForSelectedUser()">
+  <option value="">-- Select a user --</option>
+</select>
+
+<ul id="userWordListDisplay"></ul>
+
  <!-- Theme -->
 <div style="margin: 1em 0;">
   <label for="themeSelect"><strong>Select Theme:</strong></label><br/>

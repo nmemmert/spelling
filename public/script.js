@@ -126,8 +126,14 @@ async function showAdmin() {
   document.getElementById('adminPanel').classList.remove('hidden')
   document.getElementById('studentPanel').classList.add('hidden')
 
-  await loadWords()
-  displayWordList()
+  try {
+    await loadWords()
+    displayWordList()
+  } catch (err) {
+    console.error("🚨 Failed to load words:", err)
+    // Optional: fallback or placeholder UI
+  }
+
   await loadUsers()
   displayUserDropdown()
   populateWordUserDropdown()
@@ -373,10 +379,21 @@ async function clearWords() {
   alert("🗑 Word list cleared")
 }
 function populateWordUserDropdown() {
-  const dropdown = document.getElementById("wordUserSelect")
-  dropdown.innerHTML = `<option value="">-- Select a user --</option>`
-  users.forEach(user => {
-    dropdown.innerHTML += `<option value="${user.username}">${user.username}</option>`
+  const userSelects = document.querySelectorAll(".word-user-dropdown")
+
+  if (!users || !users.length) {
+    console.warn("⚠️ No users to populate dropdowns.")
+    return
+  }
+
+  userSelects.forEach(select => {
+    select.innerHTML = '<option value="">-- Select a user --</option>'
+    users.forEach(user => {
+      const option = document.createElement("option")
+      option.value = user.username
+      option.textContent = user.username
+      select.appendChild(option)
+    })
   })
 }
 async function loadWordsForSelectedUser() {
@@ -395,4 +412,31 @@ function showToast(message, duration = 3000) {
   setTimeout(() => {
     toast.classList.remove("show")
   }, duration)
+}
+async function displayWordListForSelectedUser() {
+  const select = document.getElementById("viewUserSelect")
+  const username = select.value
+  const list = document.getElementById("userWordListDisplay")
+  list.innerHTML = ''
+
+  if (!username) return
+
+  try {
+    const res = await fetch(`/getWordList?user=${username}`)
+    const words = await res.json()
+
+    if (!words.length) {
+      list.innerHTML = "<li><em>No words found for this user.</em></li>"
+      return
+    }
+
+    words.forEach(word => {
+      const li = document.createElement("li")
+      li.textContent = word
+      list.appendChild(li)
+    })
+  } catch (err) {
+    list.innerHTML = `<li style="color:red">❌ Error loading words: ${err.message}</li>`
+    console.error("Failed to load word list for user:", username, err)
+  }
 }

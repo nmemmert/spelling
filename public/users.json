@@ -8,10 +8,5 @@
     "username": "student1",
     "hash": "8d969eef6ecad3c29a3a629280e686cf",
     "role": "student"
-  },
-  {
-    "username": "nate",
-    "hash": "5a2a558c78d3717db731600c4f354fa1d9c84b556f108091a891f444f1bdec40",
-    "role": "student"
   }
 ]
