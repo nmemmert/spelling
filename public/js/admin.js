@@ -205,6 +205,10 @@ function switchTab(targetId) {
   if (targetId === 'tabBadges') {
     loadBadgeViewer();
   }
+  // Reports
+  if (targetId === 'tabReports') {
+  loadStudentNamesForReport();
+}
 }
 async function loadUserDropdowns() {
   try {
@@ -322,4 +326,65 @@ function showUserBadges(username) {
 
       details.classList.remove("hidden");
     });
+}
+async function loadStudentNamesForReport() {
+  const res = await fetch('/getResults');
+  const data = await res.json();
+  const select = document.getElementById("reportUser");
+
+  select.innerHTML = `<option value="">-- Select --</option>`;
+  Object.keys(data).forEach(username => {
+    const opt = document.createElement("option");
+    opt.value = username;
+    opt.textContent = username;
+    select.appendChild(opt);
+  });
+}
+
+async function loadStudentReport(username) {
+  if (!username) return;
+
+  const res1 = await fetch('/getResults');
+  const results = await res1.json();
+  const res2 = await fetch('/getBadges');
+  const badges = await res2.json();
+
+  const report = results[username];
+  const badgeList = badges[username] || [];
+
+  document.getElementById("reportTitle").textContent = `Report for ${username}`;
+  document.getElementById("reportScore").textContent = `${report.score}/${report.answers.length} correct`;
+  
+  const wordList = document.getElementById("reportWords");
+  wordList.innerHTML = "";
+  report.answers.forEach(({ word, correct }) => {
+    const li = document.createElement("li");
+    li.textContent = `${word} — ${correct ? '✅' : '❌'}`;
+    wordList.appendChild(li);
+  });
+
+  const badgeContainer = document.getElementById("reportBadges");
+  badgeContainer.innerHTML = "";
+  if (badgeList.length) {
+    badgeList.forEach(b => {
+      const li = document.createElement("li");
+      li.textContent = `🏅 ${b}`;
+      badgeContainer.appendChild(li);
+    });
+  } else {
+    badgeContainer.innerHTML = "<li><em>No badges earned yet.</em></li>";
+  }
+
+  document.getElementById("reportContent").classList.remove("hidden");
+}
+
+function copyReportToClipboard() {
+  const name = document.getElementById("reportTitle").textContent;
+  const score = document.getElementById("reportScore").textContent;
+  const words = Array.from(document.querySelectorAll("#reportWords li")).map(li => li.textContent).join("\n");
+  const badges = Array.from(document.querySelectorAll("#reportBadges li")).map(li => li.textContent).join("\n");
+
+  const summary = `${name}\nScore: ${score}\n\nWords:\n${words}\n\nBadges:\n${badges}`;
+  navigator.clipboard.writeText(summary);
+  alert("✅ Report copied to clipboard");
 }
