@@ -226,3 +226,55 @@ async function loadUserDropdowns() {
     console.error("⚠️ Failed to load user list:", err);
   }
 }
+async function refreshAnalytics() {
+  const summary = document.getElementById("analyticsSummary");
+  const breakdown = document.getElementById("studentBreakdown");
+  summary.innerHTML = "<li>Loading...</li>";
+  breakdown.innerHTML = "";
+
+  try {
+    const res = await fetch('/getResults');
+    const data = await res.json();
+
+    let totalScore = 0, sessionCount = 0;
+    const missMap = {};
+
+    for (const username in data) {
+      const { score, completed, answers } = data[username];
+      if (!completed || !Array.isArray(answers)) continue;
+
+      totalScore += score;
+      sessionCount++;
+
+      // Count missed words
+      answers.forEach(({ word, correct }) => {
+        if (!correct) {
+          missMap[word] = (missMap[word] || 0) + 1;
+        }
+      });
+
+      // Per-student breakdown
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${username}</strong>: ${score}/${answers.length} correct`;
+      breakdown.appendChild(li);
+    }
+
+    const avgScore = sessionCount ? (totalScore / sessionCount).toFixed(2) : "0";
+    let mostMissed = "-", highestMisses = 0;
+    for (const word in missMap) {
+      if (missMap[word] > highestMisses) {
+        highestMisses = missMap[word];
+        mostMissed = word;
+      }
+    }
+
+    summary.innerHTML = `
+      <li><strong>Average Score:</strong> ${avgScore}</li>
+      <li><strong>Total Completed Sessions:</strong> ${sessionCount}</li>
+      <li><strong>Most Missed Word:</strong> ${mostMissed} (${highestMisses} misses)</li>
+    `;
+  } catch (err) {
+    console.error("📉 Failed to refresh analytics:", err);
+    summary.innerHTML = '<li style="color:red">Error loading analytics.</li>';
+  }
+}
