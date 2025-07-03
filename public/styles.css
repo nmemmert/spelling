@@ -1,3 +1,4 @@
+/* 📋 Global Defaults */
 body {
   font-family: sans-serif;
   text-align: center;
@@ -5,45 +6,12 @@ body {
   margin: 0;
 }
 
-/* 🎨 Theme Styles */
-body.playground {
-  background: #fef9e7;
-  color: #333;
-  font-family: 'Comic Sans MS', cursive, sans-serif;
+ul {
+  list-style: none;
+  padding: 0;
 }
-
-body.chalkboard {
-  background: #222;
-  color: #f0f0f0;
-  font-family: 'Courier New', monospace;
-}
-
-body.galaxy {
-  background: radial-gradient(circle at center, #0d0d2b, #1a1a3f);
-  color: #b3e5fc;
-  font-family: 'Orbitron', sans-serif;
-}
-
-body.nature {
-  background: #e8f5e9;
-  color: #2e7d32;
-  font-family: 'Georgia', serif;
-}
-
-/* 🔘 UI Controls */
-button {
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.6rem 1rem;
-  font-size: 1rem;
-  margin: 0.4rem;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-button:hover {
-  transform: scale(1.05);
+li {
+  margin: 0.25rem 0;
 }
 
 input, textarea, select {
@@ -54,7 +22,57 @@ input, textarea, select {
   border-radius: 5px;
 }
 
-/* 🔳 Panels */
+/* 🎨 Theme Styles */
+body.playground {
+  background: #fef9e7;
+  color: #333;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+}
+body.chalkboard {
+  background: #222;
+  color: #f0f0f0;
+  font-family: 'Courier New', monospace;
+}
+body.galaxy {
+  background: radial-gradient(circle at center, #0d0d2b, #1a1a3f);
+  color: #b3e5fc;
+  font-family: 'Orbitron', sans-serif;
+}
+body.nature {
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-family: 'Georgia', serif;
+}
+
+/* 🔘 Buttons */
+button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  margin: 0.4rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+button:hover {
+  transform: scale(1.05);
+}
+
+/* 🌈 Theme-specific Button Colors */
+body.chalkboard button {
+  background-color: #555;
+}
+body.galaxy button {
+  background-color: #6200ea;
+}
+body.nature button {
+  background-color: #81c784;
+}
+
+/* 🔳 Panels and Banners */
 .hidden {
   display: none;
 }
@@ -68,43 +86,20 @@ input, textarea, select {
   color: #2196f3;
   text-shadow: 1px 1px #ccc;
 }
-
-ul {
-  list-style: none;
-  padding: 0;
-}
-li {
-  margin: 0.25rem 0;
-}
-
-/* 🎭 Theme-specific button colors */
-body.chalkboard button {
-  background-color: #555;
-}
-body.galaxy button {
-  background-color: #6200ea;
-}
-body.nature button {
-  background-color: #81c784;
-}
 .banner {
   padding: 0.5em;
   text-align: center;
   font-weight: bold;
   color: white;
 }
-
 .banner.admin {
-  background-color: #b22222; /* Firebrick red */
+  background-color: #b22222;
 }
-
 .banner.student {
-  background-color: #1e90ff; /* Dodger blue */
+  background-color: #1e90ff;
 }
 
-.hidden {
-  display: none;
-}
+/* 🔔 Toast Messages */
 .toast {
   position: fixed;
   bottom: 20px;
@@ -118,11 +113,12 @@ body.nature button {
   transition: opacity 0.4s ease;
   z-index: 999;
 }
-
 .toast.show {
   opacity: 1;
   pointer-events: auto;
 }
+
+/* 🧭 Admin Tabs */
 #adminTabs {
   margin: 1em 0;
 }
@@ -138,12 +134,10 @@ body.nature button {
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
 }
-
 #adminTabs button:hover {
   background-color: #e0f2ff;
   color: #000;
 }
-
 #adminTabs button.active {
   background-color: #ffffff;
   color: #000;

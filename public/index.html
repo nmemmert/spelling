@@ -2,15 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spelling App with Roles</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js"></script>
-  <script src="script.js" defer></script>
-</head>
-<body>
+  <link rel="stylesheet" href="styles.css" />
 
+  <!-- 🔧 Script Load Order -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/ui.js" defer></script>
+  <script src="js/themes.js" defer></script>
+  <script src="js/admin.js" defer></script>
+  <script src="js/game.js" defer></script>
+  <script src="js/main.js" defer></script>
+</head>
+
+<body>
   <h1>Spelling Practice</h1>
+
+  <!-- 🏳️ Role Banner -->
   <div id="roleBanner" class="banner hidden"></div>
+
   <!-- 👤 Login Panel -->
   <div id="loginPanel">
     <h2>User Login</h2>
@@ -22,102 +33,105 @@
     <p id="loginMessage"></p>
   </div>
 
-  <!-- 🔀 Navigation -->
+  <!-- 🔀 Role-Based Navigation -->
   <div id="nav" class="hidden">
     <p><strong id="userInfo"></strong></p>
     <button onclick="showAdmin()" id="adminBtn" class="hidden">Admin Panel</button>
-    <button onclick="showStudent()" id="studentBtn">Student Panel</button>
-    <button onclick="logoutUser()">Log Out</button>
+    <button onclick="showStudent()" id="studentBtn" class="hidden">Student Panel</button>
+    <button onclick="logoutUser()" id="logoutBtn">Log Out</button>
   </div>
 
+  <!-- 👨‍🏫 Admin Panel -->
   <div id="adminPanel" class="hidden">
-  <h2>👨‍🏫 Admin Panel</h2>
+    <h2>👨‍🏫 Admin Panel</h2>
 
-  <!-- Tab Controls -->
-  <div id="adminTabs">
-    <button onclick="switchTab('tabUsers')" class="active">👤 Manage Users</button>
-    <button onclick="switchTab('tabWords')">📝 Word Lists</button>
-    <button onclick="switchTab('tabResults')">📊 Results</button>
-    <button onclick="switchTab('tabTheme')">🎨 Theme</button>
-  </div>
+    <!-- 🔘 Tabs -->
+    <div id="adminTabs">
+      <button onclick="switchTab('tabUsers')" class="active">👤 Manage Users</button>
+      <button onclick="switchTab('tabWords')">📝 Word Lists</button>
+      <button onclick="switchTab('tabResults')">📊 Results</button>
+      <button onclick="switchTab('tabTheme')">🎨 Theme</button>
+    </div>
 
-  <!-- Manage Users -->
-  <div id="tabUsers" class="adminTab">
-    <h3>Add New User</h3>
-    <form onsubmit="event.preventDefault(); addNewUser();">
-      <input type="text" id="newUsername" placeholder="Username" required />
-      <input type="password" id="newPassword" placeholder="Password" required />
-      <select id="newRole">
-        <option value="student">Student</option>
-        <option value="admin">Admin</option>
+    <!-- 👥 Users Tab -->
+    <div id="tabUsers" class="adminTab">
+      <h3>Add New User</h3>
+      <form onsubmit="event.preventDefault(); addNewUser();">
+        <input type="text" id="newUsername" placeholder="Username" required />
+        <input type="password" id="newPassword" placeholder="Password" required />
+        <select id="newRole">
+          <option value="student">Student</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="submit">Add User</button>
+      </form>
+
+      <h3>Delete Users</h3>
+      <select id="userDropdown" onchange="selectUserAction(this.value)">
+        <option value="">-- Select a user --</option>
       </select>
-      <button type="submit">Add User</button>
-    </form>
+    </div>
 
-    <h3>Delete Users</h3>
-    <select id="userDropdown" onchange="selectUserAction(this.value)">
-      <option value="">-- Select a user --</option>
-    </select>
-  </div>
+    <!-- 📝 Word List Tab -->
+    <div id="tabWords" class="adminTab hidden">
+      <h3>Edit Word List for:</h3>
+      <select id="wordUserSelect" class="word-user-dropdown" onchange="loadWordsForSelectedUser()">
+        <option value="">-- Select a user --</option>
+      </select>
 
-  <!-- Word Lists -->
-<div id="tabWords" class="adminTab hidden">
-  <h3>Edit Word List for:</h3>
-  <select id="wordUserSelect" class="word-user-dropdown" onchange="loadWordsForSelectedUser()">
-    <option value="">-- Select a user --</option>
-  </select>
+      <h2>Enter Spelling Words</h2>
+      <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
+      <button onclick="saveWords()">Save Word List</button>
+      <button onclick="clearWords()">Clear Saved Words</button>
 
-  <h2>Enter Spelling Words</h2>
-  <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
-  <button onclick="saveWords()">Save Word List</button>
-  <button onclick="clearWords()">Clear Saved Words</button>
+      <h3>Upload a Word File</h3>
+      <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
 
-  <h3>Or Upload a Word File</h3>
-  <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
-  <p><strong>Current Word List:</strong></p>
-  <ul id="wordListDisplay"></ul>
+      <p><strong>Current Word List:</strong></p>
+      <ul id="wordListDisplay"></ul>
 
-  <h3>📋 View Word List by User:</h3>
-  <select id="viewUserSelect" class="word-user-dropdown" onchange="displayWordListForSelectedUser()">
-    <option value="">-- Select a user --</option>
-  </select>
+      <h3>📋 View Word List by User:</h3>
+      <select id="viewUserSelect" class="word-user-dropdown" onchange="displayWordListForSelectedUser()">
+        <option value="">-- Select a user --</option>
+      </select>
+      <ul id="userWordListDisplay"></ul>
+    </div>
 
-  <ul id="userWordListDisplay"></ul>
-</div>
+    <!-- 📊 Results Tab -->
+    <div id="tabResults" class="adminTab hidden">
+      <h3>🧾 Student Results Overview</h3>
+      <button onclick="loadStudentResults()">Refresh Results</button>
+      <ul id="resultsList"></ul>
+    </div>
 
-  <!-- Student Results -->
-  <div id="tabResults" class="adminTab hidden">
-    <h3>🧾 Student Results Overview</h3>
-    <button onclick="loadStudentResults()">Refresh Results</button>
-    <ul id="resultsList"></ul>
-  </div>
-
-  <!-- Theme Selection -->
-  <div id="tabTheme" class="adminTab hidden">
-    <h3>🎨 Select Theme</h3>
-    <select id="themeSelect" onchange="changeTheme(this.value)">
-      <option value="playground">Playground</option>
-      <option value="chalkboard">Chalkboard</option>
-      <option value="galaxy">Galaxy</option>
-      <option value="nature">Nature</option>
-    </select>
+    <!-- 🎨 Theme Tab -->
+    <div id="tabTheme" class="adminTab hidden">
+      <h3>🎨 Select Theme</h3>
+      <select id="themeSelect" onchange="changeTheme(this.value)">
+        <option value="playground">Playground</option>
+        <option value="chalkboard">Chalkboard</option>
+        <option value="galaxy">Galaxy</option>
+        <option value="nature">Nature</option>
+      </select>
+    </div>
   </div>
 
   <!-- 👩‍🎓 Student Panel -->
   <div id="studentPanel" class="hidden">
-    <button onclick="startGame()">Start Practice</button>
+    <div id="toast" class="toast">Welcome, student!</div>
+
+    <button id="startGameBtn" class="hidden" onclick="startGame()">Start Game</button>
 
     <div id="wordBox" class="hidden">
       <div id="word" class="word-box"></div>
     </div>
 
     <div id="inputSection" class="hidden">
-      <input type="text" id="userInput" placeholder="Spell the word" />
+      <input type="text" id="userInput" placeholder="Type your answer" autocomplete="off" />
       <button onclick="submitAnswer()">Submit</button>
     </div>
 
     <div id="summary" class="hidden"></div>
   </div>
-  <div id="toast" class="toast"></div>
-  </body>
+</body>
 </html>

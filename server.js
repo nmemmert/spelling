@@ -1,57 +1,166 @@
-const express = require('express')
-const fs = require('fs')
-const app = express()
-const PORT = 3000
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const app = express();
+const PORT = 3000;
 
-app.use(express.static('public'))
-app.use(express.json())
+// 📁 Static assets
+app.use(express.static('public'));
+app.use(express.json());
 
-app.post('/addUser', (req, res) => {
-  const { username, hash, role } = req.body
-  const users = JSON.parse(fs.readFileSync('public/users.json', 'utf-8'))
+// 🗂 Ensure data directory and files exist
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
-  if (users.find(u => u.username === username)) {
-    return res.status(409).send('User already exists.')
+const files = {
+  users: 'users.json',
+  wordlists: 'wordlists.json',
+  results: 'results.json'
+};
+
+for (const file of Object.values(files)) {
+  const target = path.join(DATA_DIR, file);
+  if (!fs.existsSync(target)) {
+    const defaultData = file === 'users.json' ? '[]' : '{}';
+    fs.writeFileSync(target, defaultData);
+    console.log(`📄 Initialized ${file}`);
+  }
+}
+
+// 🛡 Safe JSON reader
+function readJsonSafe(filePath, fallback = {}) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  } catch {
+    return fallback;
+  }
+}
+
+// 🔐 Verify user credentials
+app.post('/verifyUser', (req, res) => {
+  const { username, hash } = req.body;
+  if (typeof username !== 'string' || typeof hash !== 'string') {
+    return res.status(400).send("Invalid credentials format");
   }
 
-  users.push({ username, hash, role })
-  fs.writeFileSync('public/users.json', JSON.stringify(users, null, 2))
-  res.send('User added successfully.')
-})
+  const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
+  const user = users.find(u => u.username === username && u.hash === hash);
+
+  if (user) {
+    res.json(user);
+  } else {
+    res.status(401).send("Invalid login");
+  }
+});
+
+// ➕ Add new user
+app.post('/addUser', (req, res) => {
+  const { username, hash, role } = req.body;
+
+  if (
+    typeof username !== 'string' || 
+    typeof hash !== 'string' || 
+    typeof role !== 'string' || 
+    !['admin', 'student'].includes(role.trim().toLowerCase())
+  ) {
+    return res.status(400).send("Invalid user data");
+  }
+
+  const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
+  if (users.find(u => u.username === username)) {
+    return res.status(409).send("User already exists");
+  }
+
+  users.push({ username: username.trim(), hash, role: role.trim() });
+  fs.writeFileSync(path.join(DATA_DIR, files.users), JSON.stringify(users, null, 2));
+  res.send(`✅ User "${username}" added`);
+});
+
+// ❌ Delete user
 app.post('/deleteUser', (req, res) => {
-  const { username } = req.body
-  const users = JSON.parse(fs.readFileSync('public/users.json', 'utf-8'))
-  const updated = users.filter(u => u.username !== username)
+  const { username } = req.body;
+  if (typeof username !== 'string') return res.status(400).send("Invalid username");
+
+  const usersPath = path.join(DATA_DIR, files.users);
+  const users = readJsonSafe(usersPath, []);
+  const updated = users.filter(u => u.username !== username);
 
   if (users.length === updated.length) {
-    return res.status(404).send("User not found.")
+    return res.status(404).send("User not found");
   }
 
-  fs.writeFileSync('public/users.json', JSON.stringify(updated, null, 2))
-  res.send(`User "${username}" deleted.`)
-})
+  fs.writeFileSync(usersPath, JSON.stringify(updated, null, 2));
+  res.send(`✅ User "${username}" deleted`);
+});
+
+// 📚 Get word list
 app.get('/getWordList', (req, res) => {
-  const username = req.query.user
-  if (!username) return res.status(400).send("Username required")
-
-  const data = JSON.parse(fs.readFileSync('public/wordlists.json', 'utf-8'))
-  res.json(data[username] || [])
-})
-
-app.post('/saveWordList', (req, res) => {
-  const { username, words } = req.body
-  if (!username || !Array.isArray(words)) {
-    return res.status(400).send("Username and words array required")
+  const username = req.query.user;
+  if (!username || typeof username !== 'string') {
+    return res.status(400).send("Username required");
   }
 
-  const data = JSON.parse(fs.readFileSync('public/wordlists.json', 'utf-8'))
-  data[username] = words
-  fs.writeFileSync('public/wordlists.json', JSON.stringify(data, null, 2))
-  res.send(`✅ Word list saved for ${username}`)
-})
-app.get('/getResults', (req, res) => {
-  const results = JSON.parse(fs.readFileSync('public/results.json', 'utf-8'))
-  res.json(results)
-})
+  const wordlists = readJsonSafe(path.join(DATA_DIR, files.wordlists));
+  res.json(wordlists[username] || []);
+});
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`))
+// 💾 Save word list
+app.post('/saveWordList', (req, res) => {
+  const { username, words } = req.body;
+
+  if (
+    typeof username !== 'string' || 
+    !Array.isArray(words) || 
+    words.length > 100 || 
+    words.some(w => typeof w !== 'string')
+  ) {
+    return res.status(400).send("Invalid word list");
+  }
+
+  const userList = readJsonSafe(path.join(DATA_DIR, files.users), []);
+  if (!userList.find(u => u.username === username)) {
+    return res.status(404).send("User not found");
+  }
+
+  const wordlistsPath = path.join(DATA_DIR, files.wordlists);
+  const wordlists = readJsonSafe(wordlistsPath);
+  wordlists[username] = words;
+  fs.writeFileSync(wordlistsPath, JSON.stringify(wordlists, null, 2));
+  res.send(`✅ Word list saved for ${username}`);
+});
+
+// 📊 Get results
+app.get('/getResults', (req, res) => {
+  const results = readJsonSafe(path.join(DATA_DIR, files.results));
+  res.json(results);
+});
+
+// 🚀 Launch server
+app.listen(PORT, () => {
+  console.log(`✅ Server listening at http://localhost:${PORT}`);
+});
+app.post('/saveResults', (req, res) => {
+  const { username, result } = req.body;
+
+  if (
+    typeof username !== 'string' ||
+    typeof result !== 'object' ||
+    typeof result.score !== 'number' ||
+    typeof result.completed !== 'boolean' ||
+    !Array.isArray(result.answers)
+  ) {
+    return res.status(400).send("Invalid result format");
+  }
+
+  const resultsPath = path.join(DATA_DIR, files.results);
+  const allResults = readJsonSafe(resultsPath);
+
+  allResults[username] = result;
+
+  fs.writeFileSync(resultsPath, JSON.stringify(allResults, null, 2));
+  res.send(`✅ Results saved for ${username}`);
+});
+app.get('/getUsers', (req, res) => {
+  const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
+  res.json(users);
+});
