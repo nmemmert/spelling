@@ -49,6 +49,7 @@
     <div id="adminTabs">
       <button onclick="switchTab('tabUsers')" class="active">👤 Manage Users</button>
       <button onclick="switchTab('tabWords')">📝 Word Lists</button>
+      <button onclick="switchTab('tabAnalytics')">📊 Analytics</button>
       <button onclick="switchTab('tabResults')">📊 Results</button>
       <button onclick="switchTab('tabTheme')">🎨 Theme</button>
     </div>
@@ -103,6 +104,21 @@
       <button onclick="loadStudentResults()">Refresh Results</button>
       <ul id="resultsList"></ul>
     </div>
+
+<!-- 📊 Analytics Tab -->
+<div id="tabAnalytics" class="adminTab hidden">
+  <h3>Smart Analytics Overview</h3>
+  <ul id="analyticsSummary">
+    <li><strong>Average Score:</strong> –</li>
+    <li><strong>Total Completed Sessions:</strong> –</li>
+    <li><strong>Most Missed Word:</strong> –</li>
+  </ul>
+
+  <h4>Per-Student Breakdown</h4>
+  <ul id="studentBreakdown"></ul>
+
+  <button onclick="refreshAnalytics()">🔄 Refresh</button>
+</div>
 
     <!-- 🎨 Theme Tab -->
     <div id="tabTheme" class="adminTab hidden">
