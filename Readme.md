@@ -31,10 +31,79 @@ Then visit: 👉 http://localhost:3000
 
 ## ⚙️ Features
 
-- 🔐 Login system with **admin** and **student** roles  
-- 🌈 Theme switching *(Playground, Chalkboard, Galaxy, Nature)*  
-- 📚 Student-specific word list storage *(on server!)*  
-- 📤 Upload word lists or enter manually  
-- 🎮 Spelling game with instant feedback and retry mode  
-- 🧑‍🏫 Admin tools to manage users and word lists  
-- 🐳 Fully containerized via **Docker Compose**
+# 🎮 Student-Facing Features
+
+- **Word Game Session**  
+  Timed word presentation with answer input and summary feedback
+
+- **Retry Missed Words**  
+  Quick review round for any words answered incorrectly
+
+- **Result Summary Panel**  
+  Shows score, accuracy percentage, and answers with color-coded feedback
+
+- **🎖 Badge Display Section**  
+  Earned badges appear after each session based on milestone triggers
+
+- **Responsive Design**  
+  Touch-friendly interface optimized across devices
+
+---
+
+# 📋 Admin Panel Features
+
+- **User Management**  
+  Add and remove student accounts from the system
+
+- **Word List Editor**  
+  Customize spelling lists per student
+
+- **Game Preview & Play Trigger**  
+  Admins can test gameplay directly
+
+- **Analytics Tab**  
+  Aggregate stats like average scores, most missed words, and per-student breakdown
+
+- **Badge Viewer Tab**  
+  Shows every user's earned badges and lets admins inspect progress visually
+
+- **Reports Tab**  
+  Print-friendly HTML summaries per student with words, scores, and badges
+
+- **Clipboard Copy Button**  
+  Quick export for emailing or recordkeeping
+
+---
+
+# 🔄 Server-Side Logic
+
+- **Structured Result Saving**  
+  Stores user sessions with score, completion status, and answer accuracy
+
+- **Badge Awarding & Storage**  
+  Server tracks earned achievements in `badges.json`
+
+- **Safe Data Handling**  
+  Validates all inputs and formats before writing JSON
+
+---
+
+# 🚀 Upcoming Features (in progress or proposed)
+
+- **Multi-Session History Tracking**  
+  Store multiple results per user for trends and performance graphs
+
+- **Performance Trends Viewer**  
+  Line/bar charts to show score progression over time
+
+- **Practice Streak Badges**  
+  Awarded for consistent use across days
+
+- **Thematic Word Lists**  
+  Organize challenges by topic (e.g. animals, tech, holidays)
+
+- **Email Export Button**  
+  Opens a pre-filled `mailto:` with progress summary text
+
+- **PDF Export Option**  
+  Convert report data into downloadable documents
