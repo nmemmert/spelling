@@ -15,7 +15,8 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 const files = {
   users: 'users.json',
   wordlists: 'wordlists.json',
-  results: 'results.json'
+  results: 'results.json',
+  badges: 'badges.json'
 };
 
 for (const file of Object.values(files)) {
@@ -163,4 +164,31 @@ app.post('/saveResults', (req, res) => {
 app.get('/getUsers', (req, res) => {
   const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
   res.json(users);
+});
+
+
+const badgePath = path.join(DATA_DIR, files.badges);
+app.post('/awardBadges', (req, res) => {
+  const { username, badges } = req.body;
+  if (
+    typeof username !== 'string' ||
+    !Array.isArray(badges)
+  ) return res.status(400).send("Invalid badge format");
+
+  const allBadges = readJsonSafe(badgePath);
+  if (!allBadges[username]) allBadges[username] = [];
+
+  badges.forEach(b => {
+    if (!allBadges[username].includes(b)) {
+      allBadges[username].push(b);
+    }
+  });
+
+  fs.writeFileSync(badgePath, JSON.stringify(allBadges, null, 2));
+  res.send(`🎉 Badges updated for ${username}`);
+});
+app.get('/getBadges', (req, res) => {
+  const badgePath = path.join(DATA_DIR, files.badges);
+  const badges = readJsonSafe(badgePath);
+  res.json(badges);
 });

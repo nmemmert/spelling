@@ -10,7 +10,6 @@ function showStudent() {
   studentPanel?.classList.remove('hidden');
   adminPanel?.classList.add('hidden');
 
-  // Delay button reveal until DOM is fully settled
   setTimeout(() => {
     const btn = document.getElementById('startGameBtn');
     if (btn) {
@@ -41,6 +40,7 @@ async function startGame() {
   results = [];
 
   document.getElementById('summary')?.classList.add('hidden');
+  document.getElementById('badgeDisplay')?.classList.add('hidden');
   showWord();
 }
 
@@ -101,32 +101,57 @@ function showSummary() {
 
   summary.classList.remove('hidden');
 
-  // 📨 Save results to server
-const user = JSON.parse(localStorage.getItem('loggedInUser'));
-if (user) {
-  console.log("📡 Sending results to server:", {
-    username: user.username,
-    results
-  });
+  // 🏆 Badge evaluation
+  const earnedBadges = [];
+  if (correct === words.length) earnedBadges.push("Perfect Round");
+  if (missed.length === 0) earnedBadges.push("No Misses");
 
-const score = correct;
-const completed = true;
+  const user = JSON.parse(localStorage.getItem('loggedInUser'));
+  if (user) {
+    // 📡 Save structured results
+    fetch('/saveResults', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: user.username,
+        result: {
+          score: correct,
+          completed: true,
+          answers: results.map(({ word, attempt }) => ({
+            word,
+            correct: word.toLowerCase() === attempt.toLowerCase()
+          }))
+        }
+      })
+    });
 
-fetch('/saveResults', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    username: user.username,
-    result: {
-      score,
-      completed,
-      answers: results.map(({ word, attempt }) => ({
-        word,
-        correct: word.toLowerCase() === attempt.toLowerCase()
-      }))
+    // 🎖 Send earned badges
+    if (earnedBadges.length) {
+      fetch('/awardBadges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: user.username,
+          badges: earnedBadges
+        })
+      });
+
+      // 🎨 Display badges
+      const badgeSection = document.getElementById("badgeDisplay");
+      const badgeList = document.getElementById("badgeList");
+
+      badgeList.innerHTML = "";
+      earnedBadges.forEach(b => {
+        const li = document.createElement("li");
+        li.textContent = `🏅 ${b}`;
+        badgeList.appendChild(li);
+      });
+
+      badgeSection.classList.remove("hidden");
+    } else {
+      document.getElementById("badgeDisplay")?.classList.add("hidden");
     }
-  })
-});
+  }
 }
 
 // 🔁 Retry only the missed words
@@ -136,10 +161,6 @@ function retryMissed(missedWords) {
   results = [];
 
   document.getElementById('summary')?.classList.add('hidden');
+  document.getElementById('badgeDisplay')?.classList.add('hidden');
   showWord();
-}
-
-// added remove later
-console.log("showStudent fired");
-// added remove later
 }
