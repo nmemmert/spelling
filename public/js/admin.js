@@ -193,12 +193,18 @@ function switchTab(targetId) {
   document.querySelectorAll('#adminTabs button').forEach(btn => btn.classList.remove('active'));
 
   document.getElementById(targetId).classList.remove('hidden');
+
   const buttons = document.querySelectorAll('#adminTabs button');
   buttons.forEach(btn => {
     if (btn.getAttribute('onclick')?.includes(targetId)) {
       btn.classList.add('active');
     }
   });
+
+  // 🏆 Load badge viewer if needed
+  if (targetId === 'tabBadges') {
+    loadBadgeViewer();
+  }
 }
 async function loadUserDropdowns() {
   try {
@@ -277,4 +283,43 @@ async function refreshAnalytics() {
     console.error("📉 Failed to refresh analytics:", err);
     summary.innerHTML = '<li style="color:red">Error loading analytics.</li>';
   }
+}
+async function loadBadgeViewer() {
+  const res = await fetch('/getBadges');
+  const badgeData = await res.json();
+
+  const userList = document.getElementById("badgeUserList");
+  userList.innerHTML = "";
+
+  for (const username in badgeData) {
+    const li = document.createElement("li");
+    li.innerHTML = `<button onclick="showUserBadges('${username}')">${username}</button>`;
+    userList.appendChild(li);
+  }
+}
+
+function showUserBadges(username) {
+  fetch('/getBadges')
+    .then(res => res.json())
+    .then(data => {
+      const badges = data[username] || [];
+      const title = document.getElementById("badgeUserTitle");
+      const badgeList = document.getElementById("badgeUserBadges");
+      const details = document.getElementById("badgeDetails");
+
+      title.textContent = `Badges for ${username}`;
+      badgeList.innerHTML = "";
+
+      if (!badges.length) {
+        badgeList.innerHTML = "<li><em>No badges earned yet.</em></li>";
+      } else {
+        badges.forEach(b => {
+          const li = document.createElement("li");
+          li.textContent = `🏅 ${b}`;
+          badgeList.appendChild(li);
+        });
+      }
+
+      details.classList.remove("hidden");
+    });
 }

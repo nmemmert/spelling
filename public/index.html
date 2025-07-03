@@ -51,6 +51,7 @@
       <button onclick="switchTab('tabWords')">📝 Word Lists</button>
       <button onclick="switchTab('tabAnalytics')">📊 Analytics</button>
       <button onclick="switchTab('tabResults')">📊 Results</button>
+      <button onclick="switchTab('tabBadges')">🎖 Badges</button>
       <button onclick="switchTab('tabTheme')">🎨 Theme</button>
     </div>
 
@@ -119,7 +120,15 @@
 
   <button onclick="refreshAnalytics()">🔄 Refresh</button>
 </div>
-
+<!-- 🎖 Badges -->
+<div id="tabBadges" class="adminTab hidden">
+  <h3>🎖 Badge Viewer</h3>
+  <ul id="badgeUserList"></ul>
+  <div id="badgeDetails" class="hidden">
+    <h4 id="badgeUserTitle"></h4>
+    <ul id="badgeUserBadges"></ul>
+  </div>
+</div>
     <!-- 🎨 Theme Tab -->
     <div id="tabTheme" class="adminTab hidden">
       <h3>🎨 Select Theme</h3>
@@ -146,7 +155,10 @@
       <input type="text" id="userInput" placeholder="Type your answer" autocomplete="off" />
       <button onclick="submitAnswer()">Submit</button>
     </div>
-
+<div id="badgeDisplay" class="badgeSection hidden">
+  <h3>🎖 Badges Earned</h3>
+  <ul id="badgeList"></ul>
+</div>
     <div id="summary" class="hidden"></div>
   </div>
 </body>
