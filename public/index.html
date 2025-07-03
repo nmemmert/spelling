@@ -51,6 +51,7 @@
       <button onclick="switchTab('tabWords')">📝 Word Lists</button>
       <button onclick="switchTab('tabAnalytics')">📊 Analytics</button>
       <button onclick="switchTab('tabResults')">📊 Results</button>
+      <button onclick="switchTab('tabReports')">📘 Reports</button>
       <button onclick="switchTab('tabBadges')">🎖 Badges</button>
       <button onclick="switchTab('tabTheme')">🎨 Theme</button>
     </div>
@@ -140,6 +141,27 @@
       </select>
     </div>
   </div>
+
+  <!-- 🧾 Student Report Viewer -->
+<div id="tabReports" class="adminTab hidden">
+  <h3>📘 Student Progress Report</h3>
+  <label for="reportUser">Select Student:</label>
+  <select id="reportUser" onchange="loadStudentReport(this.value)">
+    <option value="">-- Select --</option>
+  </select>
+
+  <div id="reportContent" class="hidden">
+    <h4 id="reportTitle"></h4>
+    <p><strong>Last Score:</strong> <span id="reportScore"></span></p>
+    <p><strong>Words Attempted:</strong></p>
+    <ul id="reportWords"></ul>
+    <p><strong>Badges Earned:</strong></p>
+    <ul id="reportBadges"></ul>
+
+    <button onclick="window.print()">🖨️ Print Report</button>
+    <button onclick="copyReportToClipboard()">📋 Copy to Clipboard</button>
+  </div>
+</div>
 
   <!-- 👩‍🎓 Student Panel -->
   <div id="studentPanel" class="hidden">
