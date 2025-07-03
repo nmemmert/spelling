@@ -1,6 +1,9 @@
 # 📝 Spelling App
 
 A lightweight, multi-user spelling practice app with admin controls, customizable themes, and per-user word list management. Built with **Node.js**, **Express**, and **Docker**.
+---
+## [Watch the video](https://www.youtube.com/watch?v=K29zCFZPEjE)
+[![alt text](https://img.youtube.com/vi/K29zCFZPEjE/0.jpg)](https://www.youtube.com/watch?v=K29zCFZPEjE)
 
 ---
 
