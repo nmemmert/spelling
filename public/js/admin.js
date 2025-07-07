@@ -189,25 +189,36 @@ async function loadStudentResults() {
 
 // 🧭 Admin tab switcher
 function switchTab(targetId) {
-  document.querySelectorAll('.adminTab').forEach(tab => tab.classList.add('hidden'));
-  document.querySelectorAll('#adminTabs button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.adminTab').forEach(tab =>
+    tab.classList.add('hidden')
+  );
+  document.querySelectorAll('#adminTabs button').forEach(btn =>
+    btn.classList.remove('active')
+  );
 
+  // Show the selected tab
   document.getElementById(targetId).classList.remove('hidden');
 
-  const buttons = document.querySelectorAll('#adminTabs button');
-  buttons.forEach(btn => {
+  // Highlight the active button
+  document.querySelectorAll('#adminTabs button').forEach(btn => {
     if (btn.getAttribute('onclick')?.includes(targetId)) {
       btn.classList.add('active');
     }
   });
 
-  // 🏆 Load badge viewer if needed
+  // 🔁 Trigger tab-specific logic
+  if (targetId === 'tabSessions') {
+    loadSessionHistory();
+  }
+  if (targetId === 'tabReports') {
+    loadStudentNamesForReport();
+  }
   if (targetId === 'tabBadges') {
     loadBadgeViewer();
   }
-  // Reports
-  if (targetId === 'tabReports') {
-  loadStudentNamesForReport();
+  if (targetId === 'tabSessions') {
+  populateSessionUserDropdown();
+  document.getElementById("userSessionList").innerHTML = "";
 }
 }
 async function loadUserDropdowns() {
@@ -387,4 +398,63 @@ function copyReportToClipboard() {
   const summary = `${name}\nScore: ${score}\n\nWords:\n${words}\n\nBadges:\n${badges}`;
   navigator.clipboard.writeText(summary);
   alert("✅ Report copied to clipboard");
+}
+async function loadSessionHistory() {
+  const res = await fetch('/getResults');
+  const allResults = await res.json();
+
+  const list = document.getElementById("sessionSummaryList");
+  list.innerHTML = "";
+
+  for (const username in allResults) {
+    const sessions = allResults[username];
+    const header = document.createElement("li");
+    header.innerHTML = `<strong>${username}</strong>`;
+    list.appendChild(header);
+
+    sessions.forEach(({ score, answers, timestamp }, index) => {
+      const li = document.createElement("li");
+      const dateStr = new Date(timestamp).toLocaleString();
+      const total = answers.length;
+      li.textContent = `🗓️ ${dateStr} — ${score}/${total} correct`;
+      list.appendChild(li);
+    });
+  }
+}
+async function populateSessionUserDropdown() {
+  const res = await fetch('/getResults');
+  const allResults = await res.json();
+  const select = document.getElementById("sessionUserSelect");
+
+  select.innerHTML = `<option value="">-- Select --</option>`;
+  Object.keys(allResults).forEach(username => {
+    const opt = document.createElement("option");
+    opt.value = username;
+    opt.textContent = username;
+    select.appendChild(opt);
+  });
+}
+
+async function loadUserSessions(username) {
+  const res = await fetch('/getResults');
+  const allResults = await res.json();
+
+  const userSessions = allResults[username] || [];
+  const list = document.getElementById("userSessionList");
+  list.innerHTML = "";
+
+  userSessions.forEach(({ score, answers, timestamp }) => {
+    const sessionItem = document.createElement("li");
+    const dateStr = new Date(timestamp).toLocaleString();
+    const total = answers.length;
+
+    let html = `<p>🗓️ <strong>${dateStr}</strong> — ${score}/${total} correct</p><ul>`;
+    answers.forEach(({ word, correct }) => {
+      html += `<li>${correct ? '✅' : '❌'} ${word}</li>`;
+    });
+    html += "</ul>";
+
+    sessionItem.innerHTML = html;
+    list.appendChild(sessionItem);
+  });
 }

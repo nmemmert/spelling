@@ -52,6 +52,7 @@
       <button onclick="switchTab('tabAnalytics')">📊 Analytics</button>
       <button onclick="switchTab('tabResults')">📊 Results</button>
       <button onclick="switchTab('tabReports')">📘 Reports</button>
+      <button onclick="switchTab('tabSessions')">📆 Sessions</button>
       <button onclick="switchTab('tabBadges')">🎖 Badges</button>
       <button onclick="switchTab('tabTheme')">🎨 Theme</button>
     </div>
@@ -121,6 +122,7 @@
 
   <button onclick="refreshAnalytics()">🔄 Refresh</button>
 </div>
+
 <!-- 🎖 Badges -->
 <div id="tabBadges" class="adminTab hidden">
   <h3>🎖 Badge Viewer</h3>
@@ -130,6 +132,7 @@
     <ul id="badgeUserBadges"></ul>
   </div>
 </div>
+
     <!-- 🎨 Theme Tab -->
     <div id="tabTheme" class="adminTab hidden">
       <h3>🎨 Select Theme</h3>
@@ -162,6 +165,17 @@
     <button onclick="copyReportToClipboard()">📋 Copy to Clipboard</button>
   </div>
 </div>
+
+<div id="tabSessions" class="adminTab hidden">
+  <h3>📘 Archived Sessions</h3>
+  <label for="sessionUserSelect">Select Student:</label>
+  <select id="sessionUserSelect" onchange="loadUserSessions(this.value)">
+    <option value="">-- Select --</option>
+  </select>
+
+  <ul id="userSessionList"></ul>
+</div>
+
 
   <!-- 👩‍🎓 Student Panel -->
   <div id="studentPanel" class="hidden">

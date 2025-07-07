@@ -1,38 +1,44 @@
 {
-  "student1": {
-    "score": 8,
-    "completed": true,
-    "answers": [
-      {
-        "word": "apple",
-        "correct": true
-      },
-      {
-        "word": "banana",
-        "correct": false
-      },
-      {
-        "word": "grape",
-        "correct": true
-      }
-    ]
-  },
-  "nate": {
-    "score": 1,
-    "completed": true,
-    "answers": [
-      {
-        "word": "not",
-        "correct": false
-      },
-      {
-        "word": "bot",
-        "correct": false
-      },
-      {
-        "word": "snot",
-        "correct": true
-      }
-    ]
-  }
+  "student1": [
+    {
+      "score": 8,
+      "completed": true,
+      "answers": [
+        {
+          "word": "apple",
+          "correct": true
+        },
+        {
+          "word": "banana",
+          "correct": false
+        },
+        {
+          "word": "grape",
+          "correct": true
+        }
+      ],
+      "timestamp": "2025-07-07T12:14:21.057Z"
+    }
+  ],
+  "nate": [
+    {
+      "score": 1,
+      "completed": true,
+      "answers": [
+        {
+          "word": "not",
+          "correct": false
+        },
+        {
+          "word": "bot",
+          "correct": false
+        },
+        {
+          "word": "snot",
+          "correct": true
+        }
+      ],
+      "timestamp": "2025-07-07T12:14:21.058Z"
+    }
+  ]
 }

@@ -142,24 +142,26 @@ app.listen(PORT, () => {
 });
 app.post('/saveResults', (req, res) => {
   const { username, result } = req.body;
-
   if (
     typeof username !== 'string' ||
     typeof result !== 'object' ||
     typeof result.score !== 'number' ||
     typeof result.completed !== 'boolean' ||
     !Array.isArray(result.answers)
-  ) {
-    return res.status(400).send("Invalid result format");
-  }
+  ) return res.status(400).send("Invalid result format");
 
   const resultsPath = path.join(DATA_DIR, files.results);
   const allResults = readJsonSafe(resultsPath);
 
-  allResults[username] = result;
+  if (!allResults[username]) allResults[username] = [];
+
+  allResults[username].push({
+    ...result,
+    timestamp: new Date().toISOString()
+  });
 
   fs.writeFileSync(resultsPath, JSON.stringify(allResults, null, 2));
-  res.send(`✅ Results saved for ${username}`);
+  res.send(`✅ Results archived for ${username}`);
 });
 app.get('/getUsers', (req, res) => {
   const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
