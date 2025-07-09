@@ -8,10 +8,12 @@ const PORT = 3000;
 app.use(express.static('public'));
 app.use(express.json());
 
-// 🗂 Ensure data directory and files exist
+// 🗂 Directories
 const DATA_DIR = path.join(__dirname, 'data');
+const SEED_DIR = path.join(__dirname, 'seed');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
+// 🗃 File mapping
 const files = {
   users: 'users.json',
   wordlists: 'wordlists.json',
@@ -19,16 +21,28 @@ const files = {
   badges: 'badges.json'
 };
 
-for (const file of Object.values(files)) {
-  const target = path.join(DATA_DIR, file);
-  if (!fs.existsSync(target)) {
-    const defaultData = file === 'users.json' ? '[]' : '{}';
-    fs.writeFileSync(target, defaultData);
-    console.log(`📄 Initialized ${file}`);
+// 🌱 Initialize data from seeds if missing/empty
+function ensureFileWithSeed(name, fallback = '{}') {
+  const targetPath = path.join(DATA_DIR, name);
+  const seedPath = path.join(SEED_DIR, name);
+
+  if (!fs.existsSync(targetPath) || fs.readFileSync(targetPath, 'utf-8').trim() === '') {
+    if (fs.existsSync(seedPath)) {
+      fs.copyFileSync(seedPath, targetPath);
+      console.log(`🌱 Seeded ${name} from seed/${name}`);
+    } else {
+      fs.writeFileSync(targetPath, fallback);
+      console.log(`📄 Initialized ${name} with default`);
+    }
   }
 }
 
-// 🛡 Safe JSON reader
+for (const [key, file] of Object.entries(files)) {
+  const defaultData = file === 'users.json' ? '[]' : '{}';
+  ensureFileWithSeed(file, defaultData);
+}
+
+// 🔐 JSON utility
 function readJsonSafe(filePath, fallback = {}) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
@@ -37,41 +51,31 @@ function readJsonSafe(filePath, fallback = {}) {
   }
 }
 
-// 🔐 Verify user credentials
+// 🔐 Verify login
 app.post('/verifyUser', (req, res) => {
   const { username, hash } = req.body;
   if (typeof username !== 'string' || typeof hash !== 'string') {
     return res.status(400).send("Invalid credentials format");
   }
-
   const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
   const user = users.find(u => u.username === username && u.hash === hash);
-
-  if (user) {
-    res.json(user);
-  } else {
-    res.status(401).send("Invalid login");
-  }
+  user ? res.json(user) : res.status(401).send("Invalid login");
 });
 
-// ➕ Add new user
+// ➕ Add user
 app.post('/addUser', (req, res) => {
   const { username, hash, role } = req.body;
-
   if (
     typeof username !== 'string' || 
     typeof hash !== 'string' || 
     typeof role !== 'string' || 
     !['admin', 'student'].includes(role.trim().toLowerCase())
-  ) {
-    return res.status(400).send("Invalid user data");
-  }
+  ) return res.status(400).send("Invalid user data");
 
   const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
   if (users.find(u => u.username === username)) {
     return res.status(409).send("User already exists");
   }
-
   users.push({ username: username.trim(), hash, role: role.trim() });
   fs.writeFileSync(path.join(DATA_DIR, files.users), JSON.stringify(users, null, 2));
   res.send(`✅ User "${username}" added`);
@@ -89,34 +93,28 @@ app.post('/deleteUser', (req, res) => {
   if (users.length === updated.length) {
     return res.status(404).send("User not found");
   }
-
   fs.writeFileSync(usersPath, JSON.stringify(updated, null, 2));
   res.send(`✅ User "${username}" deleted`);
 });
 
-// 📚 Get word list
+// 📚 Word list
 app.get('/getWordList', (req, res) => {
   const username = req.query.user;
   if (!username || typeof username !== 'string') {
     return res.status(400).send("Username required");
   }
-
   const wordlists = readJsonSafe(path.join(DATA_DIR, files.wordlists));
   res.json(wordlists[username] || []);
 });
 
-// 💾 Save word list
 app.post('/saveWordList', (req, res) => {
   const { username, words } = req.body;
-
   if (
-    typeof username !== 'string' || 
-    !Array.isArray(words) || 
-    words.length > 100 || 
+    typeof username !== 'string' ||
+    !Array.isArray(words) ||
+    words.length > 100 ||
     words.some(w => typeof w !== 'string')
-  ) {
-    return res.status(400).send("Invalid word list");
-  }
+  ) return res.status(400).send("Invalid word list");
 
   const userList = readJsonSafe(path.join(DATA_DIR, files.users), []);
   if (!userList.find(u => u.username === username)) {
@@ -130,16 +128,12 @@ app.post('/saveWordList', (req, res) => {
   res.send(`✅ Word list saved for ${username}`);
 });
 
-// 📊 Get results
+// 📊 Results
 app.get('/getResults', (req, res) => {
   const results = readJsonSafe(path.join(DATA_DIR, files.results));
   res.json(results);
 });
 
-// 🚀 Launch server
-app.listen(PORT, () => {
-  console.log(`✅ Server listening at http://localhost:${PORT}`);
-});
 app.post('/saveResults', (req, res) => {
   const { username, result } = req.body;
   if (
@@ -152,31 +146,30 @@ app.post('/saveResults', (req, res) => {
 
   const resultsPath = path.join(DATA_DIR, files.results);
   const allResults = readJsonSafe(resultsPath);
-
   if (!allResults[username]) allResults[username] = [];
 
   allResults[username].push({
     ...result,
     timestamp: new Date().toISOString()
   });
-
   fs.writeFileSync(resultsPath, JSON.stringify(allResults, null, 2));
   res.send(`✅ Results archived for ${username}`);
 });
+
+// 👥 Get users
 app.get('/getUsers', (req, res) => {
   const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
   res.json(users);
 });
 
-
-const badgePath = path.join(DATA_DIR, files.badges);
+// 🎖 Badges
 app.post('/awardBadges', (req, res) => {
   const { username, badges } = req.body;
-  if (
-    typeof username !== 'string' ||
-    !Array.isArray(badges)
-  ) return res.status(400).send("Invalid badge format");
+  if (typeof username !== 'string' || !Array.isArray(badges)) {
+    return res.status(400).send("Invalid badge format");
+  }
 
+  const badgePath = path.join(DATA_DIR, files.badges);
   const allBadges = readJsonSafe(badgePath);
   if (!allBadges[username]) allBadges[username] = [];
 
@@ -185,12 +178,17 @@ app.post('/awardBadges', (req, res) => {
       allBadges[username].push(b);
     }
   });
-
   fs.writeFileSync(badgePath, JSON.stringify(allBadges, null, 2));
   res.send(`🎉 Badges updated for ${username}`);
 });
+
 app.get('/getBadges', (req, res) => {
   const badgePath = path.join(DATA_DIR, files.badges);
   const badges = readJsonSafe(badgePath);
   res.json(badges);
+});
+
+// 🚀 Server start
+app.listen(PORT, () => {
+  console.log(`✅ Server listening at http://localhost:${PORT}`);
 });
