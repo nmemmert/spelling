@@ -99,12 +99,30 @@ app.post('/deleteUser', (req, res) => {
 
 // 📚 Word list
 app.get('/getWordList', (req, res) => {
-  const username = req.query.user;
-  if (!username || typeof username !== 'string') {
-    return res.status(400).send("Username required");
-  }
-  const wordlists = readJsonSafe(path.join(DATA_DIR, files.wordlists));
-  res.json(wordlists[username] || []);
+    try {
+        const { username } = req.query;
+        if (!username) {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+
+        // Add debug logging
+        console.log('Requested username:', username);
+        
+        const wordListPath = path.join(DATA_DIR, 'wordlists.json');
+        console.log('Reading from:', wordListPath);
+        
+        const wordLists = readJsonSafe(wordListPath, {});
+        console.log('Available wordlists:', Object.keys(wordLists));
+        
+        // Get words for specific user
+        const userWords = wordLists[username] || [];
+        console.log(`Words found for ${username}:`, userWords);
+        
+        res.json({ words: userWords });
+    } catch (error) {
+        console.error('Error in getWordList:', error);
+        res.status(500).json({ error: 'Failed to get word list' });
+    }
 });
 
 app.post('/saveWordList', (req, res) => {

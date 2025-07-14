@@ -1,82 +1,118 @@
 // 🌍 Game state
-let allWords = [], words = [], current = 0, results = [];
+let words = [];
+let currentWord = '';
+let currentIndex = 0;
+let results = [];
+let typingWords = [];
 
-// 👩‍🎓 Show student interface
 function showStudent() {
-  console.log("🔊 showStudent() executed");
-
-  const studentPanel = document.getElementById('studentPanel');
-  const adminPanel = document.getElementById('adminPanel');
-  studentPanel?.classList.remove('hidden');
-  adminPanel?.classList.add('hidden');
-
-  setTimeout(() => {
-    const btn = document.getElementById('startGameBtn');
-    if (btn) {
-      console.log("🎯 Button found in delayed reveal");
-      btn.classList.remove('hidden');
-      btn.style.display = 'inline-block';
+    console.log("🔊 Showing student panel");
+    
+    // Hide admin panel
+    document.getElementById('adminPanel')?.classList.add('hidden');
+    
+    // Show student panel and its components
+    const studentPanel = document.getElementById('studentPanel');
+    studentPanel?.classList.remove('hidden');
+    
+    // Get the buttons and explicitly set their properties
+    const gameBtn = document.getElementById('startGameBtn');
+    const typingBtn = document.getElementById('startTypingBtn');
+    
+    if (gameBtn && typingBtn) {
+        console.log("Found buttons, making visible");
+        // Remove all possible hiding classes/styles
+        gameBtn.classList.remove('hidden');
+        typingBtn.classList.remove('hidden');
+        
+        // Explicitly set display style
+        gameBtn.style.cssText = 'display: inline-block !important; visibility: visible !important;';
+        typingBtn.style.cssText = 'display: inline-block !important; visibility: visible !important;';
     } else {
-      console.warn("⚠️ Button still missing after timeout");
+        console.error("Could not find game buttons");
     }
-  }, 100);
 }
 
 // 🚀 Begin game session
 async function startGame() {
-  const user = JSON.parse(localStorage.getItem('loggedInUser'));
-  if (!user) return;
+    console.log('🎮 Starting spelling game');
+    
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!user) {
+        alert('Please log in first');
+        return;
+    }
 
-  const res = await fetch(`/getWordList?user=${encodeURIComponent(user.username)}`);
-  allWords = await res.json();
+    try {
+        // Show game section
+        document.getElementById('gameSection').classList.remove('hidden');
+        document.getElementById('wordBox').textContent = 'Loading...';
+        document.getElementById('summary')?.classList.add('hidden');
+        document.getElementById('badgeDisplay')?.classList.add('hidden');
 
-  if (!allWords.length) {
-    alert("No words found. Please add words in Admin Panel.");
-    return;
-  }
+        // Fetch words
+        const response = await fetch(`/getWordList?username=${user.username}`);
+        const data = await response.json();
+        console.log('Received words:', data);
 
-  words = [...allWords];
-  current = 0;
-  results = [];
+        if (!data.words || data.words.length === 0) {
+            alert('No words found for practice');
+            return;
+        }
 
-  document.getElementById('summary')?.classList.add('hidden');
-  document.getElementById('badgeDisplay')?.classList.add('hidden');
-  showWord();
+        // Start game
+        words = [...data.words];
+        currentIndex = 0;
+        results = [];  // Reset results array
+        showWord();
+
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to load words');
+    }
 }
 
-// 🔤 Show a word, then hide after timeout
 function showWord() {
-  const wordBox = document.getElementById('wordBox');
-  const wordEl = document.getElementById('word');
+    if (currentIndex >= words.length) {
+        showSummary();
+        return;
+    }
 
-  if (!words[current]) {
-    endGame(); return;
-  }
+    currentWord = words[currentIndex];
+    console.log('Current word:', currentWord);
 
-  wordEl.textContent = words[current];
-  wordBox.classList.remove('hidden');
+    // Show word briefly then hide
+    const wordBox = document.getElementById('wordBox');
+    const inputSection = document.getElementById('inputSection');
+    
+    wordBox.textContent = currentWord;
+    inputSection.classList.add('hidden');
 
-  setTimeout(() => {
-    wordBox.classList.add('hidden');
-    document.getElementById('inputSection').classList.remove('hidden');
-    document.getElementById('userInput').value = '';
-    document.getElementById('userInput').focus();
-  }, 2000);
+    setTimeout(() => {
+        wordBox.textContent = '';
+        inputSection.classList.remove('hidden');
+        document.getElementById('userInput').value = '';
+        document.getElementById('userInput').focus();
+    }, 2000);
 }
 
 // 📝 Check user’s answer and move to next
 function submitAnswer() {
-  const input = document.getElementById('userInput').value.trim();
-  results.push({ word: words[current], attempt: input });
-  current++;
+    const input = document.getElementById('userInput').value.trim();
+    
+    // Record the attempt
+    results.push({
+        word: currentWord,
+        attempt: input
+    });
 
-  document.getElementById('inputSection').classList.add('hidden');
-
-  if (current < words.length) {
-    showWord();
-  } else {
-    showSummary();
-  }
+    if (input.toLowerCase() === currentWord.toLowerCase()) {
+        currentIndex++;
+        document.getElementById('inputSection').classList.add('hidden');
+        showWord();
+    } else {
+        alert('Try again!');
+    }
 }
 
 // 📊 Show results summary
@@ -163,4 +199,81 @@ function retryMissed(missedWords) {
   document.getElementById('summary')?.classList.add('hidden');
   document.getElementById('badgeDisplay')?.classList.add('hidden');
   showWord();
+}
+
+// New function to start typing practice
+async function startTypingPractice() {
+    console.log("⌨️ Starting typing practice...");
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!user) {
+        console.error("No user logged in");
+        return;
+    }
+
+    try {
+        const res = await fetch(`/getWordList?username=${encodeURIComponent(user.username)}`);
+        const data = await res.json();
+        const words = data.words || [];
+
+        if (!words.length) {
+            alert("No words found for practice. Please contact your teacher.");
+            return;
+        }
+
+        // Hide game section, show typing section
+        document.getElementById('gameSection')?.classList.add('hidden');
+        document.getElementById('typingSection').classList.remove('hidden');
+        
+        // Initialize typing practice
+        localStorage.setItem('typingWords', JSON.stringify(words));
+        showNextTypingSentence();
+    } catch (error) {
+        console.error('Error starting typing practice:', error);
+        alert('Error loading typing practice. Please try again.');
+    }
+}
+
+function createSentenceWithWord(word) {
+    const templates = [
+        `The word to spell is "${word}."`,
+        `Please spell the word "${word}."`,
+        `Type the word "${word}" carefully.`,
+        `Practice spelling "${word}" in this sentence.`
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+}
+
+function showNextTypingSentence() {
+    console.log('Showing next sentence...'); // Debug log
+    
+    if (!typingWords.length) {
+        document.getElementById('typingPrompt').textContent = '🎉 All done! Great job!';
+        document.getElementById('typingInput').disabled = true;
+        return;
+    }
+
+    const word = typingWords[0];
+    currentSentence = createSentenceWithWord(word);
+    console.log('Current sentence:', currentSentence); // Debug log
+
+    document.getElementById('typingPrompt').textContent = currentSentence;
+    document.getElementById('typingInput').value = '';
+    document.getElementById('typingInput').disabled = false;
+    document.getElementById('typingInput').focus();
+    document.getElementById('typingFeedback').textContent = '';
+}
+
+function submitTyping() {
+    const input = document.getElementById('typingInput').value.trim();
+    const feedback = document.getElementById('typingFeedback');
+
+    if (input.toLowerCase() === currentSentence.toLowerCase()) {
+        feedback.textContent = '✅ Perfect!';
+        feedback.style.color = 'green';
+        typingWords.shift(); // Remove completed word
+        setTimeout(showNextTypingSentence, 1500);
+    } else {
+        feedback.textContent = '❌ Try again. Type the exact sentence as shown.';
+        feedback.style.color = 'red';
+    }
 }

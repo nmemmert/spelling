@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spelling App with Roles</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- 🔧 Script Load Order -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/ui.js" defer></script>
+  <script src="js/themes.js" defer></script>
+  <script src="js/game.js"></script>
+  <script src="js/admin.js" defer></script>
+  <script src="js/main.js" defer></script>
+  <script src="js/typing.js" defer></script>
+</head>
+
+<body>
+  <h1>Spelling Practice</h1>
+
+  <!-- 🏳️ Role Banner -->
+  <div id="roleBanner" class="banner hidden"></div>
+
+  <!-- 👤 Login Panel -->
+  <div id="loginPanel">
+    <h2>User Login</h2>
+    <form onsubmit="event.preventDefault(); verifyLogin();">
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Login</button>
+    </form>
+    <p id="loginMessage"></p>
+  </div>
+
+  <!-- 🔀 Role-Based Navigation -->
+  <div id="nav" class="hidden">
+    <p><strong id="userInfo"></strong></p>
+    <button onclick="showAdmin()" id="adminBtn" class="hidden">Admin Panel</button>
+    <button onclick="showStudent()" id="studentBtn" class="hidden">Student Panel</button>
+    <button onclick="logoutUser()" id="logoutBtn">Log Out</button>
+  </div>
+
+  <!-- 👨‍🏫 Admin Panel -->
+  <div id="adminPanel" class="hidden">
+    <h2>👨‍🏫 Admin Panel</h2>
+
+    <!-- 🔘 Tabs -->
+    <div id="adminTabs">
+      <button onclick="switchTab('tabUsers')" class="active">👤 Manage Users</button>
+      <button onclick="switchTab('tabWords')">📝 Word Lists</button>
+      <button onclick="switchTab('tabAnalytics')">📊 Analytics</button>
+      <button onclick="switchTab('tabResults')">📊 Results</button>
+      <button onclick="switchTab('tabReports')">📘 Reports</button>
+      <button onclick="switchTab('tabSessions')">📆 Sessions</button>
+      <button onclick="switchTab('tabBadges')">🎖 Badges</button>
+      <button onclick="switchTab('tabTheme')">🎨 Theme</button>
+      <button onclick="switchTab('tabTyping')">⌨️ Typing Practice</button>
+    </div>
+
+    <!-- 👥 Users Tab -->
+    <div id="tabUsers" class="adminTab">
+      <h3>Add New User</h3>
+      <form onsubmit="event.preventDefault(); addNewUser();">
+        <input type="text" id="newUsername" placeholder="Username" required />
+        <input type="password" id="newPassword" placeholder="Password" required />
+        <select id="newRole">
+          <option value="student">Student</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="submit">Add User</button>
+      </form>
+
+      <h3>Delete Users</h3>
+      <select id="userDropdown" onchange="selectUserAction(this.value)">
+        <option value="">-- Select a user --</option>
+      </select>
+    </div>
+
+    <!-- 📝 Word List Tab -->
+    <div id="tabWords" class="adminTab hidden">
+      <h3>Edit Word List for:</h3>
+      <select id="wordUserSelect" class="word-user-dropdown" onchange="loadWordsForSelectedUser()">
+        <option value="">-- Select a user --</option>
+      </select>
+
+      <h2>Enter Spelling Words</h2>
+      <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
+      <button onclick="saveWords()">Save Word List</button>
+      <button onclick="clearWords()">Clear Saved Words</button>
+
+      <h3>Upload a Word File</h3>
+      <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
+
+      <p><strong>Current Word List:</strong></p>
+      <ul id="wordListDisplay"></ul>
+
+      <h3>📋 View Word List by User:</h3>
+      <select id="viewUserSelect" class="word-user-dropdown" onchange="displayWordListForSelectedUser()">
+        <option value="">-- Select a user --</option>
+      </select>
+      <ul id="userWordListDisplay"></ul>
+    </div>
+
+    <!-- 📊 Results Tab -->
+    <div id="tabResults" class="adminTab hidden">
+      <h3>🧾 Student Results Overview</h3>
+      <button onclick="loadStudentResults()">Refresh Results</button>
+      <ul id="resultsList"></ul>
+    </div>
+
+<!-- 📊 Analytics Tab -->
+<div id="tabAnalytics" class="adminTab hidden">
+  <h3>Smart Analytics Overview</h3>
+  <ul id="analyticsSummary">
+    <li><strong>Average Score:</strong> –</li>
+    <li><strong>Total Completed Sessions:</strong> –</li>
+    <li><strong>Most Missed Word:</strong> –</li>
+  </ul>
+
+  <h4>Per-Student Breakdown</h4>
+  <ul id="studentBreakdown"></ul>
+
+  <button onclick="refreshAnalytics()">🔄 Refresh</button>
+</div>
+
+<!-- 🎖 Badges -->
+<div id="tabBadges" class="adminTab hidden">
+  <h3>🎖 Badge Viewer</h3>
+  <ul id="badgeUserList"></ul>
+  <div id="badgeDetails" class="hidden">
+    <h4 id="badgeUserTitle"></h4>
+    <ul id="badgeUserBadges"></ul>
+  </div>
+</div>
+
+    <!-- 🎨 Theme Tab -->
+    <div id="tabTheme" class="adminTab hidden">
+      <h3>🎨 Select Theme</h3>
+      <select id="themeSelect" onchange="changeTheme(this.value)">
+        <option value="playground">Playground</option>
+        <option value="chalkboard">Chalkboard</option>
+        <option value="galaxy">Galaxy</option>
+        <option value="nature">Nature</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ⌨️ Typing Practice Tab -->
+<div id="tabTyping" class="adminTab hidden">
+  <h3>⌨️ Typing Challenge Preview</h3>
+  
+  <label for="typingUserSelect">Select Student:</label>
+  <select id="typingUserSelect" class="word-user-dropdown" onchange="loadTypingWords(this.value)">
+    <option value="">-- Select a user --</option>
+  </select>
+
+  <button onclick="startTypingTest()">Start Typing Test</button>
+
+  <div id="typingTestArea" class="hidden">
+    <p><strong>Practice Sentence:</strong></p>
+    <p id="typingPrompt" class="typing-sentence"></p>
+    <input type="text" id="typingInput" placeholder="Type the spelling word here..." autocomplete="off" />
+    <button onclick="submitTyping()">Submit</button>
+    <p id="typingFeedback"></p>
+  </div>
+</div>
+
+  <!-- 🧾 Student Report Viewer -->
+<div id="tabReports" class="adminTab hidden">
+  <h3>📘 Student Progress Report</h3>
+  <label for="reportUser">Select Student:</label>
+  <select id="reportUser" onchange="loadStudentReport(this.value)">
+    <option value="">-- Select --</option>
+  </select>
+
+  <div id="reportContent" class="hidden">
+    <h4 id="reportTitle"></h4>
+    <p><strong>Last Score:</strong> <span id="reportScore"></span></p>
+    <p><strong>Words Attempted:</strong></p>
+    <ul id="reportWords"></ul>
+    <p><strong>Badges Earned:</strong></p>
+    <ul id="reportBadges"></ul>
+
+    <button onclick="window.print()">🖨️ Print Report</button>
+    <button onclick="copyReportToClipboard()">📋 Copy to Clipboard</button>
+  </div>
+</div>
+
+<div id="tabSessions" class="adminTab hidden">
+  <h3>📘 Archived Sessions</h3>
+  <label for="sessionUserSelect">Select Student:</label>
+  <select id="sessionUserSelect" onchange="loadUserSessions(this.value)">
+    <option value="">-- Select --</option>
+  </select>
+
+  <ul id="userSessionList"></ul>
+</div>
+
+
+  <!-- 👩‍🎓 Student Panel -->
+<div id="studentPanel" class="hidden">
+    <h2>Student Dashboard</h2>
+    
+    <div class="student-controls">
+        <button id="startGameBtn" onclick="startGame()">Start Spelling Game</button>
+        <button id="startTypingBtn" onclick="startTypingPractice()">Start Typing Practice</button>
+    </div>
+
+    <!-- Game Section -->
+    <div id="gameSection" class="hidden">
+        <h3>🎮 Spelling Game</h3>
+        <div id="wordBox" class="word-box"></div>
+        <div id="inputSection" class="hidden">
+            <input type="text" id="userInput" placeholder="Type the word you saw..." />
+            <button onclick="submitAnswer()">Submit</button>
+        </div>
+    </div>
+
+    <!-- Typing Practice Section -->
+
+<div id="typingSection" class="hidden">
+  <h3>Typing Practice</h3>
+  <p id="typingPrompt">Type the word...</p>
+  <input type="text" id="typingInput" />
+  <button onclick="submitTyping()">Submit</button>
+  <p id="typingFeedback"></p>
+</div>
+
+  </div>
+<script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const user = JSON.parse(localStorage.getItem('loggedInUser'));
+            if (user) {
+                if (user.role === 'admin') {
+                    showAdmin();
+                } else {
+                    showStudent();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
