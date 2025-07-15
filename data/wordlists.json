@@ -1,13 +1,21 @@
 {
-  "student1": [],
+  "student1": [
+    "apple",
+    "banana",
+    "cherry",
+    "date",
+    "elderberry"
+  ],
   "admin1": [
     "boy",
     "bot",
     "snot"
   ],
   "nate": [
-    "not",
-    "bot",
-    "snot"
+    "computer",
+    "keyboard",
+    "mouse",
+    "screen",
+    "printer"
   ]
 }

@@ -1,201 +1,450 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spelling App with Roles</title>
-  <link rel="stylesheet" href="styles.css" />
-
-  <!-- 🔧 Script Load Order -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js" defer></script>
-  <script src="js/auth.js" defer></script>
-  <script src="js/ui.js" defer></script>
-  <script src="js/themes.js" defer></script>
-  <script src="js/admin.js" defer></script>
-  <script src="js/game.js" defer></script>
-  <script src="js/main.js" defer></script>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>✨ Modern Spelling Practice</title>
+    <link href="styles.css" rel="stylesheet"/>
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/themes.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/typing.js"></script>
+    <script src="js/bible.js"></script>
+    <script src="js/main.js"></script>
 </head>
-
 <body>
-  <h1>Spelling Practice</h1>
-
-  <!-- 🏳️ Role Banner -->
-  <div id="roleBanner" class="banner hidden"></div>
-
-  <!-- 👤 Login Panel -->
-  <div id="loginPanel">
-    <h2>User Login</h2>
-    <form onsubmit="event.preventDefault(); verifyLogin();">
-      <input type="text" id="username" placeholder="Username" required />
-      <input type="password" id="password" placeholder="Password" required />
-      <button type="submit">Login</button>
-    </form>
-    <p id="loginMessage"></p>
-  </div>
-
-  <!-- 🔀 Role-Based Navigation -->
-  <div id="nav" class="hidden">
-    <p><strong id="userInfo"></strong></p>
-    <button onclick="showAdmin()" id="adminBtn" class="hidden">Admin Panel</button>
-    <button onclick="showStudent()" id="studentBtn" class="hidden">Student Panel</button>
-    <button onclick="logoutUser()" id="logoutBtn">Log Out</button>
-  </div>
-
-  <!-- 👨‍🏫 Admin Panel -->
-  <div id="adminPanel" class="hidden">
-    <h2>👨‍🏫 Admin Panel</h2>
-
-    <!-- 🔘 Tabs -->
-    <div id="adminTabs">
-      <button onclick="switchTab('tabUsers')" class="active">👤 Manage Users</button>
-      <button onclick="switchTab('tabWords')">📝 Word Lists</button>
-      <button onclick="switchTab('tabAnalytics')">📊 Analytics</button>
-      <button onclick="switchTab('tabResults')">📊 Results</button>
-      <button onclick="switchTab('tabReports')">📘 Reports</button>
-      <button onclick="switchTab('tabSessions')">📆 Sessions</button>
-      <button onclick="switchTab('tabBadges')">🎖 Badges</button>
-      <button onclick="switchTab('tabTheme')">🎨 Theme</button>
+    <div class="container">
+        <h1>✨ Spelling Practice</h1>
+        
+        <!-- Role Banner -->
+        <div class="banner hidden" id="roleBanner"></div>
+        
+        <!-- Login Panel -->
+        <div id="loginPanel" class="card">
+            <div class="card-header">
+                <h2 class="text-center">Welcome Back</h2>
+                <p class="text-center" style="color: var(--text-secondary);">Sign in to continue your spelling practice</p>
+            </div>
+            <form onsubmit="event.preventDefault(); verifyLogin();">
+                <input id="username" placeholder="Username" required type="text"/>
+                <input id="password" placeholder="Password" required type="password"/>
+                <button type="submit">Sign In</button>
+            </form>
+            <p id="loginMessage" style="margin-top: 1rem; text-align: center;"></p>
+        </div>
+        
+        <!-- Navigation -->
+        <div id="nav" class="hidden">
+            <p><strong id="userInfo"></strong></p>
+            <div class="flex gap-4 justify-center" style="margin-top: 1rem;">
+                <button class="hidden" id="adminBtn" onclick="showAdmin()">👨‍💼 Admin Panel</button>
+                <button class="hidden" id="studentBtn" onclick="showStudent()">🎓 Student Panel</button>
+                <button id="logoutBtn" onclick="logoutUser()" class="btn-secondary">Sign Out</button>
+            </div>
+        </div>
+        
+        <!-- Admin Panel -->
+        <div class="hidden" id="adminPanel">
+            <div class="card-header">
+                <h2>👨‍💼 Admin Dashboard</h2>
+                <p style="color: var(--text-secondary);">Manage users, word lists, and view analytics</p>
+            </div>
+            
+            <!-- Admin Tabs -->
+            <div id="adminTabs">
+                <button class="active" onclick="switchTab('tabUsers')">👤 Users</button>
+                <button onclick="switchTab('tabWords')">📝 Word Lists</button>
+                <button onclick="switchTab('tabAnalytics')">📊 Analytics</button>
+                <button onclick="switchTab('tabResults')">📋 Results</button>
+                <button onclick="switchTab('tabReports')">📘 Reports</button>
+                <button onclick="switchTab('tabSessions')">📅 Sessions</button>
+                <button onclick="switchTab('tabBadges')">🏅 Badges</button>
+                <button onclick="switchTab('tabPasswords')">🔐 Passwords</button>
+                <button onclick="switchTab('tabTheme')">🎨 Themes</button>
+            </div>
+            
+            <!-- Users Tab -->
+            <div id="tabUsers" class="adminTab">
+                <h3>👤 User Management</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem;">
+                    <div class="card">
+                        <h4>Add New User</h4>
+                        <form onsubmit="event.preventDefault(); addNewUser();" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <input id="newUsername" placeholder="Username" required type="text"/>
+                            <input id="newPassword" placeholder="Password" required type="password"/>
+                            <select id="newRole">
+                                <option value="student">🎓 Student</option>
+                                <option value="admin">👨‍💼 Admin</option>
+                            </select>
+                            <button type="submit" class="btn-success">➕ Add User</button>
+                        </form>
+                        <p id="userAddMessage" style="margin-top: 1rem;"></p>
+                        <small id="hashPreview" style="color: var(--text-secondary);"></small>
+                    </div>
+                    <div class="card">
+                        <h4>Remove User</h4>
+                        <select id="userDropdown" onchange="selectUserAction(this.value)" style="width: 100%;">
+                            <option value="">-- Select a user to remove --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Word Lists Tab -->
+            <div class="adminTab hidden" id="tabWords">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div class="card">
+                        <h4>Select User</h4>
+                        <select class="word-user-dropdown" id="wordUserSelect" onchange="loadWordsForSelectedUser()" style="width: 100%;">
+                            <option value="">-- Select a user --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="card">
+                        <h4>Manage Word List</h4>
+                        <textarea id="wordInput" placeholder="Enter one word per line..."></textarea>
+                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                            <button onclick="saveWords()" class="btn-success">💾 Save Words</button>
+                            <button onclick="clearWords()" class="btn-error">🗑️ Clear All</button>
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem;">
+                            <h5>Upload Word File</h5>
+                            <input accept=".txt,.csv" onchange="handleFileUpload(event)" type="file" style="margin: 0.5rem 0;"/>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h4>Current Word List</h4>
+                        <ul id="wordListDisplay" style="max-height: 200px; overflow-y: auto;"></ul>
+                    </div>
+                    
+                    <div class="card">
+                        <h4>View by Student</h4>
+                        <select class="word-user-dropdown" id="viewUserSelect" onchange="displayWordListForSelectedUser()" style="width: 100%;">
+                            <option value="">-- Select a student --</option>
+                        </select>
+                        <ul id="userWordListDisplay" style="max-height: 200px; overflow-y: auto; margin-top: 1rem;"></ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Tab -->
+            <div class="adminTab hidden" id="tabResults">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📋 Student Results Overview</h3>
+                        <button onclick="loadStudentResults()" class="btn-primary">🔄 Refresh Results</button>
+                    </div>
+                    <ul id="resultsList" style="max-height: 400px; overflow-y: auto;"></ul>
+                </div>
+            </div>
+            
+            <!-- Analytics Tab -->
+            <div class="adminTab hidden" id="tabAnalytics">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📊 Performance Analytics</h3>
+                        <button onclick="refreshAnalytics()" class="btn-primary">🔄 Refresh Analytics</button>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <h4>Summary Statistics</h4>
+                            <ul id="analyticsSummary" style="background: var(--bg-secondary); border-radius: var(--radius); padding: 1rem;">
+                                <li><strong>Average Score:</strong> –</li>
+                                <li><strong>Total Sessions:</strong> –</li>
+                                <li><strong>Most Missed Word:</strong> –</li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4>Student Breakdown</h4>
+                            <ul id="studentBreakdown" style="max-height: 300px; overflow-y: auto;"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Badges Tab -->
+            <div class="adminTab hidden" id="tabBadges">
+                <div class="card">
+                    <h3>🏅 Student Badges</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+                        <div>
+                            <h4>Select Student</h4>
+                            <ul id="badgeUserList"></ul>
+                        </div>
+                        <div class="hidden" id="badgeDetails">
+                            <h4 id="badgeUserTitle"></h4>
+                            <ul id="badgeUserBadges"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Theme Tab -->
+            <!-- Passwords Tab -->
+            <div class="adminTab hidden" id="tabPasswords">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🔐 Password Management</h3>
+                        <p style="color: var(--text-secondary);">Change user passwords</p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <!-- Change Password Form -->
+                        <div class="card">
+                            <h4>Change User Password</h4>
+                            <form onsubmit="event.preventDefault(); changeUserPassword();" style="display: flex; flex-direction: column; gap: 1rem;">
+                                <label for="passwordUsername">Select User:</label>
+                                <select id="passwordUsername" required style="width: 100%;">
+                                    <option value="">-- Select a user --</option>
+                                </select>
+                                
+                                <label for="newUserPassword">New Password:</label>
+                                <input id="newUserPassword" placeholder="Enter new password" required type="password"/>
+                                
+                                <label for="confirmPassword">Confirm Password:</label>
+                                <input id="confirmPassword" placeholder="Confirm new password" required type="password"/>
+                                
+                                <button type="submit" class="btn-warning">🔐 Change Password</button>
+                            </form>
+                        </div>
+                        
+                        <!-- Password History -->
+                        <div class="card">
+                            <h4>Password Change Log</h4>
+                            <div id="passwordLog" style="max-height: 300px; overflow-y: auto; background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius);">
+                                <p style="color: var(--text-secondary); font-style: italic;">No password changes recorded yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Themes Tab -->
+            <div class="adminTab hidden" id="tabTheme">
+                <div class="card">
+                    <h3>🎨 Application Themes</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Choose a visual theme for the application</p>
+                    <select id="themeSelect" onchange="changeTheme(this.value)" style="width: 100%; max-width: 300px;">
+                        <option value="default">✨ Modern (Default)</option>
+                        <option value="playground">🎪 Playground</option>
+                        <option value="chalkboard">🎓 Chalkboard</option>
+                        <option value="galaxy">🌌 Galaxy</option>
+                        <option value="nature">🌿 Nature</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Reports Tab -->
+            <div class="adminTab hidden" id="tabReports">
+                <div class="card">
+                    <h3>📘 Student Progress Reports</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <label for="reportUser">Select Student:</label>
+                        <select id="reportUser" onchange="loadStudentReport(this.value)" style="width: 100%; max-width: 300px;">
+                            <option value="">-- Select a student --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="hidden" id="reportContent">
+                        <div class="card" style="background: var(--bg-secondary);">
+                            <h4 id="reportTitle"></h4>
+                            <p><strong>Latest Score:</strong> <span id="reportScore"></span></p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem;">
+                                <div>
+                                    <h5>Words Attempted</h5>
+                                    <ul id="reportWords" style="max-height: 200px; overflow-y: auto;"></ul>
+                                </div>
+                                <div>
+                                    <h5>Badges Earned</h5>
+                                    <ul id="reportBadges"></ul>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                                <button onclick="window.print()" class="btn-secondary">🖨️ Print Report</button>
+                                <button onclick="copyReportToClipboard()" class="btn-primary">📋 Copy to Clipboard</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sessions Tab -->
+            <div class="adminTab hidden" id="tabSessions">
+                <div class="card">
+                    <h3>📅 Session History</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <label for="sessionUserSelect">Select Student:</label>
+                        <select id="sessionUserSelect" onchange="loadUserSessions(this.value)" style="width: 100%; max-width: 300px;">
+                            <option value="">-- Select a student --</option>
+                        </select>
+                    </div>
+                    <ul id="userSessionList" style="max-height: 400px; overflow-y: auto;"></ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Student Panel -->
+        <div class="hidden" id="studentPanel">
+            <div class="card">
+                <div class="card-header">
+                    <h2>🎓 Student Dashboard</h2>
+                    <p style="color: var(--text-secondary);">Choose an activity to start practicing</p>
+                </div>
+                
+                <!-- Theme Selection for Students -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <h4>🎨 Choose Your Theme</h4>
+                    <select id="studentThemeSelect" onchange="changeTheme(this.value)" style="width: 100%; max-width: 300px;">
+                        <option value="default">✨ Modern (Default)</option>
+                        <option value="playground">🎪 Playground</option>
+                        <option value="chalkboard">🎓 Chalkboard</option>
+                        <option value="galaxy">🌌 Galaxy</option>
+                        <option value="nature">🌿 Nature</option>
+                    </select>
+                </div>
+                
+                <div class="student-controls">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; max-width: 900px; margin: 0 auto;">
+                        <button id="startGameBtn" onclick="startGame()" class="btn-success">
+                            🎮 Spelling Game
+                        </button>
+                        <button id="startTypingBtn" onclick="startTypingPractice()" class="btn-warning">
+                            ⌨️ Typing Practice
+                        </button>
+                        <button id="startBibleBtn" onclick="startBibleTyping()" class="btn-primary">
+                            📖 Bible Typing
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Section -->
+        <div class="hidden" id="gameSection">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>🎮 Spelling Challenge</h3>
+                    <button onclick="backToStudentDashboard()" class="btn-secondary" style="padding: 0.5rem 1rem;">
+                        ← Back to Dashboard
+                    </button>
+                </div>
+                <div class="word-box" id="wordBox"></div>
+                <div class="hidden" id="inputSection" style="text-align: center;">
+                    <input id="userInput" placeholder="Type the word you saw..." type="text" style="max-width: 400px;"/>
+                    <button onclick="submitAnswer()" class="btn-primary">Submit Answer</button>
+                </div>
+                <!-- Game Summary -->
+                <div class="hidden" id="summary" class="card"></div>
+                <!-- Badge Display -->
+                <div class="hidden" id="badgeDisplay" class="card">
+                    <h3>🏅 Congratulations!</h3>
+                    <p>You've earned new badges:</p>
+                    <ul id="badgeList"></ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Typing Practice Section -->
+        <div class="hidden" id="typingSection">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>⌨️ Typing Practice</h3>
+                    <button onclick="backToStudentDashboard()" class="btn-secondary" style="padding: 0.5rem 1rem;">
+                        ← Back to Dashboard
+                    </button>
+                </div>
+                <div id="typingPrompt">Get ready to type...</div>
+                <div style="text-align: center; margin: 2rem 0;">
+                    <input id="typingInput" type="text" style="max-width: 500px;"/>
+                    <button onclick="submitTyping()" class="btn-primary">Submit</button>
+                </div>
+                <p id="typingFeedback" style="text-align: center; font-weight: 600;"></p>
+            </div>
+        </div>
+        
+        <!-- Bible Typing Section -->
+        <div class="hidden" id="bibleSection">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>📖 Bible Typing (ESV)</h3>
+                    <button onclick="backToStudentDashboard()" class="btn-secondary" style="padding: 0.5rem 1rem;">
+                        ← Back to Dashboard
+                    </button>
+                </div>
+                
+                <!-- Verse Selection -->
+                <div style="margin-bottom: 2rem;">
+                    <h4>Select a Bible Verse:</h4>
+                    <select id="verseSelect" onchange="loadSelectedVerse()" style="width: 100%; max-width: 500px; margin-bottom: 1rem;">
+                        <option value="">-- Choose a verse --</option>
+                    </select>
+                    <button onclick="getRandomVerse()" class="btn-secondary" style="margin-left: 1rem;">🎲 Random Verse</button>
+                </div>
+                
+                <!-- Verse Display -->
+                <div id="bibleVerseDisplay" style="font-size: 1.2rem; line-height: 1.8; padding: 2rem; background: var(--bg-secondary); border-radius: var(--radius); margin-bottom: 2rem; min-height: 100px; display: flex; align-items: center; justify-content: center; text-align: center;">
+                    Select a verse to begin typing practice
+                </div>
+                
+                <!-- Typing Area -->
+                <div style="text-align: center; margin: 2rem 0;">
+                    <textarea id="bibleInput" placeholder="Type the verse here..." style="width: 100%; max-width: 700px; min-height: 120px; font-size: 1.1rem; line-height: 1.6;"></textarea>
+                    <div style="margin-top: 1rem;">
+                        <button onclick="checkBibleVerse()" class="btn-primary">✓ Check Typing</button>
+                        <button onclick="clearBibleInput()" class="btn-secondary">🗑️ Clear</button>
+                    </div>
+                </div>
+                
+                <!-- Feedback -->
+                <div id="bibleFeedback" style="text-align: center; margin-top: 2rem;"></div>
+                
+                <!-- Progress -->
+                <div id="bibleProgress" style="margin-top: 2rem;">
+                    <h4>📊 Typing Progress</h4>
+                    <div id="bibleStats" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius);">
+                            <div style="font-size: 2rem; font-weight: bold; color: var(--primary);" id="accuracyPercent">0%</div>
+                            <div>Accuracy</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius);">
+                            <div style="font-size: 2rem; font-weight: bold; color: var(--success);" id="correctWords">0</div>
+                            <div>Correct Words</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius);">
+                            <div style="font-size: 2rem; font-weight: bold; color: var(--error);" id="incorrectWords">0</div>
+                            <div>Errors</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Toast notification -->
+        <div id="toast" class="toast"></div>
     </div>
-
-    <!-- 👥 Users Tab -->
-    <div id="tabUsers" class="adminTab">
-      <h3>Add New User</h3>
-      <form onsubmit="event.preventDefault(); addNewUser();">
-        <input type="text" id="newUsername" placeholder="Username" required />
-        <input type="password" id="newPassword" placeholder="Password" required />
-        <select id="newRole">
-          <option value="student">Student</option>
-          <option value="admin">Admin</option>
-        </select>
-        <button type="submit">Add User</button>
-      </form>
-
-      <h3>Delete Users</h3>
-      <select id="userDropdown" onchange="selectUserAction(this.value)">
-        <option value="">-- Select a user --</option>
-      </select>
-    </div>
-
-    <!-- 📝 Word List Tab -->
-    <div id="tabWords" class="adminTab hidden">
-      <h3>Edit Word List for:</h3>
-      <select id="wordUserSelect" class="word-user-dropdown" onchange="loadWordsForSelectedUser()">
-        <option value="">-- Select a user --</option>
-      </select>
-
-      <h2>Enter Spelling Words</h2>
-      <textarea id="wordInput" placeholder="Enter one word per line..."></textarea><br/>
-      <button onclick="saveWords()">Save Word List</button>
-      <button onclick="clearWords()">Clear Saved Words</button>
-
-      <h3>Upload a Word File</h3>
-      <input type="file" accept=".txt,.csv" onchange="handleFileUpload(event)" />
-
-      <p><strong>Current Word List:</strong></p>
-      <ul id="wordListDisplay"></ul>
-
-      <h3>📋 View Word List by User:</h3>
-      <select id="viewUserSelect" class="word-user-dropdown" onchange="displayWordListForSelectedUser()">
-        <option value="">-- Select a user --</option>
-      </select>
-      <ul id="userWordListDisplay"></ul>
-    </div>
-
-    <!-- 📊 Results Tab -->
-    <div id="tabResults" class="adminTab hidden">
-      <h3>🧾 Student Results Overview</h3>
-      <button onclick="loadStudentResults()">Refresh Results</button>
-      <ul id="resultsList"></ul>
-    </div>
-
-<!-- 📊 Analytics Tab -->
-<div id="tabAnalytics" class="adminTab hidden">
-  <h3>Smart Analytics Overview</h3>
-  <ul id="analyticsSummary">
-    <li><strong>Average Score:</strong> –</li>
-    <li><strong>Total Completed Sessions:</strong> –</li>
-    <li><strong>Most Missed Word:</strong> –</li>
-  </ul>
-
-  <h4>Per-Student Breakdown</h4>
-  <ul id="studentBreakdown"></ul>
-
-  <button onclick="refreshAnalytics()">🔄 Refresh</button>
-</div>
-
-<!-- 🎖 Badges -->
-<div id="tabBadges" class="adminTab hidden">
-  <h3>🎖 Badge Viewer</h3>
-  <ul id="badgeUserList"></ul>
-  <div id="badgeDetails" class="hidden">
-    <h4 id="badgeUserTitle"></h4>
-    <ul id="badgeUserBadges"></ul>
-  </div>
-</div>
-
-    <!-- 🎨 Theme Tab -->
-    <div id="tabTheme" class="adminTab hidden">
-      <h3>🎨 Select Theme</h3>
-      <select id="themeSelect" onchange="changeTheme(this.value)">
-        <option value="playground">Playground</option>
-        <option value="chalkboard">Chalkboard</option>
-        <option value="galaxy">Galaxy</option>
-        <option value="nature">Nature</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- 🧾 Student Report Viewer -->
-<div id="tabReports" class="adminTab hidden">
-  <h3>📘 Student Progress Report</h3>
-  <label for="reportUser">Select Student:</label>
-  <select id="reportUser" onchange="loadStudentReport(this.value)">
-    <option value="">-- Select --</option>
-  </select>
-
-  <div id="reportContent" class="hidden">
-    <h4 id="reportTitle"></h4>
-    <p><strong>Last Score:</strong> <span id="reportScore"></span></p>
-    <p><strong>Words Attempted:</strong></p>
-    <ul id="reportWords"></ul>
-    <p><strong>Badges Earned:</strong></p>
-    <ul id="reportBadges"></ul>
-
-    <button onclick="window.print()">🖨️ Print Report</button>
-    <button onclick="copyReportToClipboard()">📋 Copy to Clipboard</button>
-  </div>
-</div>
-
-<div id="tabSessions" class="adminTab hidden">
-  <h3>📘 Archived Sessions</h3>
-  <label for="sessionUserSelect">Select Student:</label>
-  <select id="sessionUserSelect" onchange="loadUserSessions(this.value)">
-    <option value="">-- Select --</option>
-  </select>
-
-  <ul id="userSessionList"></ul>
-</div>
-
-
-  <!-- 👩‍🎓 Student Panel -->
-  <div id="studentPanel" class="hidden">
-    <div id="toast" class="toast">Welcome, student!</div>
-
-    <button id="startGameBtn" class="hidden" onclick="startGame()">Start Game</button>
-
-    <div id="wordBox" class="hidden">
-      <div id="word" class="word-box"></div>
-    </div>
-
-    <div id="inputSection" class="hidden">
-      <input type="text" id="userInput" placeholder="Type your answer" autocomplete="off" />
-      <button onclick="submitAnswer()">Submit</button>
-    </div>
-<div id="badgeDisplay" class="badgeSection hidden">
-  <h3>🎖 Badges Earned</h3>
-  <ul id="badgeList"></ul>
-</div>
-    <div id="summary" class="hidden"></div>
-  </div>
+    
+    <script>
+        // Initialize the application when DOM is loaded
+        window.addEventListener('DOMContentLoaded', () => {
+            const user = JSON.parse(localStorage.getItem('loggedInUser'));
+            if (user) {
+                if (user.role === 'admin') {
+                    showAdmin();
+                } else {
+                    showStudent();
+                }
+            }
+        });
+    </script>
 </body>
 </html>

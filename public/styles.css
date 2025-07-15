@@ -1,152 +1,564 @@
-/* 📋 Global Defaults */
-body {
-  font-family: sans-serif;
-  text-align: center;
-  padding: 2rem;
+/* Modern Spelling App Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Reset and base styles */
+* {
   margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
+:root {
+  /* Modern color palette */
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --secondary: #f1f5f9;
+  --accent: #06b6d4;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --radius: 0.75rem;
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, #ffffff 100%);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+}
+
+/* Container and layout */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Typography */
+h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 2rem;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+h2 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+/* Form elements */
+input, textarea, select {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+  max-width: 500px;
+}
+
+/* Buttons - Global enhanced readability */
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  margin: 0.25rem;
+  background: var(--primary);
+  color: #ffffff !important;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  min-height: 44px;
+}
+
+button:hover {
+  background: var(--primary-dark);
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+button:active {
+  transform: translateY(0);
+  color: #ffffff !important;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  color: #ffffff !important;
+}
+
+/* Button variants with enhanced readability */
+.btn-secondary {
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 2px solid #e2e8f0 !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+.btn-primary {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  min-height: 44px !important;
+}
+
+.btn-primary:hover {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+.btn-success {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  min-height: 44px !important;
+}
+
+.btn-success:hover {
+  background: #059669 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+}
+
+.btn-warning {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  min-height: 44px !important;
+}
+
+.btn-warning:hover {
+  background: #d97706 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+}
+
+.btn-error {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  min-height: 44px !important;
+}
+
+.btn-error:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Additional button contrast fixes */
+#startGameBtn, #startTypingBtn {
+  background: var(--success) !important;
+  color: white !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  font-weight: 600 !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#startGameBtn:hover, #startTypingBtn:hover {
+  background: #059669 !important;
+  color: white !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Typing Practice button specific styling */
+#startTypingBtn {
+  background: var(--warning) !important;
+}
+
+#startTypingBtn:hover {
+  background: #d97706 !important;
+}
+
+/* Bible typing button specific styling */
+#startBibleBtn {
+  background: var(--primary) !important;
+  color: white !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  font-weight: 600 !important;
+  min-height: 60px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+}
+
+#startBibleBtn:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: white !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Bible typing interface styling with enhanced button readability */
+#bibleSection textarea {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+#bibleSection textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+  outline: none;
+}
+
+#verseSelect {
+  max-width: 500px !important;
+  font-size: 1rem;
+}
+
+/* Enhanced Bible typing button styles - Force override all button styling */
+#bibleSection .btn-primary,
+#bibleSection .btn-secondary,
+#bibleFeedback .btn-primary,
+#bibleFeedback .btn-secondary,
+#bibleSection button,
+#bibleFeedback button {
+  min-height: 44px !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: var(--radius) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  justify-content: center !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* Bible section primary buttons (Check Typing, Show Differences) */
+#bibleSection .btn-primary,
+#bibleFeedback .btn-primary {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+  border: 2px solid #10b981 !important;
+}
+
+#bibleSection .btn-primary:hover,
+#bibleFeedback .btn-primary:hover {
+  background: #059669 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+  border: 2px solid #059669 !important;
+}
+
+/* Bible section secondary buttons (Clear, Random) */
+#bibleSection .btn-secondary,
+#bibleFeedback .btn-secondary {
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 2px solid #e2e8f0 !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+#bibleSection .btn-secondary:hover,
+#bibleFeedback .btn-secondary:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  border: 2px solid #cbd5e1 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Specific component styles */
+#loginPanel {
+  max-width: 400px;
+  margin: 0 auto;
+  background: var(--bg-primary);
+  padding: 2rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+#loginPanel form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Banner */
+.banner {
+  padding: 1rem;
+  text-align: center;
+  font-weight: 600;
+  color: white;
+  border-radius: var(--radius);
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow);
+}
+
+.banner.admin {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.banner.student {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+}
+
+/* Navigation */
+#nav {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Admin tabs */
+#adminTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  padding: 0.5rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+}
+
+#adminTabs button {
+  flex: 1;
+  min-width: fit-content;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: calc(var(--radius) - 0.25rem);
+  padding: 0.75rem 1rem;
+  font-weight: 500;
+  transition: var(--transition);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+#adminTabs button:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transform: none;
+}
+
+#adminTabs button.active {
+  background: var(--primary) !important;
+  color: white !important;
+  box-shadow: var(--shadow);
+}
+
+.adminTab {
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  padding: 2rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+/* Layout utilities */
+.hidden {
+  display: none !important;
+}
+
+.adminTab.hidden {
+  display: none !important;
+}
+
+/* Game elements */
+#wordBox, .word-box, #typingPrompt {
+  font-size: 3rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 3rem 2rem;
+  margin: 2rem 0;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--secondary) 100%);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--primary);
+  box-shadow: var(--shadow-lg);
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.student-controls {
+  text-align: center;
+  margin: 2rem 0;
+  padding: 2rem;
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Student controls specific styling */
+.student-controls button {
+  min-height: 60px !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.student-controls .btn-success {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: white !important;
+}
+
+.student-controls .btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: white !important;
+}
+
+.student-controls button:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Lists */
 ul {
   list-style: none;
-  padding: 0;
 }
+
 li {
-  margin: 0.25rem 0;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  background: var(--bg-secondary);
+  border-radius: calc(var(--radius) - 0.25rem);
+  border: 1px solid var(--border);
 }
 
-input, textarea, select {
-  font-size: 1rem;
-  padding: 0.5rem;
-  margin: 0.5rem;
-  border: 2px solid #ccc;
-  border-radius: 5px;
-}
-
-/* 🎨 Theme Styles */
-body.playground {
-  background: #fef9e7;
-  color: #333;
-  font-family: 'Comic Sans MS', cursive, sans-serif;
-}
-body.chalkboard {
-  background: #222;
-  color: #f0f0f0;
-  font-family: 'Courier New', monospace;
-}
-body.galaxy {
-  background: radial-gradient(circle at center, #0d0d2b, #1a1a3f);
-  color: #b3e5fc;
-  font-family: 'Orbitron', sans-serif;
-}
-body.nature {
-  background: #e8f5e9;
-  color: #2e7d32;
-  font-family: 'Georgia', serif;
-}
-
-/* 🔘 Buttons */
-button {
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.6rem 1rem;
-  font-size: 1rem;
-  margin: 0.4rem;
-  cursor: pointer;
-  transition: transform 0.2s;
-  display: inline-block;
-}
-button:hover {
-  transform: scale(1.05);
-}
-
-/* 🌈 Theme-specific Button Colors */
-body.chalkboard button {
-  background-color: #555;
-}
-body.galaxy button {
-  background-color: #6200ea;
-}
-body.nature button {
-  background-color: #81c784;
-}
-
-/* 🔳 Panels and Banners */
-.hidden {
-  display: none;
-}
-#wordBox {
-  margin-top: 5rem;
-}
-.word-box {
-  font-size: 3rem;
-  font-weight: bold;
-  margin-bottom: 2rem;
-  color: #2196f3;
-  text-shadow: 1px 1px #ccc;
-}
-.banner {
-  padding: 0.5em;
-  text-align: center;
-  font-weight: bold;
-  color: white;
-}
-.banner.admin {
-  background-color: #b22222;
-}
-.banner.student {
-  background-color: #1e90ff;
-}
-
-/* 🔔 Toast Messages */
+/* Toast notifications */
 .toast {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #333;
-  color: #fff;
-  padding: 0.75em 1.25em;
-  border-radius: 5px;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--text-primary);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius);
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s ease;
-  z-index: 999;
-}
-.toast.show {
-  opacity: 1;
-  pointer-events: auto;
+  transform: translateY(100%);
+  transition: var(--transition);
+  z-index: 1000;
+  box-shadow: var(--shadow-lg);
+  font-weight: 500;
 }
 
-/* 🧭 Admin Tabs */
-#adminTabs {
-  margin: 1em 0;
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
 }
-#adminTabs button {
-  margin-right: 8px;
-  padding: 10px 16px;
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  border-bottom: none;
-  border-radius: 6px 6px 0 0;
-  font-weight: 600;
-  color: #333;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-}
-#adminTabs button:hover {
-  background-color: #e0f2ff;
-  color: #000;
-}
-#adminTabs button.active {
-  background-color: #ffffff;
-  color: #000;
-  border-bottom: 2px solid #fff;
-  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-}
-.adminTab {
-  display: none;
-}
-.adminTab:not(.hidden) {
-  display: block;
+
+/* Responsive design */
+@media (max-width: 768px) {
+  body {
+    padding: 1rem 0.5rem;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  #adminTabs {
+    flex-direction: column;
+  }
+  
+  #adminTabs button {
+    flex: none;
+  }
+  
+  .card, .adminTab, #loginPanel {
+    padding: 1rem;
+  }
+  
+  #wordBox, .word-box, #typingPrompt {
+    font-size: 2rem;
+    padding: 2rem 1rem;
+  }
 }

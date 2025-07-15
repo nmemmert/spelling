@@ -1,13 +1,13 @@
 {
-  "student1": [],
+  "student1": [
+    "apple", "banana", "cherry", "date", "elderberry",
+    "grape", "honeydew", "kiwi", "lemon", "mango"
+  ],
   "admin1": [
-    "boy",
-    "bot",
-    "snot"
+    "administration", "education", "technology", "development", "programming"
   ],
   "nate": [
-    "not",
-    "bot",
-    "snot"
+    "computer", "keyboard", "mouse", "screen", "printer",
+    "software", "hardware", "network", "database", "security"
   ]
 }

@@ -31,8 +31,55 @@ function ensureFileWithSeed(name, fallback = '{}') {
       fs.copyFileSync(seedPath, targetPath);
       console.log(`🌱 Seeded ${name} from seed/${name}`);
     } else {
-      fs.writeFileSync(targetPath, fallback);
-      console.log(`📄 Initialized ${name} with default`);
+      // Create default data for each file type
+      if (name === 'users.json') {
+        const defaultUsers = [
+          {
+            "username": "admin1",
+            "hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", // password
+            "role": "admin"
+          },
+          {
+            "username": "nate",
+            "hash": "5a2a558c78d3717db731600c4f354fa1d9c84b556f108091a891f444f1bdec40", // nate123
+            "role": "student"
+          },
+          {
+            "username": "student1",
+            "hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", // 123456
+            "role": "student"
+          }
+        ];
+        fs.writeFileSync(targetPath, JSON.stringify(defaultUsers, null, 2));
+        console.log(`👥 Created default users: admin1, nate, student1`);
+      } else if (name === 'wordlists.json') {
+        const defaultWordlists = {
+          "student1": [
+            "apple", "banana", "cherry", "date", "elderberry",
+            "grape", "honeydew", "kiwi", "lemon", "mango"
+          ],
+          "admin1": [
+            "administration", "education", "technology", "development", "programming"
+          ],
+          "nate": [
+            "computer", "keyboard", "mouse", "screen", "printer",
+            "software", "hardware", "network", "database", "security"
+          ]
+        };
+        fs.writeFileSync(targetPath, JSON.stringify(defaultWordlists, null, 2));
+        console.log(`📝 Created default word lists for all users`);
+      } else if (name === 'badges.json') {
+        const defaultBadges = {
+          "student1": [],
+          "nate": [],
+          "admin1": []
+        };
+        fs.writeFileSync(targetPath, JSON.stringify(defaultBadges, null, 2));
+        console.log(`🏆 Created default badge structure`);
+      } else {
+        fs.writeFileSync(targetPath, fallback);
+        console.log(`📄 Initialized ${name} with default`);
+      }
     }
   }
 }
@@ -54,12 +101,25 @@ function readJsonSafe(filePath, fallback = {}) {
 // 🔐 Verify login
 app.post('/verifyUser', (req, res) => {
   const { username, hash } = req.body;
+  console.log('Login attempt - Username:', username, 'Hash:', hash);
+  
   if (typeof username !== 'string' || typeof hash !== 'string') {
+    console.log('Invalid credentials format');
     return res.status(400).send("Invalid credentials format");
   }
+  
   const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
+  console.log('Available users:', users.map(u => u.username));
+  
   const user = users.find(u => u.username === username && u.hash === hash);
-  user ? res.json(user) : res.status(401).send("Invalid login");
+  
+  if (user) {
+    console.log('Login successful for:', username);
+    res.json(user);
+  } else {
+    console.log('Login failed for:', username);
+    res.status(401).send("Invalid login");
+  }
 });
 
 // ➕ Add user
@@ -97,14 +157,57 @@ app.post('/deleteUser', (req, res) => {
   res.send(`✅ User "${username}" deleted`);
 });
 
+// 🔐 Change user password
+app.post('/changePassword', (req, res) => {
+  const { username, newPasswordHash } = req.body;
+  if (typeof username !== 'string' || typeof newPasswordHash !== 'string') {
+    return res.status(400).send("Invalid request data");
+  }
+
+  const usersPath = path.join(DATA_DIR, files.users);
+  const users = readJsonSafe(usersPath, []);
+  const userIndex = users.findIndex(u => u.username === username);
+
+  if (userIndex === -1) {
+    return res.status(404).send("User not found");
+  }
+
+  // Update the password hash
+  users[userIndex].hash = newPasswordHash;
+  
+  // Save updated users
+  fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+  
+  console.log(`Password changed for user: ${username}`);
+  res.send(`✅ Password changed for user "${username}"`);
+});
+
 // 📚 Word list
 app.get('/getWordList', (req, res) => {
-  const username = req.query.user;
-  if (!username || typeof username !== 'string') {
-    return res.status(400).send("Username required");
-  }
-  const wordlists = readJsonSafe(path.join(DATA_DIR, files.wordlists));
-  res.json(wordlists[username] || []);
+    try {
+        const { username } = req.query;
+        if (!username) {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+
+        // Add debug logging
+        console.log('Requested username:', username);
+        
+        const wordListPath = path.join(DATA_DIR, 'wordlists.json');
+        console.log('Reading from:', wordListPath);
+        
+        const wordLists = readJsonSafe(wordListPath, {});
+        console.log('Available wordlists:', Object.keys(wordLists));
+        
+        // Get words for specific user
+        const userWords = wordLists[username] || [];
+        console.log(`Words found for ${username}:`, userWords);
+        
+        res.json({ words: userWords });
+    } catch (error) {
+        console.error('Error in getWordList:', error);
+        res.status(500).json({ error: 'Failed to get word list' });
+    }
 });
 
 app.post('/saveWordList', (req, res) => {
@@ -191,4 +294,32 @@ app.get('/getBadges', (req, res) => {
 // 🚀 Server start
 app.listen(PORT, () => {
   console.log(`✅ Server listening at http://localhost:${PORT}`);
+  
+  // Display available users for easy login
+  try {
+    const usersPath = path.join(DATA_DIR, files.users);
+    const users = readJsonSafe(usersPath, []);
+    console.log('\n👥 Available Users:');
+    console.log('┌─────────────┬────────────┬──────────┐');
+    console.log('│ Username    │ Password   │ Role     │');
+    console.log('├─────────────┼────────────┼──────────┤');
+    
+    const userInfo = [
+      { username: 'admin1', password: 'password', role: 'admin' },
+      { username: 'nate', password: 'nate123', role: 'student' },
+      { username: 'student1', password: '123456', role: 'student' }
+    ];
+    
+    userInfo.forEach(user => {
+      const exists = users.find(u => u.username === user.username);
+      const status = exists ? '✅' : '❌';
+      console.log(`│ ${user.username.padEnd(11)} │ ${user.password.padEnd(10)} │ ${user.role.padEnd(8)} │ ${status}`);
+    });
+    
+    console.log('└─────────────┴────────────┴──────────┘');
+    console.log('\n🔐 Note: Change default passwords after first login!');
+    console.log(`🌐 Access the app at: http://localhost:${PORT}\n`);
+  } catch (error) {
+    console.log('⚠️  Could not display user information');
+  }
 });

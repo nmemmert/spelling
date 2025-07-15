@@ -46,16 +46,68 @@ function showToast(message, duration = 3000) {
     toast.classList.remove("show");
   }, duration);
 }
-function showAdmin() {
-  console.log("showAdmin fired");
-
-  const adminPanel = document.getElementById("adminPanel");
-  const studentPanel = document.getElementById("studentPanel");
+function showStudent() {
+  console.log("🎓 Showing student panel");
   
-  loadUserDropdowns();
+  // Hide other panels
+  document.getElementById('adminPanel')?.classList.add('hidden');
+  document.getElementById('loginPanel')?.classList.add('hidden');
+  
+  // Show student panel
+  const studentPanel = document.getElementById('studentPanel');
+  if (studentPanel) {
+    studentPanel.classList.remove('hidden');
+    studentPanel.style.display = 'block';
+    
+    // Ensure buttons are visible and functional
+    const gameBtn = document.getElementById('startGameBtn');
+    const typingBtn = document.getElementById('startTypingBtn');
+    const bibleBtn = document.getElementById('startBibleBtn');
+    
+    if (gameBtn && typingBtn && bibleBtn) {
+      gameBtn.classList.remove('hidden');
+      typingBtn.classList.remove('hidden');
+      bibleBtn.classList.remove('hidden');
+      console.log("✅ All student buttons are now visible");
+    }
+    
+    // Update student theme selector to match current theme
+    const savedTheme = localStorage.getItem('theme') || localStorage.getItem('selectedTheme') || 'default';
+    const studentThemeSelect = document.getElementById('studentThemeSelect');
+    if (studentThemeSelect) {
+      studentThemeSelect.value = savedTheme;
+    }
+  }
+}
 
-  adminPanel?.classList.remove("hidden");
-  studentPanel?.classList.add("hidden");
+function showAdmin() {
+  console.log("👨‍💼 Showing admin panel");
 
-  switchTab("tabUsers"); // optional default tab
+  // Hide other panels
+  document.getElementById('studentPanel')?.classList.add('hidden');
+  document.getElementById('loginPanel')?.classList.add('hidden');
+  
+  const adminPanel = document.getElementById("adminPanel");
+  if (adminPanel) {
+    adminPanel.classList.remove("hidden");
+    
+    // Load user data for dropdowns
+    loadUserDropdowns().then(() => {
+      console.log("✅ User dropdowns loaded");
+    }).catch(e => {
+      console.warn("Could not load user dropdowns:", e);
+    });
+    
+    // Set default tab - use a slight delay to ensure DOM is ready
+    setTimeout(() => {
+      if (typeof window.switchTab === 'function') {
+        window.switchTab("tabUsers");
+        console.log("✅ Default tab set");
+      } else {
+        console.error("switchTab function not available");
+      }
+    }, 100);
+  } else {
+    console.error("Admin panel not found");
+  }
 }

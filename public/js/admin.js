@@ -1,3 +1,87 @@
+// Global variables for admin functionality
+let allWords = [];
+let adminUsers = [];
+
+// 🧭 Admin tab switcher (make it globally accessible)
+window.switchTab = function switchTab(targetId) {
+  console.log('🔄 Switching to tab:', targetId);
+  
+  // Hide all tabs
+  document.querySelectorAll('.adminTab').forEach(tab => {
+    tab.classList.add('hidden');
+  });
+  
+  // Remove active class from all buttons
+  document.querySelectorAll('#adminTabs button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+
+  // Show the selected tab
+  const targetTab = document.getElementById(targetId);
+  if (targetTab) {
+    targetTab.classList.remove('hidden');
+    console.log('✅ Showing tab:', targetId);
+  } else {
+    console.error('❌ Tab not found:', targetId);
+  }
+
+  // Highlight the active button
+  document.querySelectorAll('#adminTabs button').forEach(btn => {
+    const onclick = btn.getAttribute('onclick');
+    if (onclick && onclick.includes(targetId)) {
+      btn.classList.add('active');
+    }
+  });
+
+  // 🔁 Trigger tab-specific logic
+  switch(targetId) {
+    case 'tabSessions':
+      if (typeof populateSessionUserDropdown === 'function') {
+        populateSessionUserDropdown();
+      }
+      const sessionList = document.getElementById("userSessionList");
+      if (sessionList) sessionList.innerHTML = "";
+      break;
+    case 'tabReports':
+      if (typeof loadStudentNamesForReport === 'function') {
+        loadStudentNamesForReport();
+      }
+      break;
+    case 'tabPasswords':
+      populatePasswordUserDropdown();
+      break;
+    case 'tabBadges':
+      if (typeof loadBadgeViewer === 'function') {
+        loadBadgeViewer();
+      }
+      break;
+    case 'tabAnalytics':
+      if (typeof refreshAnalytics === 'function') {
+        refreshAnalytics();
+      }
+      break;
+    case 'tabResults':
+      if (typeof loadStudentResults === 'function') {
+        loadStudentResults();
+      }
+      break;
+    case 'tabWords':
+      loadUserDropdowns();
+      break;
+  }
+};
+
+// Load users from server
+async function loadUsers() {
+  try {
+    const res = await fetch('/getUsers');
+    adminUsers = await res.json();
+  } catch (err) {
+    console.error("Failed to load users:", err);
+    adminUsers = [];
+  }
+}
+
 // ➕ Add a new user
 async function addNewUser() {
   const username = document.getElementById("newUsername").value.trim();
@@ -26,8 +110,9 @@ async function addNewUser() {
     document.getElementById("newPassword").value = '';
     if (hashPreview) hashPreview.textContent = '[auto]';
 
-    await loadUsers();
-    displayUserDropdown();
+  await loadUsers();
+  displayUserDropdown();
+  populateWordUserDropdown();
   } catch (e) {
     msg.textContent = "❌ Failed to add user.";
     console.error("Add user error:", e);
@@ -38,7 +123,7 @@ async function addNewUser() {
 function displayUserDropdown() {
   const dropdown = document.getElementById("userDropdown");
   dropdown.innerHTML = `<option value="">-- Select a user --</option>`;
-  users.forEach(user => {
+  adminUsers.forEach(user => {
     dropdown.innerHTML += `<option value="${user.username}">${user.username} (${user.role})</option>`;
   });
 }
@@ -104,8 +189,9 @@ async function loadWordsForSelectedUser() {
   const selectedUser = document.getElementById("wordUserSelect").value;
   if (!selectedUser) return;
 
-  const res = await fetch(`/getWordList?user=${encodeURIComponent(selectedUser)}`);
-  allWords = await res.json();
+  const res = await fetch(`/getWordList?username=${encodeURIComponent(selectedUser)}`);
+  const data = await res.json();
+  allWords = data.words || [];
   displayWordList();
 }
 
@@ -118,7 +204,7 @@ function populateWordUserDropdown() {
   const selects = document.querySelectorAll(".word-user-dropdown");
   selects.forEach(select => {
     select.innerHTML = '<option value="">-- Select a user --</option>';
-    users.forEach(user => {
+    adminUsers.forEach(user => {
       const option = document.createElement("option");
       option.value = user.username;
       option.textContent = user.username;
@@ -136,8 +222,9 @@ async function displayWordListForSelectedUser() {
   if (!username) return;
 
   try {
-    const res = await fetch(`/getWordList?user=${username}`);
-    const words = await res.json();
+    const res = await fetch(`/getWordList?username=${username}`);
+    const data = await res.json();
+    const words = data.words || [];
     if (!words.length) {
       list.innerHTML = "<li><em>No words found for this user.</em></li>";
       return;
@@ -154,7 +241,7 @@ async function displayWordListForSelectedUser() {
 }
 
 // 📊 Student result viewer
-async function loadStudentResults() {
+window.loadStudentResults = async function() {
   const list = document.getElementById("resultsList");
   list.innerHTML = '';
 
@@ -167,19 +254,38 @@ async function loadStudentResults() {
       return;
     }
 
-    for (const [username, result] of Object.entries(results)) {
-      const li = document.createElement("li");
-      let answersHTML = '';
-      result.answers.forEach(entry => {
-        const status = entry.correct ? '✅' : '❌';
-        answersHTML += `${status} ${entry.word}<br>`;
-      });
+    for (const [username, userResults] of Object.entries(results)) {
+      // Handle array of results per user
+      if (Array.isArray(userResults) && userResults.length > 0) {
+        userResults.forEach((result, index) => {
+          const li = document.createElement("li");
+          let answersHTML = '';
+          
+          // Check if result and answers exist and are valid
+          if (result && result.answers && Array.isArray(result.answers)) {
+            result.answers.forEach(entry => {
+              const status = entry.correct ? '✅' : '❌';
+              answersHTML += `${status} ${entry.word}<br>`;
+            });
+          } else {
+            answersHTML = '<em>No answer data available</em>';
+          }
 
-      li.innerHTML = `
-        <strong>${username}</strong> — Score: ${result.score}, Completed: ${result.completed ? '✅' : '❌'}<br>
-        <em>Answers:</em><br>${answersHTML}
-      `;
-      list.appendChild(li);
+          const timestamp = result.timestamp ? new Date(result.timestamp).toLocaleString() : 'Unknown time';
+          li.innerHTML = `
+            <strong>${username}</strong> (Session ${index + 1}) — Score: ${result?.score || 'N/A'}, Completed: ${result?.completed ? '✅' : '❌'}<br>
+            <em>Date:</em> ${timestamp}<br>
+            <em>Answers:</em><br>${answersHTML}
+            <hr style="margin: 1rem 0; opacity: 0.3;">
+          `;
+          list.appendChild(li);
+        });
+      } else {
+        // Fallback for single result format
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${username}</strong> — No valid results found`;
+        list.appendChild(li);
+      }
     }
   } catch (err) {
     console.error("🔴 Failed to load results:", err);
@@ -187,40 +293,6 @@ async function loadStudentResults() {
   }
 }
 
-// 🧭 Admin tab switcher
-function switchTab(targetId) {
-  document.querySelectorAll('.adminTab').forEach(tab =>
-    tab.classList.add('hidden')
-  );
-  document.querySelectorAll('#adminTabs button').forEach(btn =>
-    btn.classList.remove('active')
-  );
-
-  // Show the selected tab
-  document.getElementById(targetId).classList.remove('hidden');
-
-  // Highlight the active button
-  document.querySelectorAll('#adminTabs button').forEach(btn => {
-    if (btn.getAttribute('onclick')?.includes(targetId)) {
-      btn.classList.add('active');
-    }
-  });
-
-  // 🔁 Trigger tab-specific logic
-  if (targetId === 'tabSessions') {
-    loadSessionHistory();
-  }
-  if (targetId === 'tabReports') {
-    loadStudentNamesForReport();
-  }
-  if (targetId === 'tabBadges') {
-    loadBadgeViewer();
-  }
-  if (targetId === 'tabSessions') {
-  populateSessionUserDropdown();
-  document.getElementById("userSessionList").innerHTML = "";
-}
-}
 async function loadUserDropdowns() {
   try {
     const res = await fetch('/getUsers');
@@ -243,6 +315,8 @@ async function loadUserDropdowns() {
         drop.appendChild(opt);
       });
     });
+    
+    console.log('✅ User dropdowns loaded');
   } catch (err) {
     console.error("⚠️ Failed to load user list:", err);
   }
@@ -352,44 +426,73 @@ async function loadStudentNamesForReport() {
   });
 }
 
-async function loadStudentReport(username) {
+window.loadStudentReport = async function(username) {
   if (!username) return;
 
-  const res1 = await fetch('/getResults');
-  const results = await res1.json();
-  const res2 = await fetch('/getBadges');
-  const badges = await res2.json();
+  try {
+    const res1 = await fetch('/getResults');
+    const results = await res1.json();
+    const res2 = await fetch('/getBadges');
+    const badges = await res2.json();
 
-  const report = results[username];
-  const badgeList = badges[username] || [];
+    const userResults = results[username];
+    const badgeList = badges[username] || [];
 
-  document.getElementById("reportTitle").textContent = `Report for ${username}`;
-  document.getElementById("reportScore").textContent = `${report.score}/${report.answers.length} correct`;
-  
-  const wordList = document.getElementById("reportWords");
-  wordList.innerHTML = "";
-  report.answers.forEach(({ word, correct }) => {
-    const li = document.createElement("li");
-    li.textContent = `${word} — ${correct ? '✅' : '❌'}`;
-    wordList.appendChild(li);
-  });
+    // Handle case where userResults might be an array or undefined
+    let latestReport = null;
+    if (Array.isArray(userResults) && userResults.length > 0) {
+      // Get the most recent result
+      latestReport = userResults[userResults.length - 1];
+    } else if (userResults && typeof userResults === 'object') {
+      // Handle single result object
+      latestReport = userResults;
+    }
 
-  const badgeContainer = document.getElementById("reportBadges");
-  badgeContainer.innerHTML = "";
-  if (badgeList.length) {
-    badgeList.forEach(b => {
-      const li = document.createElement("li");
-      li.textContent = `🏅 ${b}`;
-      badgeContainer.appendChild(li);
-    });
-  } else {
-    badgeContainer.innerHTML = "<li><em>No badges earned yet.</em></li>";
+    if (!latestReport) {
+      document.getElementById("reportContent").classList.add("hidden");
+      alert(`No results found for ${username}`);
+      return;
+    }
+
+    document.getElementById("reportTitle").textContent = `Report for ${username}`;
+    
+    // Safe access to score and answers
+    const score = latestReport.score || 0;
+    const answers = latestReport.answers || [];
+    document.getElementById("reportScore").textContent = `${score}/${answers.length} correct`;
+    
+    const wordList = document.getElementById("reportWords");
+    wordList.innerHTML = "";
+    if (answers.length > 0) {
+      answers.forEach(({ word, correct }) => {
+        const li = document.createElement("li");
+        li.textContent = `${word} — ${correct ? '✅' : '❌'}`;
+        wordList.appendChild(li);
+      });
+    } else {
+      wordList.innerHTML = "<li><em>No word data available.</em></li>";
+    }
+
+    const badgeContainer = document.getElementById("reportBadges");
+    badgeContainer.innerHTML = "";
+    if (badgeList.length) {
+      badgeList.forEach(b => {
+        const li = document.createElement("li");
+        li.textContent = `🏅 ${b}`;
+        badgeContainer.appendChild(li);
+      });
+    } else {
+      badgeContainer.innerHTML = "<li><em>No badges earned yet.</em></li>";
+    }
+
+    document.getElementById("reportContent").classList.remove("hidden");
+  } catch (error) {
+    console.error("Error loading student report:", error);
+    alert("Error loading student report. Please try again.");
   }
-
-  document.getElementById("reportContent").classList.remove("hidden");
 }
 
-function copyReportToClipboard() {
+window.copyReportToClipboard = function() {
   const name = document.getElementById("reportTitle").textContent;
   const score = document.getElementById("reportScore").textContent;
   const words = Array.from(document.querySelectorAll("#reportWords li")).map(li => li.textContent).join("\n");
@@ -458,3 +561,142 @@ async function loadUserSessions(username) {
     list.appendChild(sessionItem);
   });
 }
+
+// File upload handler for word lists
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const content = e.target.result;
+    const words = content.split(/\r?\n/).map(w => w.trim()).filter(Boolean);
+    
+    document.getElementById('wordInput').value = words.join('\n');
+    showToast(`📁 Loaded ${words.length} words from file`);
+  };
+  reader.readAsText(file);
+}
+
+// 🔐 Password Management Functions
+window.changeUserPassword = async function() {
+  const username = document.getElementById('passwordUsername').value;
+  const newPassword = document.getElementById('newUserPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+  
+  if (!username) {
+    alert('Please select a user');
+    return;
+  }
+  
+  if (!newPassword || newPassword.length < 3) {
+    alert('Password must be at least 3 characters long');
+    return;
+  }
+  
+  if (newPassword !== confirmPassword) {
+    alert('Passwords do not match');
+    return;
+  }
+  
+  try {
+    // Hash the new password (same way as registration)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(newPassword);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const newPasswordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    // Send password change request
+    const response = await fetch('/changePassword', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, newPasswordHash })
+    });
+    
+    const message = await response.text();
+    
+    if (response.ok) {
+      alert(message);
+      logPasswordChange(username);
+      // Clear form
+      document.getElementById('newUserPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+      document.getElementById('passwordUsername').value = '';
+    } else {
+      alert('Error: ' + message);
+    }
+  } catch (error) {
+    console.error('Error changing password:', error);
+    alert('Failed to change password');
+  }
+}
+
+// Log password changes
+function logPasswordChange(username) {
+  const passwordLog = document.getElementById('passwordLog');
+  const timestamp = new Date().toLocaleString();
+  
+  const logEntry = document.createElement('div');
+  logEntry.style.padding = '0.5rem';
+  logEntry.style.marginBottom = '0.5rem';
+  logEntry.style.backgroundColor = 'var(--bg-primary)';
+  logEntry.style.borderRadius = 'var(--radius)';
+  logEntry.style.borderLeft = '4px solid var(--warning)';
+  
+  logEntry.innerHTML = `
+    <strong>🔐 Password Changed</strong><br>
+    <span style="color: var(--text-secondary);">User: ${username}</span><br>
+    <span style="color: var(--text-secondary); font-size: 0.9rem;">${timestamp}</span>
+  `;
+  
+  // Remove "no changes" message if it exists
+  if (passwordLog.querySelector('p')) {
+    passwordLog.innerHTML = '';
+  }
+  
+  // Add new entry at the top
+  passwordLog.insertBefore(logEntry, passwordLog.firstChild);
+}
+
+// Populate password username dropdown
+function populatePasswordUserDropdown() {
+  const dropdown = document.getElementById('passwordUsername');
+  if (!dropdown || !adminUsers) return;
+  
+  dropdown.innerHTML = '<option value="">-- Select a user --</option>';
+  
+  adminUsers.forEach(user => {
+    const option = document.createElement('option');
+    option.value = user.username;
+    option.textContent = `${user.username} (${user.role})`;
+    dropdown.appendChild(option);
+  });
+}
+
+// Add event listeners for admin tabs as backup to onclick
+document.addEventListener('DOMContentLoaded', () => {
+  // Setup tab click listeners
+  setTimeout(() => {
+    const tabButtons = document.querySelectorAll('#adminTabs button');
+    tabButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        const onclick = button.getAttribute('onclick');
+        if (onclick) {
+          const match = onclick.match(/switchTab\('(.+?)'\)/);
+          if (match) {
+            const tabId = match[1];
+            console.log('Tab clicked:', tabId);
+            if (typeof window.switchTab === 'function') {
+              window.switchTab(tabId);
+            } else {
+              console.error('switchTab function not available');
+            }
+          }
+        }
+      });
+    });
+    console.log('✅ Tab event listeners added to', tabButtons.length, 'buttons');
+  }, 300);
+});
