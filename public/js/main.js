@@ -52,3 +52,53 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   console.log('✅ Application initialized');
 });
+
+// Function to return to student dashboard
+window.backToStudentDashboard = function() {
+    console.log('🔙 Returning to student dashboard');
+    
+    // Hide all sections
+    document.getElementById('gameSection').classList.add('hidden');
+    document.getElementById('gameSection').style.display = 'none';
+    document.getElementById('typingSection').classList.add('hidden');
+    document.getElementById('typingSection').style.display = 'none';
+    
+    // Show student panel
+    document.getElementById('studentPanel').classList.remove('hidden');
+    document.getElementById('studentPanel').style.display = 'block';
+    
+    // Reset any game/typing state
+    document.getElementById('userInput').value = '';
+    document.getElementById('typingInput').value = '';
+    document.getElementById('wordBox').textContent = '';
+    document.getElementById('typingPrompt').textContent = 'Get ready to type...';
+    document.getElementById('typingFeedback').textContent = '';
+}
+
+// Function to change theme (accessible to students)
+window.changeTheme = function(themeName) {
+    console.log('🎨 Changing theme to:', themeName);
+    
+    // Apply the theme
+    applyTheme(themeName);
+    
+    // Save the preference in both possible keys
+    localStorage.setItem('selectedTheme', themeName);
+    localStorage.setItem('theme', themeName);
+    
+    // Update both theme selects if they exist
+    const adminThemeSelect = document.getElementById('themeSelect');
+    const studentThemeSelect = document.getElementById('studentThemeSelect');
+    
+    if (adminThemeSelect) {
+        adminThemeSelect.value = themeName;
+    }
+    if (studentThemeSelect) {
+        studentThemeSelect.value = themeName;
+    }
+    
+    // Show toast notification
+    if (typeof showToast === 'function') {
+        showToast(`🎨 Theme changed to ${themeName}`);
+    }
+}

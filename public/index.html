@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
+    <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>✨ Modern Spelling Practice</title>
     <link href="styles.css" rel="stylesheet"/>
@@ -35,6 +35,7 @@
             </form>
             <p id="loginMessage" style="margin-top: 1rem; text-align: center;"></p>
         </div>
+        
         <!-- Navigation -->
         <div id="nav" class="hidden">
             <p><strong id="userInfo"></strong></p>
@@ -44,6 +45,7 @@
                 <button id="logoutBtn" onclick="logoutUser()" class="btn-secondary">Sign Out</button>
             </div>
         </div>
+        
         <!-- Admin Panel -->
         <div class="hidden" id="adminPanel">
             <div class="card-header">
@@ -56,12 +58,13 @@
                 <button class="active" onclick="switchTab('tabUsers')">👤 Users</button>
                 <button onclick="switchTab('tabWords')">📝 Word Lists</button>
                 <button onclick="switchTab('tabAnalytics')">📊 Analytics</button>
-                <button onclick="switchTab('tabResults')">� Results</button>
+                <button onclick="switchTab('tabResults')">📋 Results</button>
                 <button onclick="switchTab('tabReports')">📘 Reports</button>
-                <button onclick="switchTab('tabSessions')">� Sessions</button>
-                <button onclick="switchTab('tabBadges')">� Badges</button>
+                <button onclick="switchTab('tabSessions')">📅 Sessions</button>
+                <button onclick="switchTab('tabBadges')">🏅 Badges</button>
                 <button onclick="switchTab('tabTheme')">🎨 Themes</button>
             </div>
+            
             <!-- Users Tab -->
             <div id="tabUsers" class="adminTab">
                 <h3>👤 User Management</h3>
@@ -78,6 +81,7 @@
                             <button type="submit" class="btn-success">➕ Add User</button>
                         </form>
                         <p id="userAddMessage" style="margin-top: 1rem;"></p>
+                        <small id="hashPreview" style="color: var(--text-secondary);"></small>
                     </div>
                     <div class="card">
                         <h4>Remove User</h4>
@@ -87,14 +91,14 @@
                     </div>
                 </div>
             </div>
+            
             <!-- Word Lists Tab -->
             <div class="adminTab hidden" id="tabWords">
-                <h3>📝 Word List Management</h3>
-                <div style="display: grid; gap: 2rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <div class="card">
-                        <h4>Select Student</h4>
+                        <h4>Select User</h4>
                         <select class="word-user-dropdown" id="wordUserSelect" onchange="loadWordsForSelectedUser()" style="width: 100%;">
-                            <option value="">-- Select a student --</option>
+                            <option value="">-- Select a user --</option>
                         </select>
                     </div>
                     
@@ -126,6 +130,7 @@
                     </div>
                 </div>
             </div>
+            
             <!-- Results Tab -->
             <div class="adminTab hidden" id="tabResults">
                 <div class="card">
@@ -166,7 +171,7 @@
             <!-- Badges Tab -->
             <div class="adminTab hidden" id="tabBadges">
                 <div class="card">
-                    <h3>� Student Badges</h3>
+                    <h3>🏅 Student Badges</h3>
                     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
                         <div>
                             <h4>Select Student</h4>
@@ -194,6 +199,7 @@
                     </select>
                 </div>
             </div>
+            
             <!-- Reports Tab -->
             <div class="adminTab hidden" id="tabReports">
                 <div class="card">
@@ -233,7 +239,7 @@
             <!-- Sessions Tab -->
             <div class="adminTab hidden" id="tabSessions">
                 <div class="card">
-                    <h3>� Session History</h3>
+                    <h3>📅 Session History</h3>
                     <div style="margin-bottom: 2rem;">
                         <label for="sessionUserSelect">Select Student:</label>
                         <select id="sessionUserSelect" onchange="loadUserSessions(this.value)" style="width: 100%; max-width: 300px;">
@@ -244,12 +250,25 @@
                 </div>
             </div>
         </div>
+        
         <!-- Student Panel -->
         <div class="hidden" id="studentPanel">
             <div class="card">
                 <div class="card-header">
                     <h2>🎓 Student Dashboard</h2>
                     <p style="color: var(--text-secondary);">Choose an activity to start practicing</p>
+                </div>
+                
+                <!-- Theme Selection for Students -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <h4>🎨 Choose Your Theme</h4>
+                    <select id="studentThemeSelect" onchange="changeTheme(this.value)" style="width: 100%; max-width: 300px;">
+                        <option value="default">✨ Modern (Default)</option>
+                        <option value="playground">🎪 Playground</option>
+                        <option value="chalkboard">🎓 Chalkboard</option>
+                        <option value="galaxy">🌌 Galaxy</option>
+                        <option value="nature">🌿 Nature</option>
+                    </select>
                 </div>
                 
                 <div class="student-controls">
@@ -262,43 +281,58 @@
                         </button>
                     </div>
                 </div>
-                
-                <!-- Game Section -->
-                <div class="hidden" id="gameSection">
+            </div>
+        </div>
+        
+        <!-- Game Section -->
+        <div class="hidden" id="gameSection">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h3>🎮 Spelling Challenge</h3>
-                    <div class="word-box" id="wordBox"></div>
-                    <div class="hidden" id="inputSection" style="text-align: center;">
-                        <input id="userInput" placeholder="Type the word you saw..." type="text" style="max-width: 400px;"/>
-                        <button onclick="submitAnswer()" class="btn-primary">Submit Answer</button>
-                    </div>
-                    <!-- Game Summary -->
-                    <div class="hidden" id="summary" class="card"></div>
-                    <!-- Badge Display -->
-                    <div class="hidden" id="badgeDisplay" class="card">
-                        <h3>🏅 Congratulations!</h3>
-                        <p>You've earned new badges:</p>
-                        <ul id="badgeList"></ul>
-                    </div>
+                    <button onclick="backToStudentDashboard()" class="btn-secondary" style="padding: 0.5rem 1rem;">
+                        ← Back to Dashboard
+                    </button>
                 </div>
-                
-                <!-- Typing Practice Section -->
-                <div class="hidden" id="typingSection">
+                <div class="word-box" id="wordBox"></div>
+                <div class="hidden" id="inputSection" style="text-align: center;">
+                    <input id="userInput" placeholder="Type the word you saw..." type="text" style="max-width: 400px;"/>
+                    <button onclick="submitAnswer()" class="btn-primary">Submit Answer</button>
+                </div>
+                <!-- Game Summary -->
+                <div class="hidden" id="summary" class="card"></div>
+                <!-- Badge Display -->
+                <div class="hidden" id="badgeDisplay" class="card">
+                    <h3>🏅 Congratulations!</h3>
+                    <p>You've earned new badges:</p>
+                    <ul id="badgeList"></ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Typing Practice Section -->
+        <div class="hidden" id="typingSection">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h3>⌨️ Typing Practice</h3>
-                    <div id="typingPrompt">Get ready to type...</div>
-                    <div style="text-align: center; margin: 2rem 0;">
-                        <input id="typingInput" type="text" style="max-width: 500px;"/>
-                        <button onclick="submitTyping()" class="btn-primary">Submit</button>
-                    </div>
-                    <p id="typingFeedback" style="text-align: center; font-weight: 600;"></p>
+                    <button onclick="backToStudentDashboard()" class="btn-secondary" style="padding: 0.5rem 1rem;">
+                        ← Back to Dashboard
+                    </button>
                 </div>
+                <div id="typingPrompt">Get ready to type...</div>
+                <div style="text-align: center; margin: 2rem 0;">
+                    <input id="typingInput" type="text" style="max-width: 500px;"/>
+                    <button onclick="submitTyping()" class="btn-primary">Submit</button>
+                </div>
+                <p id="typingFeedback" style="text-align: center; font-weight: 600;"></p>
             </div>
         </div>
         
         <!-- Toast notification -->
         <div id="toast" class="toast"></div>
-    </div>    <script>
+    </div>
+    
+    <script>
         // Initialize the application when DOM is loaded
-        
         window.addEventListener('DOMContentLoaded', () => {
             const user = JSON.parse(localStorage.getItem('loggedInUser'));
             if (user) {

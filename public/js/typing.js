@@ -12,8 +12,12 @@ window.startTypingPractice = async function() {
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
     if (!user) return;
 
+    // Hide student dashboard and game section
+    document.getElementById('studentPanel').style.display = 'none';
     document.getElementById('gameSection').classList.add('hidden');
+    document.getElementById('gameSection').style.display = 'none';
     document.getElementById('typingSection').classList.remove('hidden');
+    document.getElementById('typingSection').style.display = 'block';
 
     const typingPrompt = document.getElementById('typingPrompt');
     typingPrompt.textContent = 'Loading...';

@@ -57,6 +57,7 @@ function showStudent() {
   const studentPanel = document.getElementById('studentPanel');
   if (studentPanel) {
     studentPanel.classList.remove('hidden');
+    studentPanel.style.display = 'block';
     
     // Ensure buttons are visible and functional
     const gameBtn = document.getElementById('startGameBtn');
@@ -66,6 +67,13 @@ function showStudent() {
       gameBtn.classList.remove('hidden');
       typingBtn.classList.remove('hidden');
       console.log("✅ Student buttons are now visible");
+    }
+    
+    // Update student theme selector to match current theme
+    const savedTheme = localStorage.getItem('theme') || localStorage.getItem('selectedTheme') || 'default';
+    const studentThemeSelect = document.getElementById('studentThemeSelect');
+    if (studentThemeSelect) {
+      studentThemeSelect.value = savedTheme;
     }
   }
 }

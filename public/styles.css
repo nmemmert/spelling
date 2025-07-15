@@ -105,7 +105,7 @@ button {
   padding: 0.75rem 1.5rem;
   margin: 0.25rem;
   background: var(--primary);
-  color: white;
+  color: white !important;
   border: none;
   border-radius: var(--radius);
   font-size: 1rem;
@@ -114,56 +114,126 @@ button {
   cursor: pointer;
   transition: var(--transition);
   box-shadow: var(--shadow);
+  text-decoration: none;
 }
 
 button:hover {
   background: var(--primary-dark);
+  color: white !important;
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
 }
 
 button:active {
   transform: translateY(0);
+  color: white !important;
 }
 
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+  color: white !important;
 }
 
 /* Button variants */
 .btn-secondary {
   background: var(--secondary);
-  color: var(--text-primary);
+  color: var(--text-primary) !important;
 }
 
 .btn-secondary:hover {
   background: var(--border);
+  color: var(--text-primary) !important;
 }
 
 .btn-success {
   background: var(--success);
+  color: white !important;
 }
 
 .btn-success:hover {
   background: #059669;
+  color: white !important;
 }
 
 .btn-warning {
   background: var(--warning);
+  color: white !important;
 }
 
 .btn-warning:hover {
   background: #d97706;
+  color: white !important;
 }
 
 .btn-error {
   background: var(--error);
+  color: white !important;
 }
 
 .btn-error:hover {
   background: #dc2626;
+  color: white !important;
+}
+
+/* Additional button contrast fixes */
+#startGameBtn, #startTypingBtn {
+  background: var(--success) !important;
+  color: white !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  font-weight: 600 !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#startGameBtn:hover, #startTypingBtn:hover {
+  background: #059669 !important;
+  color: white !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Typing Practice button specific styling */
+#startTypingBtn {
+  background: var(--warning) !important;
+}
+
+#startTypingBtn:hover {
+  background: #d97706 !important;
+}
+
+/* Back to dashboard button */
+button[onclick="backToStudentDashboard()"] {
+  background: var(--secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+}
+
+button[onclick="backToStudentDashboard()"]:hover {
+  background: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Theme-specific button fixes */
+.theme-chalkboard button,
+.theme-galaxy button {
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.theme-chalkboard .btn-secondary,
+.theme-galaxy .btn-secondary {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.theme-chalkboard .btn-secondary:hover,
+.theme-galaxy .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
 }
 
 /* Cards and panels */
@@ -331,6 +401,31 @@ button:disabled {
   background: var(--bg-primary);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+
+/* Student controls specific styling */
+.student-controls button {
+  min-height: 60px !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.student-controls .btn-success {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: white !important;
+}
+
+.student-controls .btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: white !important;
+}
+
+.student-controls button:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
 }
 
 /* Lists */

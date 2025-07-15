@@ -83,8 +83,13 @@ window.startGame = async function() {
     }
 
     try {
+        // Hide student dashboard and typing practice
+        document.getElementById('studentPanel').style.display = 'none';
+        document.getElementById('typingSection').style.display = 'none';
+        
         // Show game section
         document.getElementById('gameSection').classList.remove('hidden');
+        document.getElementById('gameSection').style.display = 'block';
         document.getElementById('wordBox').textContent = 'Loading...';
         document.getElementById('summary')?.classList.add('hidden');
         document.getElementById('badgeDisplay')?.classList.add('hidden');

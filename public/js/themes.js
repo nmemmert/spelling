@@ -1,10 +1,14 @@
 // Modern theme system
 function applySavedTheme() {
-  const savedTheme = localStorage.getItem('theme') || 'default';
+  const savedTheme = localStorage.getItem('theme') || localStorage.getItem('selectedTheme') || 'default';
   applyTheme(savedTheme);
 
+  // Update both theme selectors
   const themeSelector = document.getElementById('themeSelect');
+  const studentThemeSelector = document.getElementById('studentThemeSelect');
+  
   if (themeSelector) themeSelector.value = savedTheme;
+  if (studentThemeSelector) studentThemeSelector.value = savedTheme;
 }
 
 function changeTheme(themeName) {
