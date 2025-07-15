@@ -83,9 +83,10 @@ window.startGame = async function() {
     }
 
     try {
-        // Hide student dashboard and typing practice
+        // Hide student dashboard and other sections
         document.getElementById('studentPanel').style.display = 'none';
         document.getElementById('typingSection').style.display = 'none';
+        document.getElementById('bibleSection').style.display = 'none';
         
         // Show game section
         document.getElementById('gameSection').classList.remove('hidden');

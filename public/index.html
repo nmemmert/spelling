@@ -13,6 +13,7 @@
     <script src="js/themes.js"></script>
     <script src="js/game.js"></script>
     <script src="js/typing.js"></script>
+    <script src="js/bible.js"></script>
     <script src="js/main.js"></script>
 </head>
 <body>
@@ -313,12 +314,15 @@
                 </div>
                 
                 <div class="student-controls">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 600px; margin: 0 auto;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; max-width: 900px; margin: 0 auto;">
                         <button id="startGameBtn" onclick="startGame()" class="btn-success">
                             🎮 Spelling Game
                         </button>
                         <button id="startTypingBtn" onclick="startTypingPractice()" class="btn-warning">
                             ⌨️ Typing Practice
+                        </button>
+                        <button id="startBibleBtn" onclick="startBibleTyping()" class="btn-primary">
+                            📖 Bible Typing
                         </button>
                     </div>
                 </div>
@@ -365,6 +369,63 @@
                     <button onclick="submitTyping()" class="btn-primary">Submit</button>
                 </div>
                 <p id="typingFeedback" style="text-align: center; font-weight: 600;"></p>
+            </div>
+        </div>
+        
+        <!-- Bible Typing Section -->
+        <div class="hidden" id="bibleSection">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>📖 Bible Typing (ESV)</h3>
+                    <button onclick="backToStudentDashboard()" class="btn-secondary" style="padding: 0.5rem 1rem;">
+                        ← Back to Dashboard
+                    </button>
+                </div>
+                
+                <!-- Verse Selection -->
+                <div style="margin-bottom: 2rem;">
+                    <h4>Select a Bible Verse:</h4>
+                    <select id="verseSelect" onchange="loadSelectedVerse()" style="width: 100%; max-width: 500px; margin-bottom: 1rem;">
+                        <option value="">-- Choose a verse --</option>
+                    </select>
+                    <button onclick="getRandomVerse()" class="btn-secondary" style="margin-left: 1rem;">🎲 Random Verse</button>
+                </div>
+                
+                <!-- Verse Display -->
+                <div id="bibleVerseDisplay" style="font-size: 1.2rem; line-height: 1.8; padding: 2rem; background: var(--bg-secondary); border-radius: var(--radius); margin-bottom: 2rem; min-height: 100px; display: flex; align-items: center; justify-content: center; text-align: center;">
+                    Select a verse to begin typing practice
+                </div>
+                
+                <!-- Typing Area -->
+                <div style="text-align: center; margin: 2rem 0;">
+                    <textarea id="bibleInput" placeholder="Type the verse here..." style="width: 100%; max-width: 700px; min-height: 120px; font-size: 1.1rem; line-height: 1.6;"></textarea>
+                    <div style="margin-top: 1rem;">
+                        <button onclick="checkBibleVerse()" class="btn-primary">✓ Check Typing</button>
+                        <button onclick="clearBibleInput()" class="btn-secondary">🗑️ Clear</button>
+                    </div>
+                </div>
+                
+                <!-- Feedback -->
+                <div id="bibleFeedback" style="text-align: center; margin-top: 2rem;"></div>
+                
+                <!-- Progress -->
+                <div id="bibleProgress" style="margin-top: 2rem;">
+                    <h4>📊 Typing Progress</h4>
+                    <div id="bibleStats" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius);">
+                            <div style="font-size: 2rem; font-weight: bold; color: var(--primary);" id="accuracyPercent">0%</div>
+                            <div>Accuracy</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius);">
+                            <div style="font-size: 2rem; font-weight: bold; color: var(--success);" id="correctWords">0</div>
+                            <div>Correct Words</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius);">
+                            <div style="font-size: 2rem; font-weight: bold; color: var(--error);" id="incorrectWords">0</div>
+                            <div>Errors</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         

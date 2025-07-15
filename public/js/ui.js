@@ -62,11 +62,13 @@ function showStudent() {
     // Ensure buttons are visible and functional
     const gameBtn = document.getElementById('startGameBtn');
     const typingBtn = document.getElementById('startTypingBtn');
+    const bibleBtn = document.getElementById('startBibleBtn');
     
-    if (gameBtn && typingBtn) {
+    if (gameBtn && typingBtn && bibleBtn) {
       gameBtn.classList.remove('hidden');
       typingBtn.classList.remove('hidden');
-      console.log("✅ Student buttons are now visible");
+      bibleBtn.classList.remove('hidden');
+      console.log("✅ All student buttons are now visible");
     }
     
     // Update student theme selector to match current theme

@@ -97,7 +97,7 @@ textarea {
   max-width: 500px;
 }
 
-/* Buttons */
+/* Buttons - Global enhanced readability */
 button {
   display: inline-flex;
   align-items: center;
@@ -105,76 +105,116 @@ button {
   padding: 0.75rem 1.5rem;
   margin: 0.25rem;
   background: var(--primary);
-  color: white !important;
+  color: #ffffff !important;
   border: none;
   border-radius: var(--radius);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   transition: var(--transition);
   box-shadow: var(--shadow);
   text-decoration: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  min-height: 44px;
 }
 
 button:hover {
   background: var(--primary-dark);
-  color: white !important;
+  color: #ffffff !important;
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
 }
 
 button:active {
   transform: translateY(0);
-  color: white !important;
+  color: #ffffff !important;
 }
 
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-  color: white !important;
+  color: #ffffff !important;
 }
 
-/* Button variants */
+/* Button variants with enhanced readability */
 .btn-secondary {
-  background: var(--secondary);
-  color: var(--text-primary) !important;
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 2px solid #e2e8f0 !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
 }
 
 .btn-secondary:hover {
-  background: var(--border);
-  color: var(--text-primary) !important;
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+.btn-primary {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  min-height: 44px !important;
+}
+
+.btn-primary:hover {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
 }
 
 .btn-success {
-  background: var(--success);
-  color: white !important;
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  min-height: 44px !important;
 }
 
 .btn-success:hover {
-  background: #059669;
-  color: white !important;
+  background: #059669 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
 }
 
 .btn-warning {
-  background: var(--warning);
-  color: white !important;
+  background: #f59e0b !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  min-height: 44px !important;
 }
 
 .btn-warning:hover {
-  background: #d97706;
-  color: white !important;
+  background: #d97706 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
 }
 
 .btn-error {
-  background: var(--error);
-  color: white !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  min-height: 44px !important;
 }
 
 .btn-error:hover {
-  background: #dc2626;
-  color: white !important;
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
 }
 
 /* Additional button contrast fixes */
@@ -204,81 +244,108 @@ button:disabled {
   background: #d97706 !important;
 }
 
-/* Back to dashboard button */
-button[onclick="backToStudentDashboard()"] {
-  background: var(--secondary) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--border) !important;
-}
-
-button[onclick="backToStudentDashboard()"]:hover {
-  background: var(--border) !important;
-  color: var(--text-primary) !important;
-}
-
-/* Theme-specific button fixes */
-.theme-chalkboard button,
-.theme-galaxy button {
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
-}
-
-.theme-chalkboard .btn-secondary,
-.theme-galaxy .btn-secondary {
-  background: rgba(255, 255, 255, 0.1) !important;
+/* Bible typing button specific styling */
+#startBibleBtn {
+  background: var(--primary) !important;
   color: white !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  font-weight: 600 !important;
+  min-height: 60px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
 }
 
-.theme-chalkboard .btn-secondary:hover,
-.theme-galaxy .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
+#startBibleBtn:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
   color: white !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* Cards and panels */
-.card {
-  background: var(--bg-primary);
+/* Bible typing interface styling with enhanced button readability */
+#bibleSection textarea {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 2rem;
-  margin: 1rem 0;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
+  padding: 1rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
 }
 
-.card-header {
-  padding-bottom: 1rem;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
+#bibleSection textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+  outline: none;
 }
 
-/* Layout utilities */
-.hidden {
-  display: none !important;
+#verseSelect {
+  max-width: 500px !important;
+  font-size: 1rem;
 }
 
-.flex {
-  display: flex;
+/* Enhanced Bible typing button styles - Force override all button styling */
+#bibleSection .btn-primary,
+#bibleSection .btn-secondary,
+#bibleFeedback .btn-primary,
+#bibleFeedback .btn-secondary,
+#bibleSection button,
+#bibleFeedback button {
+  min-height: 44px !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: var(--radius) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  justify-content: center !important;
+  border: none !important;
+  outline: none !important;
 }
 
-.flex-col {
-  flex-direction: column;
+/* Bible section primary buttons (Check Typing, Show Differences) */
+#bibleSection .btn-primary,
+#bibleFeedback .btn-primary {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+  border: 2px solid #10b981 !important;
 }
 
-.items-center {
-  align-items: center;
+#bibleSection .btn-primary:hover,
+#bibleFeedback .btn-primary:hover {
+  background: #059669 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+  border: 2px solid #059669 !important;
 }
 
-.justify-center {
-  justify-content: center;
+/* Bible section secondary buttons (Clear, Random) */
+#bibleSection .btn-secondary,
+#bibleFeedback .btn-secondary {
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 2px solid #e2e8f0 !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
-.gap-4 {
-  gap: 1rem;
-}
-
-.text-center {
-  text-align: center;
+#bibleSection .btn-secondary:hover,
+#bibleFeedback .btn-secondary:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  border: 2px solid #cbd5e1 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Specific component styles */
@@ -370,6 +437,11 @@ button[onclick="backToStudentDashboard()"]:hover {
   padding: 2rem;
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
+}
+
+/* Layout utilities */
+.hidden {
+  display: none !important;
 }
 
 .adminTab.hidden {

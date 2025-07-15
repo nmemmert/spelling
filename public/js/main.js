@@ -1,14 +1,14 @@
 document.addEventListener("DOMContentLoaded", async () => {
   console.log('🚀 Application starting...');
   
-  // Load users for admin functionality
-  try {
-    await loadUsers();
-    displayUserDropdown();
-    populateWordUserDropdown();
-  } catch (e) {
-    console.warn('Could not load users (normal if not admin):', e);
-  }
+  // Ensure all panels are hidden initially
+  document.getElementById('adminPanel')?.classList.add('hidden');
+  document.getElementById('studentPanel')?.classList.add('hidden');
+  document.getElementById('gameSection')?.classList.add('hidden');
+  document.getElementById('typingSection')?.classList.add('hidden');
+  document.getElementById('bibleSection')?.classList.add('hidden');
+  document.getElementById('nav')?.classList.add('hidden');
+  document.getElementById('roleBanner')?.classList.add('hidden');
 
   // Restore saved theme
   applySavedTheme();
@@ -19,39 +19,50 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const user = JSON.parse(savedUser);
       console.log('👤 Restoring session for:', user.username);
+      
+      // Load users for admin functionality only if user is admin
+      if (user.role === 'admin') {
+        try {
+          await loadUsers();
+          displayUserDropdown();
+          populateWordUserDropdown();
+        } catch (e) {
+          console.warn('Could not load admin data:', e);
+        }
+      }
+      
       setupSession(user);
     } catch (e) {
       console.error('Error restoring session:', e);
       localStorage.removeItem("loggedInUser");
+      showLoginOnly();
     }
   } else {
     console.log('👤 No saved session found');
-    // Focus on login form
-    const usernameField = document.getElementById('username');
-    if (usernameField) {
-      setTimeout(() => usernameField.focus(), 100);
-    }
+    showLoginOnly();
   }
-
-  // Set default admin tab
-  const defaultTab = document.querySelector('#adminTabs button.active');
-  if (defaultTab) {
-    const targetId = defaultTab.getAttribute("onclick")?.match(/'(.*?)'/)?.[1];
-    if (targetId) {
-      console.log('🔧 Setting default admin tab:', targetId);
-      // Use a small delay to ensure all scripts are loaded
-      setTimeout(() => {
-        if (typeof window.switchTab === 'function') {
-          window.switchTab(targetId);
-        } else {
-          console.warn('switchTab function not yet available');
-        }
-      }, 200);
-    }
-  }
-  
-  console.log('✅ Application initialized');
 });
+
+// Function to show only the login panel
+function showLoginOnly() {
+  // Hide all panels
+  document.getElementById('adminPanel')?.classList.add('hidden');
+  document.getElementById('studentPanel')?.classList.add('hidden');
+  document.getElementById('gameSection')?.classList.add('hidden');
+  document.getElementById('typingSection')?.classList.add('hidden');
+  document.getElementById('bibleSection')?.classList.add('hidden');
+  document.getElementById('nav')?.classList.add('hidden');
+  document.getElementById('roleBanner')?.classList.add('hidden');
+  
+  // Show login panel
+  document.getElementById('loginPanel')?.classList.remove('hidden');
+  
+  // Focus on login form
+  const usernameField = document.getElementById('username');
+  if (usernameField) {
+    setTimeout(() => usernameField.focus(), 100);
+  }
+}
 
 // Function to return to student dashboard
 window.backToStudentDashboard = function() {
@@ -62,17 +73,30 @@ window.backToStudentDashboard = function() {
     document.getElementById('gameSection').style.display = 'none';
     document.getElementById('typingSection').classList.add('hidden');
     document.getElementById('typingSection').style.display = 'none';
+    document.getElementById('bibleSection').classList.add('hidden');
+    document.getElementById('bibleSection').style.display = 'none';
     
     // Show student panel
     document.getElementById('studentPanel').classList.remove('hidden');
     document.getElementById('studentPanel').style.display = 'block';
     
     // Reset any game/typing state
-    document.getElementById('userInput').value = '';
-    document.getElementById('typingInput').value = '';
-    document.getElementById('wordBox').textContent = '';
-    document.getElementById('typingPrompt').textContent = 'Get ready to type...';
-    document.getElementById('typingFeedback').textContent = '';
+    const userInput = document.getElementById('userInput');
+    const typingInput = document.getElementById('typingInput');
+    const wordBox = document.getElementById('wordBox');
+    const typingPrompt = document.getElementById('typingPrompt');
+    const typingFeedback = document.getElementById('typingFeedback');
+    
+    if (userInput) userInput.value = '';
+    if (typingInput) typingInput.value = '';
+    if (wordBox) wordBox.textContent = '';
+    if (typingPrompt) typingPrompt.textContent = 'Get ready to type...';
+    if (typingFeedback) typingFeedback.textContent = '';
+    
+    // Reset Bible typing state
+    if (typeof window.resetBibleInterface === 'function') {
+        window.resetBibleInterface();
+    }
 }
 
 // Function to change theme (accessible to students)
