@@ -54,12 +54,25 @@ function readJsonSafe(filePath, fallback = {}) {
 // 🔐 Verify login
 app.post('/verifyUser', (req, res) => {
   const { username, hash } = req.body;
+  console.log('Login attempt - Username:', username, 'Hash:', hash);
+  
   if (typeof username !== 'string' || typeof hash !== 'string') {
+    console.log('Invalid credentials format');
     return res.status(400).send("Invalid credentials format");
   }
+  
   const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
+  console.log('Available users:', users.map(u => u.username));
+  
   const user = users.find(u => u.username === username && u.hash === hash);
-  user ? res.json(user) : res.status(401).send("Invalid login");
+  
+  if (user) {
+    console.log('Login successful for:', username);
+    res.json(user);
+  } else {
+    console.log('Login failed for:', username);
+    res.status(401).send("Invalid login");
+  }
 });
 
 // ➕ Add user

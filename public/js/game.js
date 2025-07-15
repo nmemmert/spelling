@@ -3,7 +3,46 @@ let words = [];
 let currentWord = '';
 let currentIndex = 0;
 let results = [];
-let typingWords = [];
+// 📝 Check user's answer and move to next
+window.submitAnswer = function() {
+    const input = document.getElementById('userInput').value.trim();
+    
+    // Record the attempt
+    results.push({
+        word: currentWord,
+        attempt: input
+    });
+
+    if (input.toLowerCase() === currentWord.toLowerCase()) {
+        currentIndex++;
+        document.getElementById('inputSection').classList.add('hidden');
+        setTimeout(() => showWord(), 500); // Brief pause before next word
+    } else {
+        // Show feedback for incorrect answer
+        const inputEl = document.getElementById('userInput');
+        inputEl.style.borderColor = 'var(--error)';
+        inputEl.style.backgroundColor = '#fef2f2';
+        
+        setTimeout(() => {
+            inputEl.style.borderColor = '';
+            inputEl.style.backgroundColor = '';
+            inputEl.focus();
+        }, 1000);
+    }
+}
+
+// Add Enter key support for game input
+document.addEventListener('DOMContentLoaded', () => {
+    const gameInput = document.getElementById('userInput');
+    if (gameInput) {
+        gameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitAnswer();
+            }
+        });
+    }
+});[];
+let currentSentence = '';
 
 function showStudent() {
     console.log("🔊 Showing student panel");
@@ -34,7 +73,7 @@ function showStudent() {
 }
 
 // 🚀 Begin game session
-async function startGame() {
+window.startGame = async function() {
     console.log('🎮 Starting spelling game');
     
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -62,6 +101,7 @@ async function startGame() {
 
         // Start game
         words = [...data.words];
+        typingWords = [...data.words]; // Initialize typing words too
         currentIndex = 0;
         results = [];  // Reset results array
         showWord();

@@ -5,7 +5,8 @@ const typingState = {
     currentWord: ''
 };
 
-async function startTypingPractice() {
+// Make functions globally accessible
+window.startTypingPractice = async function() {
     console.log('Starting typing practice');
     
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -34,7 +35,7 @@ async function startTypingPractice() {
     }
 }
 
-function showNextWord() {
+window.showNextWord = function() {
   const promptEl = document.getElementById('typingPrompt');
   const inputEl = document.getElementById('typingInput');
   if (!promptEl || !inputEl) return;
@@ -58,14 +59,8 @@ function showNextWord() {
   inputEl.focus();
 }
 
-    
-    // Reset input
-    inputEl.value = '';
-    inputEl.disabled = false;
-    inputEl.focus();
 
-
-function submitTyping() {
+window.submitTyping = function() {
     const input = document.getElementById('typingInput')?.value.trim() || '';
     const feedback = document.getElementById('typingFeedback');
     if (!feedback) return;
