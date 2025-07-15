@@ -62,6 +62,7 @@
                 <button onclick="switchTab('tabReports')">📘 Reports</button>
                 <button onclick="switchTab('tabSessions')">📅 Sessions</button>
                 <button onclick="switchTab('tabBadges')">🏅 Badges</button>
+                <button onclick="switchTab('tabPasswords')">🔐 Passwords</button>
                 <button onclick="switchTab('tabTheme')">🎨 Themes</button>
             </div>
             
@@ -186,6 +187,46 @@
             </div>
             
             <!-- Theme Tab -->
+            <!-- Passwords Tab -->
+            <div class="adminTab hidden" id="tabPasswords">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🔐 Password Management</h3>
+                        <p style="color: var(--text-secondary);">Change user passwords</p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <!-- Change Password Form -->
+                        <div class="card">
+                            <h4>Change User Password</h4>
+                            <form onsubmit="event.preventDefault(); changeUserPassword();" style="display: flex; flex-direction: column; gap: 1rem;">
+                                <label for="passwordUsername">Select User:</label>
+                                <select id="passwordUsername" required style="width: 100%;">
+                                    <option value="">-- Select a user --</option>
+                                </select>
+                                
+                                <label for="newUserPassword">New Password:</label>
+                                <input id="newUserPassword" placeholder="Enter new password" required type="password"/>
+                                
+                                <label for="confirmPassword">Confirm Password:</label>
+                                <input id="confirmPassword" placeholder="Confirm new password" required type="password"/>
+                                
+                                <button type="submit" class="btn-warning">🔐 Change Password</button>
+                            </form>
+                        </div>
+                        
+                        <!-- Password History -->
+                        <div class="card">
+                            <h4>Password Change Log</h4>
+                            <div id="passwordLog" style="max-height: 300px; overflow-y: auto; background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius);">
+                                <p style="color: var(--text-secondary); font-style: italic;">No password changes recorded yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Themes Tab -->
             <div class="adminTab hidden" id="tabTheme">
                 <div class="card">
                     <h3>🎨 Application Themes</h3>

@@ -110,6 +110,31 @@ app.post('/deleteUser', (req, res) => {
   res.send(`✅ User "${username}" deleted`);
 });
 
+// 🔐 Change user password
+app.post('/changePassword', (req, res) => {
+  const { username, newPasswordHash } = req.body;
+  if (typeof username !== 'string' || typeof newPasswordHash !== 'string') {
+    return res.status(400).send("Invalid request data");
+  }
+
+  const usersPath = path.join(DATA_DIR, files.users);
+  const users = readJsonSafe(usersPath, []);
+  const userIndex = users.findIndex(u => u.username === username);
+
+  if (userIndex === -1) {
+    return res.status(404).send("User not found");
+  }
+
+  // Update the password hash
+  users[userIndex].hash = newPasswordHash;
+  
+  // Save updated users
+  fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+  
+  console.log(`Password changed for user: ${username}`);
+  res.send(`✅ Password changed for user "${username}"`);
+});
+
 // 📚 Word list
 app.get('/getWordList', (req, res) => {
     try {

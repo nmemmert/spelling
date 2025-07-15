@@ -47,6 +47,9 @@ window.switchTab = function switchTab(targetId) {
         loadStudentNamesForReport();
       }
       break;
+    case 'tabPasswords':
+      populatePasswordUserDropdown();
+      break;
     case 'tabBadges':
       if (typeof loadBadgeViewer === 'function') {
         loadBadgeViewer();
@@ -573,6 +576,102 @@ function handleFileUpload(event) {
     showToast(`📁 Loaded ${words.length} words from file`);
   };
   reader.readAsText(file);
+}
+
+// 🔐 Password Management Functions
+window.changeUserPassword = async function() {
+  const username = document.getElementById('passwordUsername').value;
+  const newPassword = document.getElementById('newUserPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+  
+  if (!username) {
+    alert('Please select a user');
+    return;
+  }
+  
+  if (!newPassword || newPassword.length < 3) {
+    alert('Password must be at least 3 characters long');
+    return;
+  }
+  
+  if (newPassword !== confirmPassword) {
+    alert('Passwords do not match');
+    return;
+  }
+  
+  try {
+    // Hash the new password (same way as registration)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(newPassword);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const newPasswordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    // Send password change request
+    const response = await fetch('/changePassword', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, newPasswordHash })
+    });
+    
+    const message = await response.text();
+    
+    if (response.ok) {
+      alert(message);
+      logPasswordChange(username);
+      // Clear form
+      document.getElementById('newUserPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+      document.getElementById('passwordUsername').value = '';
+    } else {
+      alert('Error: ' + message);
+    }
+  } catch (error) {
+    console.error('Error changing password:', error);
+    alert('Failed to change password');
+  }
+}
+
+// Log password changes
+function logPasswordChange(username) {
+  const passwordLog = document.getElementById('passwordLog');
+  const timestamp = new Date().toLocaleString();
+  
+  const logEntry = document.createElement('div');
+  logEntry.style.padding = '0.5rem';
+  logEntry.style.marginBottom = '0.5rem';
+  logEntry.style.backgroundColor = 'var(--bg-primary)';
+  logEntry.style.borderRadius = 'var(--radius)';
+  logEntry.style.borderLeft = '4px solid var(--warning)';
+  
+  logEntry.innerHTML = `
+    <strong>🔐 Password Changed</strong><br>
+    <span style="color: var(--text-secondary);">User: ${username}</span><br>
+    <span style="color: var(--text-secondary); font-size: 0.9rem;">${timestamp}</span>
+  `;
+  
+  // Remove "no changes" message if it exists
+  if (passwordLog.querySelector('p')) {
+    passwordLog.innerHTML = '';
+  }
+  
+  // Add new entry at the top
+  passwordLog.insertBefore(logEntry, passwordLog.firstChild);
+}
+
+// Populate password username dropdown
+function populatePasswordUserDropdown() {
+  const dropdown = document.getElementById('passwordUsername');
+  if (!dropdown || !adminUsers) return;
+  
+  dropdown.innerHTML = '<option value="">-- Select a user --</option>';
+  
+  adminUsers.forEach(user => {
+    const option = document.createElement('option');
+    option.value = user.username;
+    option.textContent = `${user.username} (${user.role})`;
+    dropdown.appendChild(option);
+  });
 }
 
 // Add event listeners for admin tabs as backup to onclick
