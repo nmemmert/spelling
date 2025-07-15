@@ -31,8 +31,55 @@ function ensureFileWithSeed(name, fallback = '{}') {
       fs.copyFileSync(seedPath, targetPath);
       console.log(`🌱 Seeded ${name} from seed/${name}`);
     } else {
-      fs.writeFileSync(targetPath, fallback);
-      console.log(`📄 Initialized ${name} with default`);
+      // Create default data for each file type
+      if (name === 'users.json') {
+        const defaultUsers = [
+          {
+            "username": "admin1",
+            "hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", // password
+            "role": "admin"
+          },
+          {
+            "username": "nate",
+            "hash": "5a2a558c78d3717db731600c4f354fa1d9c84b556f108091a891f444f1bdec40", // nate123
+            "role": "student"
+          },
+          {
+            "username": "student1",
+            "hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", // 123456
+            "role": "student"
+          }
+        ];
+        fs.writeFileSync(targetPath, JSON.stringify(defaultUsers, null, 2));
+        console.log(`👥 Created default users: admin1, nate, student1`);
+      } else if (name === 'wordlists.json') {
+        const defaultWordlists = {
+          "student1": [
+            "apple", "banana", "cherry", "date", "elderberry",
+            "grape", "honeydew", "kiwi", "lemon", "mango"
+          ],
+          "admin1": [
+            "administration", "education", "technology", "development", "programming"
+          ],
+          "nate": [
+            "computer", "keyboard", "mouse", "screen", "printer",
+            "software", "hardware", "network", "database", "security"
+          ]
+        };
+        fs.writeFileSync(targetPath, JSON.stringify(defaultWordlists, null, 2));
+        console.log(`📝 Created default word lists for all users`);
+      } else if (name === 'badges.json') {
+        const defaultBadges = {
+          "student1": [],
+          "nate": [],
+          "admin1": []
+        };
+        fs.writeFileSync(targetPath, JSON.stringify(defaultBadges, null, 2));
+        console.log(`🏆 Created default badge structure`);
+      } else {
+        fs.writeFileSync(targetPath, fallback);
+        console.log(`📄 Initialized ${name} with default`);
+      }
     }
   }
 }
@@ -247,4 +294,32 @@ app.get('/getBadges', (req, res) => {
 // 🚀 Server start
 app.listen(PORT, () => {
   console.log(`✅ Server listening at http://localhost:${PORT}`);
+  
+  // Display available users for easy login
+  try {
+    const usersPath = path.join(DATA_DIR, files.users);
+    const users = readJsonSafe(usersPath, []);
+    console.log('\n👥 Available Users:');
+    console.log('┌─────────────┬────────────┬──────────┐');
+    console.log('│ Username    │ Password   │ Role     │');
+    console.log('├─────────────┼────────────┼──────────┤');
+    
+    const userInfo = [
+      { username: 'admin1', password: 'password', role: 'admin' },
+      { username: 'nate', password: 'nate123', role: 'student' },
+      { username: 'student1', password: '123456', role: 'student' }
+    ];
+    
+    userInfo.forEach(user => {
+      const exists = users.find(u => u.username === user.username);
+      const status = exists ? '✅' : '❌';
+      console.log(`│ ${user.username.padEnd(11)} │ ${user.password.padEnd(10)} │ ${user.role.padEnd(8)} │ ${status}`);
+    });
+    
+    console.log('└─────────────┴────────────┴──────────┘');
+    console.log('\n🔐 Note: Change default passwords after first login!');
+    console.log(`🌐 Access the app at: http://localhost:${PORT}\n`);
+  } catch (error) {
+    console.log('⚠️  Could not display user information');
+  }
 });
