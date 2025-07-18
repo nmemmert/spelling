@@ -85,7 +85,7 @@ x-casaos:
   description: 
     en_us: "A comprehensive educational application featuring spelling practice, typing exercises, and Bible verse typing with modern UI design."
   developer: "NMemmert"
-  icon: "📝"
+  icon: "https://hotemoji.com/images/dl/7/memo-emoji-by-google.png"
   screenshot_link: ""
   tagline:
     en_us: "Modern Spelling & Typing Practice"
