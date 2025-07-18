@@ -17,5 +17,17 @@
     "mouse",
     "screen",
     "printer"
+  ],
+  "testuser": [
+    "hello",
+    "world",
+    "test",
+    "sample",
+    "basic",
+    "learn",
+    "spell",
+    "word",
+    "study",
+    "practice"
   ]
 }
