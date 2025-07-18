@@ -89,12 +89,71 @@ for (const [key, file] of Object.entries(files)) {
   ensureFileWithSeed(file, defaultData);
 }
 
+// 🔄 Initialize existing users in all data files
+function initializeAllExistingUsers() {
+  console.log('🔄 Checking all users are initialized...');
+  const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
+  
+  users.forEach(user => {
+    // Check if user exists in all data files
+    const wordlists = readJsonSafe(path.join(DATA_DIR, files.wordlists), {});
+    const results = readJsonSafe(path.join(DATA_DIR, files.results), {});
+    const badges = readJsonSafe(path.join(DATA_DIR, files.badges), {});
+    
+    const needsInit = !wordlists[user.username] || !results[user.username] || !badges[user.username];
+    
+    if (needsInit) {
+      console.log(`🔧 User "${user.username}" needs initialization`);
+      initializeUserInAllFiles(user.username);
+    }
+  });
+  console.log('✅ All users initialized');
+}
+
+// Initialize all existing users
+initializeAllExistingUsers();
+
 // 🔐 JSON utility
 function readJsonSafe(filePath, fallback = {}) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
   } catch {
     return fallback;
+  }
+}
+
+// 🔧 Initialize user across all data files
+function initializeUserInAllFiles(username) {
+  console.log(`🔧 Initializing user "${username}" across all data files`);
+  
+  // Initialize in wordlists.json
+  const wordlistsPath = path.join(DATA_DIR, files.wordlists);
+  const wordlists = readJsonSafe(wordlistsPath, {});
+  if (!wordlists[username]) {
+    wordlists[username] = [
+      "hello", "world", "test", "sample", "basic",
+      "learn", "spell", "word", "study", "practice"
+    ];
+    fs.writeFileSync(wordlistsPath, JSON.stringify(wordlists, null, 2));
+    console.log(`📝 Added default word list for "${username}"`);
+  }
+  
+  // Initialize in results.json
+  const resultsPath = path.join(DATA_DIR, files.results);
+  const results = readJsonSafe(resultsPath, {});
+  if (!results[username]) {
+    results[username] = [];
+    fs.writeFileSync(resultsPath, JSON.stringify(results, null, 2));
+    console.log(`📊 Added results tracking for "${username}"`);
+  }
+  
+  // Initialize in badges.json
+  const badgesPath = path.join(DATA_DIR, files.badges);
+  const badges = readJsonSafe(badgesPath, {});
+  if (!badges[username]) {
+    badges[username] = [];
+    fs.writeFileSync(badgesPath, JSON.stringify(badges, null, 2));
+    console.log(`🏆 Added badge tracking for "${username}"`);
   }
 }
 
@@ -136,9 +195,15 @@ app.post('/addUser', (req, res) => {
   if (users.find(u => u.username === username)) {
     return res.status(409).send("User already exists");
   }
+  
+  // Add user to users.json
   users.push({ username: username.trim(), hash, role: role.trim() });
   fs.writeFileSync(path.join(DATA_DIR, files.users), JSON.stringify(users, null, 2));
-  res.send(`✅ User "${username}" added`);
+  
+  // Initialize user in all other data files
+  initializeUserInAllFiles(username.trim());
+  
+  res.send(`✅ User "${username}" added and initialized`);
 });
 
 // ❌ Delete user
@@ -153,8 +218,28 @@ app.post('/deleteUser', (req, res) => {
   if (users.length === updated.length) {
     return res.status(404).send("User not found");
   }
+  
+  // Remove from users.json
   fs.writeFileSync(usersPath, JSON.stringify(updated, null, 2));
-  res.send(`✅ User "${username}" deleted`);
+  
+  // Clean up from other data files
+  const wordlistsPath = path.join(DATA_DIR, files.wordlists);
+  const wordlists = readJsonSafe(wordlistsPath, {});
+  delete wordlists[username];
+  fs.writeFileSync(wordlistsPath, JSON.stringify(wordlists, null, 2));
+  
+  const resultsPath = path.join(DATA_DIR, files.results);
+  const results = readJsonSafe(resultsPath, {});
+  delete results[username];
+  fs.writeFileSync(resultsPath, JSON.stringify(results, null, 2));
+  
+  const badgesPath = path.join(DATA_DIR, files.badges);
+  const badges = readJsonSafe(badgesPath, {});
+  delete badges[username];
+  fs.writeFileSync(badgesPath, JSON.stringify(badges, null, 2));
+  
+  console.log(`🗑️ Cleaned up all data for user "${username}"`);
+  res.send(`✅ User "${username}" deleted and cleaned up`);
 });
 
 // 🔐 Change user password
