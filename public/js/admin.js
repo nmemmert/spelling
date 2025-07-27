@@ -1,4 +1,81 @@
 // Global variables for admin functionality
+// --- Weeks input logic ---
+// Populate active week dropdown from weeksContainer
+window.populateActiveWeekDropdown = function() {
+  const select = document.getElementById('activeWeekSelect');
+  select.innerHTML = '';
+  document.querySelectorAll('#weeksContainer .week-input-card').forEach(card => {
+    const date = card.querySelector('.week-date').value;
+    if (date) {
+      const option = document.createElement('option');
+      option.value = date;
+      option.textContent = date;
+      select.appendChild(option);
+    }
+  });
+};
+
+// Call populateActiveWeekDropdown whenever weeks change
+const observer = new MutationObserver(() => populateActiveWeekDropdown());
+observer.observe(document.getElementById('weeksContainer'), { childList: true, subtree: true });
+
+window.setActiveWeek = async function() {
+  const selectedUser = document.getElementById('wordUserSelect')?.value;
+  const activeWeek = document.getElementById('activeWeekSelect')?.value;
+  if (!selectedUser || !activeWeek) {
+    alert('⚠️ Please select a user and week.');
+    return;
+  }
+  await fetch('/setActiveWeek', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: selectedUser, activeWeek })
+  });
+  alert(`✅ Active week set for ${selectedUser}: ${activeWeek}`);
+}
+window.addWeekInput = function() {
+  const container = document.getElementById('weeksContainer');
+  const weekIdx = container.children.length;
+  const weekDiv = document.createElement('div');
+  weekDiv.className = 'week-input-card';
+  weekDiv.style = 'border:1px solid #ccc; padding:1rem; margin-bottom:1rem;';
+  weekDiv.innerHTML = `
+    <label>Date: <input type="date" class="week-date" /></label><br/>
+    <textarea class="week-words" placeholder="Enter one word per line..."></textarea><br/>
+    <button type="button" onclick="this.parentElement.remove()" class="btn-error" style="margin-top:0.5rem;">Remove Week</button>
+  `;
+  container.appendChild(weekDiv);
+}
+
+window.saveWeeks = async function() {
+  const selectedUser = document.getElementById('wordUserSelect')?.value;
+  if (!selectedUser) {
+    alert('⚠️ Please select a user before saving.');
+    return;
+  }
+  const weeks = [];
+  document.querySelectorAll('#weeksContainer .week-input-card').forEach(card => {
+    const date = card.querySelector('.week-date').value;
+    const words = card.querySelector('.week-words').value.split('\n').map(w => w.trim()).filter(Boolean);
+    if (date && words.length) {
+      weeks.push({ date, words });
+    }
+  });
+  if (!weeks.length) {
+    alert('⚠️ Please enter at least one week with a date and words.');
+    return;
+  }
+  await fetch('/saveWeeksWordList', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: selectedUser, weeks })
+  });
+  alert(`✅ Weeks saved for ${selectedUser}`);
+}
+
+window.clearWeeks = function() {
+  document.getElementById('weeksContainer').innerHTML = '';
+}
 let allWords = [];
 let adminUsers = [];
 
@@ -675,28 +752,23 @@ function populatePasswordUserDropdown() {
 }
 
 // Add event listeners for admin tabs as backup to onclick
-document.addEventListener('DOMContentLoaded', () => {
-  // Setup tab click listeners
+window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     const tabButtons = document.querySelectorAll('#adminTabs button');
     tabButtons.forEach(button => {
       button.addEventListener('click', (e) => {
         e.preventDefault();
-        const onclick = button.getAttribute('onclick');
-        if (onclick) {
-          const match = onclick.match(/switchTab\('(.+?)'\)/);
-          if (match) {
-            const tabId = match[1];
-            console.log('Tab clicked:', tabId);
-            if (typeof window.switchTab === 'function') {
-              window.switchTab(tabId);
-            } else {
-              console.error('switchTab function not available');
-            }
+        const tabId = button.getAttribute('data-tab');
+        if (tabId) {
+          console.log('Tab clicked:', tabId);
+          if (typeof window.switchTab === 'function') {
+            window.switchTab(tabId);
+          } else {
+            console.error('switchTab function not available');
           }
         }
       });
     });
     console.log('✅ Tab event listeners added to', tabButtons.length, 'buttons');
-  }, 300);
+  }, 500);
 });

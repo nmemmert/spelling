@@ -98,11 +98,12 @@ function showAdmin() {
       console.warn("Could not load user dropdowns:", e);
     });
     
-    // Set default tab - use a slight delay to ensure DOM is ready
+    // Set default tab to tabWords and enable tab buttons
     setTimeout(() => {
+      document.querySelectorAll('#adminTabs button').forEach(btn => btn.disabled = false);
       if (typeof window.switchTab === 'function') {
-        window.switchTab("tabUsers");
-        console.log("✅ Default tab set");
+        window.switchTab("tabWords");
+        console.log("✅ Default tab set to tabWords");
       } else {
         console.error("switchTab function not available");
       }

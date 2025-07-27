@@ -100,14 +100,24 @@ window.startGame = async function() {
         const data = await response.json();
         console.log('Received words:', data);
 
-        if (!data.words || data.words.length === 0) {
+        let weekWords = [];
+        // If weeks format and activeWeek is set, use only that week's words
+        if (data.words && Array.isArray(data.words)) {
+            weekWords = data.words;
+        } else if (data.words && data.words.weeks && data.words.activeWeek) {
+            const active = data.words.activeWeek;
+            const found = data.words.weeks.find(w => w.date === active);
+            if (found) weekWords = found.words;
+        }
+
+        if (!weekWords.length) {
             alert('No words found for practice');
             return;
         }
 
         // Start game
-        words = [...data.words];
-        typingWords = [...data.words]; // Initialize typing words too
+        words = [...weekWords];
+        typingWords = [...weekWords]; // Initialize typing words too
         currentIndex = 0;
         results = [];  // Reset results array
         showWord();

@@ -296,6 +296,46 @@ app.get('/getWordList', (req, res) => {
 });
 
 app.post('/saveWordList', (req, res) => {
+// Save multiple weeks with dates for a user
+app.post('/saveWeeksWordList', (req, res) => {
+// Set active week for a user
+app.post('/setActiveWeek', (req, res) => {
+  const { username, activeWeek } = req.body;
+  if (typeof username !== 'string' || typeof activeWeek !== 'string') {
+    return res.status(400).send('Invalid data');
+  }
+  const wordlistsPath = path.join(DATA_DIR, files.wordlists);
+  const wordlists = readJsonSafe(wordlistsPath);
+  if (!wordlists[username]) {
+    return res.status(404).send('User not found');
+  }
+  if (typeof wordlists[username] === 'object') {
+    wordlists[username].activeWeek = activeWeek;
+  } else {
+    wordlists[username] = { weeks: [], activeWeek };
+  }
+  fs.writeFileSync(wordlistsPath, JSON.stringify(wordlists, null, 2));
+  res.send(`✅ Active week set for ${username}: ${activeWeek}`);
+});
+  const { username, weeks } = req.body;
+  if (
+    typeof username !== 'string' ||
+    !Array.isArray(weeks) ||
+    weeks.length > 100 ||
+    weeks.some(w => typeof w.date !== 'string' || !Array.isArray(w.words) || w.words.some(word => typeof word !== 'string'))
+  ) return res.status(400).send('Invalid weeks data');
+
+  const userList = readJsonSafe(path.join(DATA_DIR, files.users), []);
+  if (!userList.find(u => u.username === username)) {
+    return res.status(404).send('User not found');
+  }
+
+  const wordlistsPath = path.join(DATA_DIR, files.wordlists);
+  const wordlists = readJsonSafe(wordlistsPath);
+  wordlists[username] = { weeks };
+  fs.writeFileSync(wordlistsPath, JSON.stringify(wordlists, null, 2));
+  res.send(`✅ Weeks word list saved for ${username}`);
+});
   const { username, words } = req.body;
   if (
     typeof username !== 'string' ||

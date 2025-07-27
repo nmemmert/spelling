@@ -56,15 +56,15 @@
             
             <!-- Admin Tabs -->
             <div id="adminTabs">
-                <button class="active" onclick="switchTab('tabUsers')">👤 Users</button>
-                <button onclick="switchTab('tabWords')">📝 Word Lists</button>
-                <button onclick="switchTab('tabAnalytics')">📊 Analytics</button>
-                <button onclick="switchTab('tabResults')">📋 Results</button>
-                <button onclick="switchTab('tabReports')">📘 Reports</button>
-                <button onclick="switchTab('tabSessions')">📅 Sessions</button>
-                <button onclick="switchTab('tabBadges')">🏅 Badges</button>
-                <button onclick="switchTab('tabPasswords')">🔐 Passwords</button>
-                <button onclick="switchTab('tabTheme')">🎨 Themes</button>
+                <button class="active" data-tab="tabUsers">👤 Users</button>
+                <button data-tab="tabWords">📝 Word Lists</button>
+                <button data-tab="tabAnalytics">📊 Analytics</button>
+                <button data-tab="tabResults">📋 Results</button>
+                <button data-tab="tabReports">📘 Reports</button>
+                <button data-tab="tabSessions">📅 Sessions</button>
+                <button data-tab="tabBadges">🏅 Badges</button>
+                <button data-tab="tabPasswords">🔐 Passwords</button>
+                <button data-tab="tabTheme">🎨 Themes</button>
             </div>
             
             <!-- Users Tab -->
@@ -106,12 +106,20 @@
                     
                     <div class="card">
                         <h4>Manage Word List</h4>
-                        <textarea id="wordInput" placeholder="Enter one word per line..."></textarea>
-                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                            <button onclick="saveWords()" class="btn-success">💾 Save Words</button>
-                            <button onclick="clearWords()" class="btn-error">🗑️ Clear All</button>
+                        <div id="weeksInputSection">
+                            <h4>Enter Weeks</h4>
+                            <div id="weeksContainer"></div>
+                            <button onclick="addWeekInput()" class="btn-secondary" style="margin-top: 1rem;">➕ Add Week</button>
+                            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                                <button onclick="saveWeeks()" class="btn-success">💾 Save Weeks</button>
+                                <button onclick="clearWeeks()" class="btn-error">🗑️ Clear All Weeks</button>
+                            </div>
+                            <div style="margin-top:2rem;">
+                                <label for="activeWeekSelect"><strong>Set Active Week for Student:</strong></label>
+                                <select id="activeWeekSelect" style="width:100%; margin-top:0.5rem;"></select>
+                                <button onclick="setActiveWeek()" class="btn-primary" style="margin-top:0.5rem;">Set Active Week</button>
+                            </div>
                         </div>
-                        
                         <div style="margin-top: 1.5rem;">
                             <h5>Upload Word File</h5>
                             <input accept=".txt,.csv" onchange="handleFileUpload(event)" type="file" style="margin: 0.5rem 0;"/>
