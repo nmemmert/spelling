@@ -99,15 +99,13 @@ function showAdmin() {
     });
     
     // Set default tab to tabWords and enable tab buttons
-    setTimeout(() => {
-      document.querySelectorAll('#adminTabs button').forEach(btn => btn.disabled = false);
-      if (typeof window.switchTab === 'function') {
-        window.switchTab("tabWords");
-        console.log("✅ Default tab set to tabWords");
-      } else {
-        console.error("switchTab function not available");
-      }
-    }, 100);
+    document.querySelectorAll('#adminTabs button').forEach(btn => btn.disabled = false);
+    if (typeof window.switchTab === 'function') {
+      window.switchTab("tabWords");
+      console.log("✅ Default tab set to tabWords");
+    } else {
+      console.error("switchTab function not available");
+    }
   } else {
     console.error("Admin panel not found");
   }

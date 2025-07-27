@@ -1,3 +1,18 @@
+// Ensure tab event listeners are attached after everything is defined
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const tabButtons = document.querySelectorAll('#adminTabs button');
+    tabButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tabId = button.getAttribute('data-tab');
+        if (tabId && typeof window.switchTab === 'function') {
+          window.switchTab(tabId);
+        }
+      });
+    });
+  }, 0);
+});
 // Global variables for admin functionality
 // --- Weeks input logic ---
 // Populate active week dropdown from weeksContainer
@@ -104,8 +119,7 @@ window.switchTab = function switchTab(targetId) {
 
   // Highlight the active button
   document.querySelectorAll('#adminTabs button').forEach(btn => {
-    const onclick = btn.getAttribute('onclick');
-    if (onclick && onclick.includes(targetId)) {
+    if (btn.getAttribute('data-tab') === targetId) {
       btn.classList.add('active');
     }
   });
@@ -146,6 +160,19 @@ window.switchTab = function switchTab(targetId) {
       loadUserDropdowns();
       break;
   }
+  // Attach admin tab event listeners after switchTab is defined
+  window.addEventListener('DOMContentLoaded', () => {
+    const tabButtons = document.querySelectorAll('#adminTabs button');
+    tabButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tabId = button.getAttribute('data-tab');
+        if (tabId) {
+          window.switchTab(tabId);
+        }
+      });
+    });
+  });
 };
 
 // Load users from server
@@ -753,22 +780,20 @@ function populatePasswordUserDropdown() {
 
 // Add event listeners for admin tabs as backup to onclick
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    const tabButtons = document.querySelectorAll('#adminTabs button');
-    tabButtons.forEach(button => {
-      button.addEventListener('click', (e) => {
-        e.preventDefault();
-        const tabId = button.getAttribute('data-tab');
-        if (tabId) {
-          console.log('Tab clicked:', tabId);
-          if (typeof window.switchTab === 'function') {
-            window.switchTab(tabId);
-          } else {
-            console.error('switchTab function not available');
-          }
+  const tabButtons = document.querySelectorAll('#adminTabs button');
+  tabButtons.forEach(button => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tabId = button.getAttribute('data-tab');
+      if (tabId) {
+        console.log('Tab clicked:', tabId);
+        if (typeof window.switchTab === 'function') {
+          window.switchTab(tabId);
+        } else {
+          console.error('switchTab function not available');
         }
-      });
+      }
     });
-    console.log('✅ Tab event listeners added to', tabButtons.length, 'buttons');
-  }, 500);
+  });
+  console.log('✅ Tab event listeners added to', tabButtons.length, 'buttons');
 });
