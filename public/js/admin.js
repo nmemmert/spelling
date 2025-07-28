@@ -293,9 +293,35 @@ async function loadWordsForSelectedUser() {
   const selectedUser = document.getElementById("wordUserSelect").value;
   if (!selectedUser) return;
 
+  // Fetch the user's word list object (could be array or {weeks, activeWeek})
   const res = await fetch(`/getWordList?username=${encodeURIComponent(selectedUser)}`);
   const data = await res.json();
   allWords = data.words || [];
+  // Now also fetch the raw wordlists object to get weeks/activeWeek
+  const wordlistsRes = await fetch('/getWordlistsRaw');
+  const wordlists = await wordlistsRes.json();
+  const userList = wordlists[selectedUser];
+  // If userList is an object with weeks, populate week cards and dropdown
+  if (userList && typeof userList === 'object' && Array.isArray(userList.weeks)) {
+    // Clear current week cards
+    document.getElementById('weeksContainer').innerHTML = '';
+    userList.weeks.forEach(week => {
+      window.addWeekInput();
+      const cards = document.querySelectorAll('#weeksContainer .week-input-card');
+      const lastCard = cards[cards.length - 1];
+      if (lastCard) {
+        lastCard.querySelector('.week-date').value = week.date;
+        lastCard.querySelector('.week-words').value = (week.words || []).join('\n');
+      }
+    });
+    // Repopulate the active week dropdown
+    window.populateActiveWeekDropdown();
+    // Set the dropdown to the saved activeWeek if present
+    if (userList.activeWeek) {
+      const select = document.getElementById('activeWeekSelect');
+      select.value = userList.activeWeek;
+    }
+  }
   displayWordList();
 }
 

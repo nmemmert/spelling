@@ -11,13 +11,27 @@
     "bot",
     "snot"
   ],
-  "nate": [
-    "computer",
-    "keyboard",
-    "mouse",
-    "screen",
-    "printer"
-  ],
+  "nate": {
+    "weeks": [
+      {
+        "date": "2025-08-03",
+        "words": [
+          "not",
+          "bot",
+          "snot"
+        ]
+      },
+      {
+        "date": "2025-08-10",
+        "words": [
+          "bate",
+          "hate",
+          "late"
+        ]
+      }
+    ],
+    "activeWeek": "2025-08-10"
+  },
   "testuser": [
     "hello",
     "world",
