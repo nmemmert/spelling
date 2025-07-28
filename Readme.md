@@ -21,8 +21,8 @@ A comprehensive educational application featuring spelling practice, typing exer
 
 #### Quick Start with Docker Compose
 ```bash
-git clone https://git.necloud.us/nmemmert/Spelling.git
-cd Spelling
+git clone https://github.com/nmemmert/spelling.git
+cd spelling
 docker-compose up -d
 ```
 
@@ -42,7 +42,7 @@ ghcr.io/nmemmert/spelling:latest
 version: "3.9"
 services:
   spelling-app:
-    image: git.necloud.us/nmemmert/spelling:latest
+    image: ghcr.io/nmemmert/spelling:latest
     container_name: spelling-app
     ports:
       - "3000:3000"
@@ -64,7 +64,7 @@ services:
 name: spelling-practice-app
 services:
   spelling-app:
-    image: git.necloud.us/nmemmert/spelling:latest
+    image: ghcr.io/nmemmert/spelling:latest
     container_name: spelling-practice
     ports:
       - "3000:3000"
@@ -119,18 +119,18 @@ x-casaos:
    
 4. **Add this configuration and save:**
    ```yaml
-   version: "3.9"
-   services:
-     spelling-app:
-       image: git.necloud.us/nmemmert/spelling:latest
-       container_name: spelling-practice
-       ports:
-         - "3000:3000"
-       volumes:
-         - /DATA/AppData/spelling:/app/data
-       restart: unless-stopped
-       environment:
-         - NODE_ENV=production
+version: "3.9"
+services:
+  spelling-app:
+    image: ghcr.io/nmemmert/spelling:latest
+    container_name: spelling-practice
+    ports:
+      - "3000:3000"
+    volumes:
+      - /DATA/AppData/spelling:/app/data
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
    ```
 
 5. **Deploy the application:**
@@ -176,8 +176,8 @@ netstat -tlnp | grep :3000
 ### Option 3: Manual Installation
 ```bash
 # Clone repository
-git clone https://git.necloud.us/nmemmert/Spelling.git
-cd Spelling
+git clone https://github.com/nmemmert/spelling.git
+cd spelling
 
 # Install dependencies
 npm install
