@@ -309,14 +309,27 @@ For Docker installations, map the data directory:
 
 ## 🔄 Updates & Maintenance
 
+
 ### Updating the Application
 ```bash
-# Pull latest image
-docker pull git.necloud.us/nmemmert/spelling:latest
+# Pull latest image from GitHub Container Registry (GHCR)
+docker pull ghcr.io/nmemmert/spelling:latest
 
 # Restart container
 docker-compose down && docker-compose up -d
 ```
+
+---
+
+## Docker Image (GitHub Container Registry)
+
+To pull and run the latest Docker image for this app from GitHub Container Registry:
+
+```sh
+docker pull ghcr.io/nmemmert/spelling:latest
+```
+
+You must be logged in to GHCR with a GitHub account that has access to the repository. See https://github.com/nmemmert/spelling/packages for the image.
 
 ### Backup Data
 ```bash
