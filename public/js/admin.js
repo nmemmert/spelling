@@ -390,7 +390,6 @@ window.loadStudentResults = async function() {
         userResults.forEach((result, index) => {
           const li = document.createElement("li");
           let answersHTML = '';
-          
           // Check if result and answers exist and are valid
           if (result && result.answers && Array.isArray(result.answers)) {
             result.answers.forEach(entry => {
@@ -402,8 +401,15 @@ window.loadStudentResults = async function() {
           }
 
           const timestamp = result.timestamp ? new Date(result.timestamp).toLocaleString() : 'Unknown time';
+          // Label result type
+          let typeLabel = '';
+          if (result.type === 'typing') {
+            typeLabel = '<span style="color: #007bff; font-weight: bold;">[Typing Practice]</span> ';
+          } else {
+            typeLabel = '<span style="color: #28a745; font-weight: bold;">[Game]</span> ';
+          }
           li.innerHTML = `
-            <strong>${username}</strong> (Session ${index + 1}) — Score: ${result?.score || 'N/A'}, Completed: ${result?.completed ? '✅' : '❌'}<br>
+            ${typeLabel}<strong>${username}</strong> (Session ${index + 1}) — Score: ${result?.score || 'N/A'}, Completed: ${result?.completed ? '✅' : '❌'}<br>
             <em>Date:</em> ${timestamp}<br>
             <em>Answers:</em><br>${answersHTML}
             <hr style="margin: 1rem 0; opacity: 0.3;">

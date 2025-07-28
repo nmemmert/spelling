@@ -40,7 +40,11 @@ window.startTypingPractice = async function() {
     }
 }
 
-window.showNextWord = function() {
+
+// Track answers for results
+typingState.answers = [];
+
+window.showNextWord = async function() {
   const promptEl = document.getElementById('typingPrompt');
   const inputEl = document.getElementById('typingInput');
   if (!promptEl || !inputEl) return;
@@ -48,6 +52,8 @@ window.showNextWord = function() {
   if (!typingState.words.length) {
     promptEl.textContent = '🎉 Practice complete!';
     inputEl.disabled = true;
+    // Save results to backend
+    await saveTypingPracticeResults();
     return;
   }
 
@@ -64,13 +70,36 @@ window.showNextWord = function() {
   inputEl.focus();
 }
 
+async function saveTypingPracticeResults() {
+  const user = JSON.parse(localStorage.getItem('loggedInUser'));
+  if (!user) return;
+  const result = {
+    score: typingState.answers.filter(a => a.correct).length,
+    completed: true,
+    answers: typingState.answers
+  };
+  try {
+    await fetch('/saveTypingResults', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user.username, result })
+    });
+    console.log('Typing practice results saved');
+  } catch (e) {
+    console.error('Failed to save typing results', e);
+  }
+}
+
 
 window.submitTyping = function() {
     const input = document.getElementById('typingInput')?.value.trim() || '';
     const feedback = document.getElementById('typingFeedback');
     if (!feedback) return;
-    
-    if (input.toLowerCase() === typingState.currentWord.toLowerCase()) {
+
+    const correct = input.toLowerCase() === typingState.currentWord.toLowerCase();
+    typingState.answers.push({ word: typingState.currentWord, input, correct });
+
+    if (correct) {
         feedback.textContent = '✅ Correct!';
         feedback.style.color = 'green';
         typingState.words.shift();

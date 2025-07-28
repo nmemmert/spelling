@@ -407,6 +407,30 @@ app.post('/saveResults', (req, res) => {
 });
 
 // 👥 Get users
+// --- Typing Practice Results ---
+// Save typing practice results for a user
+app.post('/saveTypingResults', (req, res) => {
+  const { username, result } = req.body;
+  if (
+    typeof username !== 'string' ||
+    typeof result !== 'object' ||
+    typeof result.score !== 'number' ||
+    typeof result.completed !== 'boolean' ||
+    !Array.isArray(result.answers)
+  ) return res.status(400).send("Invalid result format");
+
+  const resultsPath = path.join(DATA_DIR, files.results);
+  const allResults = readJsonSafe(resultsPath);
+  if (!allResults[username]) allResults[username] = [];
+
+  allResults[username].push({
+    ...result,
+    timestamp: new Date().toISOString(),
+    type: 'typing' // Mark as typing practice result
+  });
+  fs.writeFileSync(resultsPath, JSON.stringify(allResults, null, 2));
+  res.send(`✅ Typing results archived for ${username}`);
+});
 app.get('/getUsers', (req, res) => {
   const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
   res.json(users);
