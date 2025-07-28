@@ -34,7 +34,7 @@ docker run -d \
   -p 3000:3000 \
   -v ./data:/app/data \
   --restart unless-stopped \
-  git.necloud.us/nmemmert/spelling:latest
+ghcr.io/nmemmert/spelling:latest
 ```
 
 #### Custom Docker Compose
