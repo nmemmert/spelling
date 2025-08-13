@@ -1,0 +1,44 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Node.js
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Development files
+*.md
+!README.md
+!CHANGELOG.md
+*.log
+*.bak
+.DS_Store
+.vscode
+.idea
+.editorconfig
+.eslintrc
+.prettierrc
+
+# Test files
+test
+__tests__
+coverage
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Local data (should be mounted as volume)
+data/*
+!data/.gitkeep
+
+# Debug scripts
+debug-*.js
+test-*.js
+
+# Documentation
+docs

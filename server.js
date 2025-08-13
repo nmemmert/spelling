@@ -25,6 +25,37 @@ const files = {
 app.use(express.static('public'));
 app.use(express.json());
 
+// Health check endpoint for container monitoring
+app.get('/health', (req, res) => {
+  try {
+    // Check if essential files exist
+    const usersExists = fs.existsSync(path.join(DATA_DIR, files.users));
+    const wordlistsExists = fs.existsSync(path.join(DATA_DIR, files.wordlists));
+    
+    if (usersExists && wordlistsExists) {
+      res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        version: require('./version.json').version
+      });
+    } else {
+      res.status(503).json({
+        status: 'error',
+        message: 'Essential data files not available',
+        missing: {
+          users: !usersExists,
+          wordlists: !wordlistsExists
+        }
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+});
+
 // Define routes after middleware is set up
 // Serve raw wordlists.json for admin UI
 app.get('/getWordlistsRaw', (req, res) => {
@@ -1145,9 +1176,27 @@ app.get('/checkBadges', (req, res) => {
 // Initialize all required data files
 ensureAllRequiredFiles();
 
-// 🚀 Server start
-app.listen(PORT, () => {
-  console.log(`✅ Server listening at http://localhost:${PORT}`);
+// Get environment variables or use defaults
+const HOST = process.env.HOST || '0.0.0.0';
+const PORT_ENV = process.env.PORT || PORT;
+
+// Handle graceful shutdown for container orchestration
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received. Shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('� SIGINT received. Shutting down gracefully...');
+  process.exit(0);
+});
+
+// �🚀 Server start
+app.listen(PORT_ENV, HOST, () => {
+  console.log(`✅ Server listening at http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT_ENV}`);
+  console.log(`📁 Data directory: ${DATA_DIR}`);
+  console.log(`🌐 Node environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📦 Version: ${require('./version.json').version}`);
   
   // Display available users for easy login
   try {

@@ -40,10 +40,13 @@ docker run -d \
   -p 3000:3000 \
   -v ./data:/app/data \
   --restart unless-stopped \
-ghcr.io/nmemmert/spelling:latest
+  --health-cmd "wget -q -O - http://localhost:3000/health || exit 1" \
+  --health-interval 30s \
+  --health-retries 3 \
+  ghcr.io/nmemmert/spelling:latest
 ```
 
-#### Custom Docker Compose
+#### Advanced Docker Compose
 ```yaml
 version: "3.9"
 services:
@@ -54,9 +57,31 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
-    restart: unless-stopped
     environment:
       - NODE_ENV=production
+      # Optional environment variables:
+      # - PORT=3000
+      # - HOST=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', res => res.statusCode === 200 ? process.exit(0) : process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+```
+
+#### Building Your Own Docker Image
+```bash
+# Clone the repository
+git clone https://github.com/nmemmert/spelling.git
+cd spelling
+
+# Build the Docker image
+docker build -t spelling:local .
+
+# Run your local image
+docker run -d --name spelling-app -p 3000:3000 -v ./data:/app/data spelling:local
 ```
 
 ### Option 2: CasaOS Installation
