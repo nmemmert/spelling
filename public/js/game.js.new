@@ -1,0 +1,358 @@
+// 🌍 Game state
+let words = [];
+let currentWord = '';
+let currentIndex = 0;
+let results = [];
+let typingWords = [];
+let isSpacedRepetitionMode = false;
+
+// 📝 Check user's answer and move to next word regardless of correctness
+window.submitAnswer = function() {
+    const input = document.getElementById('userInput').value.trim();
+    
+    // Record the attempt
+    results.push({
+        word: currentWord,
+        attempt: input
+    });
+
+    // Show feedback and move to next word regardless of correctness
+    if (input.toLowerCase() === currentWord.toLowerCase()) {
+        // Correct answer - add visual feedback
+        const inputEl = document.getElementById('userInput');
+        inputEl.style.borderColor = 'var(--success)';
+        inputEl.style.backgroundColor = '#f0fdf4';
+        
+        // Add feedback text if element exists
+        const feedbackEl = document.getElementById('wordFeedback');
+        if (feedbackEl) {
+            feedbackEl.textContent = '✓ Correct!';
+            feedbackEl.className = 'feedback-correct';
+            feedbackEl.style.color = 'var(--success)';
+        }
+    } else {
+        // Incorrect answer - show correct spelling but continue
+        const inputEl = document.getElementById('userInput');
+        inputEl.style.borderColor = 'var(--error)';
+        inputEl.style.backgroundColor = '#fef2f2';
+        
+        // Add feedback text if element exists
+        const feedbackEl = document.getElementById('wordFeedback');
+        if (feedbackEl) {
+            feedbackEl.textContent = `✗ Correct spelling: ${currentWord}`;
+            feedbackEl.className = 'feedback-incorrect';
+            feedbackEl.style.color = 'var(--error)';
+        }
+    }
+    
+    // Always advance to next word
+    currentIndex++;
+    document.getElementById('inputSection').classList.add('hidden');
+    
+    // Small delay before showing next word
+    setTimeout(() => showWord(), 1500);
+}
+
+// Add Enter key support for game input
+document.addEventListener('DOMContentLoaded', () => {
+    const gameInput = document.getElementById('userInput');
+    if (gameInput) {
+        gameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitAnswer();
+            }
+        });
+    }
+});
+
+let currentSentence = '';
+
+function showStudent() {
+    console.log("🔊 Showing student panel");
+    
+    // Hide admin panel
+    document.getElementById('adminPanel')?.classList.add('hidden');
+    
+    // Show student panel and its components
+    const studentPanel = document.getElementById('studentPanel');
+    studentPanel?.classList.remove('hidden');
+    
+    // Get the buttons and explicitly set their properties
+    const gameBtn = document.getElementById('startGameBtn');
+    const typingBtn = document.getElementById('startTypingBtn');
+    
+    if (gameBtn && typingBtn) {
+        console.log("Found buttons, making visible");
+        // Remove all possible hiding classes/styles
+        gameBtn.classList.remove('hidden');
+        typingBtn.classList.remove('hidden');
+        
+        // Explicitly set display style
+        gameBtn.style.cssText = 'display: inline-block !important; visibility: visible !important;';
+        typingBtn.style.cssText = 'display: inline-block !important; visibility: visible !important;';
+    } else {
+        console.error("Could not find game buttons");
+    }
+}
+
+// 🚀 Begin game session
+window.startGame = async function(customWords = null, isSpacedRepetition = false) {
+    console.log('🎮 Starting spelling game');
+    
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!user) {
+        alert('Please log in first');
+        return;
+    }
+
+    try {
+        // Hide student dashboard and other sections
+        document.getElementById('studentPanel').style.display = 'none';
+        document.getElementById('typingSection').style.display = 'none';
+        document.getElementById('bibleSection').style.display = 'none';
+        
+        // Show game section
+        document.getElementById('gameSection').classList.remove('hidden');
+        document.getElementById('gameSection').style.display = 'block';
+        document.getElementById('wordBox').textContent = 'Loading...';
+        document.getElementById('summary')?.classList.add('hidden');
+        document.getElementById('badgeDisplay')?.classList.add('hidden');
+
+        let wordList;
+        
+        // Use custom words if provided (for spaced repetition)
+        if (customWords && Array.isArray(customWords) && customWords.length > 0) {
+            wordList = customWords;
+            isSpacedRepetitionMode = isSpacedRepetition;
+            console.log('Using custom word list for spaced repetition:', wordList);
+        } else {
+            // Fetch words from user's word list
+            const response = await fetch(`/getWordList?username=${user.username}`);
+            const data = await response.json();
+            console.log('Received words:', data);
+            
+            let weekWords = [];
+            // Safely handle various response formats
+            try {
+                if (data && data.words && Array.isArray(data.words)) {
+                    // Server returns {words: [array]}
+                    weekWords = data.words;
+                } else if (data && data.words && typeof data.words === 'object' && data.words.weeks && data.words.activeWeek) {
+                    // Server returns {words: {weeks: [], activeWeek: ""}}
+                    const active = data.words.activeWeek;
+                    const found = data.words.weeks.find(w => w.date === active);
+                    if (found && Array.isArray(found.words)) {
+                        weekWords = found.words;
+                    }
+                } else if (Array.isArray(data)) {
+                    // Server returns direct array
+                    weekWords = data;
+                } else if (typeof data === 'object' && Array.isArray(Object.values(data)[0])) {
+                    // Handle unexpected format as best we can
+                    weekWords = Object.values(data)[0];
+                }
+            } catch (err) {
+                console.error("Error processing word list data:", err);
+            }
+            
+            wordList = weekWords.length > 0 ? weekWords : ["default", "practice", "words"];
+        }
+
+        if (!wordList.length) {
+            alert('No words found for practice');
+            return;
+        }
+
+        // Start game
+        words = [...wordList];
+        typingWords = [...wordList]; // Initialize typing words too
+        currentIndex = 0;
+        results = [];  // Reset results array
+        showWord();
+
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to load words');
+    }
+}
+
+function showWord() {
+    if (currentIndex >= words.length) {
+        showSummary();
+        return;
+    }
+
+    currentWord = words[currentIndex];
+    console.log('Current word:', currentWord);
+
+    // Show word briefly then hide
+    const wordBox = document.getElementById('wordBox');
+    const inputSection = document.getElementById('inputSection');
+    
+    // Reset any feedback text
+    const feedbackEl = document.getElementById('wordFeedback');
+    if (feedbackEl) {
+        feedbackEl.textContent = '';
+        feedbackEl.className = '';
+    }
+    
+    wordBox.textContent = currentWord;
+    inputSection.classList.add('hidden');
+
+    setTimeout(() => {
+        wordBox.textContent = '';
+        inputSection.classList.remove('hidden');
+        document.getElementById('userInput').value = '';
+        document.getElementById('userInput').focus();
+    }, 2000);
+}
+
+function showSummary() {
+    console.log('Game completed, showing summary');
+    document.getElementById('inputSection').classList.add('hidden');
+    
+    // Calculate stats
+    let correctCount = 0;
+    const incorrectWords = [];
+    
+    results.forEach(result => {
+        if (result.attempt.toLowerCase() === result.word.toLowerCase()) {
+            correctCount++;
+        } else {
+            incorrectWords.push(result);
+        }
+    });
+    
+    const accuracy = Math.round((correctCount / results.length) * 100);
+    
+    // Show summary
+    document.getElementById('summary').classList.remove('hidden');
+    document.getElementById('totalWords').textContent = results.length;
+    document.getElementById('correctWords').textContent = correctCount;
+    document.getElementById('accuracy').textContent = `${accuracy}%`;
+    
+    // Show incorrect words
+    const incorrectList = document.getElementById('incorrectList');
+    incorrectList.innerHTML = '';
+    
+    if (incorrectWords.length === 0) {
+        incorrectList.innerHTML = '<li>Perfect! No mistakes.</li>';
+    } else {
+        incorrectWords.forEach(item => {
+            incorrectList.innerHTML += `
+                <li>
+                    <span class="word">${item.word}</span>
+                    <span class="attempt">${item.attempt}</span>
+                </li>
+            `;
+        });
+    }
+    
+    // Save results if not in spaced repetition mode
+    if (!isSpacedRepetitionMode) {
+        saveResults(results, accuracy);
+    } else {
+        console.log('In spaced repetition mode, not saving normal results');
+        // Update spaced repetition data
+        updateSpacedRepetitionResults(results);
+    }
+}
+
+async function saveResults(resultData, accuracy) {
+    try {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!user) return;
+        
+        const payload = {
+            username: user.username,
+            results: resultData,
+            accuracy,
+            timestamp: new Date().toISOString()
+        };
+        
+        const response = await fetch('/saveResults', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+            console.log('Results saved successfully');
+            checkForBadges(accuracy, resultData.length);
+        }
+    } catch (error) {
+        console.error('Error saving results:', error);
+    }
+}
+
+async function checkForBadges(accuracy, wordCount) {
+    try {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!user) return;
+        
+        // Check for earned badges
+        const response = await fetch(`/checkBadges?username=${user.username}&accuracy=${accuracy}&wordCount=${wordCount}`);
+        const data = await response.json();
+        
+        if (data && data.newBadges && data.newBadges.length > 0) {
+            // Show badge notification
+            showBadgeNotification(data.newBadges);
+        }
+    } catch (error) {
+        console.error('Error checking badges:', error);
+    }
+}
+
+function showBadgeNotification(badges) {
+    const badgeDisplay = document.getElementById('badgeDisplay');
+    if (!badgeDisplay) return;
+    
+    const badgeList = document.getElementById('badgeList');
+    badgeList.innerHTML = '';
+    
+    badges.forEach(badge => {
+        badgeList.innerHTML += `
+            <div class="badge-item">
+                <div class="badge-icon">${badge.icon}</div>
+                <div class="badge-info">
+                    <h4>${badge.name}</h4>
+                    <p>${badge.description}</p>
+                </div>
+            </div>
+        `;
+    });
+    
+    badgeDisplay.classList.remove('hidden');
+}
+
+// Function to check if user has completed all words for today
+async function checkDailyCompletion() {
+    try {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!user) return;
+        
+        const response = await fetch(`/checkDailyCompletion?username=${user.username}`);
+        const data = await response.json();
+        
+        return data.completed;
+    } catch (error) {
+        console.error('Error checking daily completion:', error);
+        return false;
+    }
+}
+
+// Return to student panel
+window.returnToStudentPanel = function() {
+    // Hide game and typing sections
+    document.getElementById('gameSection').style.display = 'none';
+    document.getElementById('typingSection').style.display = 'none';
+    document.getElementById('bibleSection').style.display = 'none';
+    
+    // Show student panel
+    document.getElementById('studentPanel').style.display = 'block';
+    
+    // Force panel to be visible
+    showStudent();
+}

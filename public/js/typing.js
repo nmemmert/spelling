@@ -28,8 +28,29 @@ window.startTypingPractice = async function() {
         const data = await response.json();
         console.log('Words received:', data);
 
-        if (data.words?.length) {
-            typingState.words = [...data.words];
+        let wordList = [];
+        
+        // Handle various potential response formats
+        if (data && data.words && Array.isArray(data.words)) {
+            // Server returns {words: [array]}
+            wordList = data.words;
+        } else if (data && data.words && typeof data.words === 'object' && data.words.weeks && data.words.activeWeek) {
+            // Server returns {words: {weeks: [], activeWeek: ""}}
+            const active = data.words.activeWeek;
+            const found = data.words.weeks.find(w => w.date === active);
+            if (found && Array.isArray(found.words)) {
+                wordList = found.words;
+            }
+        } else if (Array.isArray(data)) {
+            // Server returns direct array
+            wordList = data;
+        } else if (typeof data === 'object' && Array.isArray(Object.values(data)[0])) {
+            // Handle unexpected format as best we can
+            wordList = Object.values(data)[0];
+        }
+        
+        if (wordList.length > 0) {
+            typingState.words = [...wordList];
             showNextWord();
         } else {
             typingPrompt.textContent = 'No words available';

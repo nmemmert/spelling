@@ -25,8 +25,28 @@ function createScoreChart(username, results) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', width);
     svg.setAttribute('height', height);
-    svg.style.overflow = 'visible';
+    svg.style.overflow = 'hidden';
     chartContainer.appendChild(svg);
+    
+    // Create a clipping path to ensure chart doesn't go outside boundaries
+    // Create all definitions in one defs element
+    const svgDefs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    
+    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    clipPath.setAttribute('id', 'chart-area');
+    const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    clipRect.setAttribute('x', padding.left);
+    clipRect.setAttribute('y', padding.top);
+    clipRect.setAttribute('width', chartWidth);
+    clipRect.setAttribute('height', chartHeight);
+    clipPath.appendChild(clipRect);
+    svgDefs.appendChild(clipPath);
+    
+    // Add a group for all chart elements that should be clipped
+    const chartGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    chartGroup.setAttribute('clip-path', 'url(#chart-area)');
+    svg.appendChild(chartGroup);
+    svg.appendChild(svgDefs);
     
     // Get data points
     const dataPoints = recentResults.map((result, index) => {
@@ -41,9 +61,17 @@ function createScoreChart(username, results) {
         };
     });
     
-    // Scale functions
-    const xScale = index => (index / (dataPoints.length - 1 || 1)) * chartWidth + padding.left;
-    const yScale = score => chartHeight - (score / 100) * chartHeight + padding.top;
+    // Scale functions with boundary checks
+    const xScale = index => {
+        // Ensure index is within bounds
+        const safeIndex = Math.max(0, Math.min(index, dataPoints.length - 1));
+        return (safeIndex / (dataPoints.length - 1 || 1)) * chartWidth + padding.left;
+    };
+    const yScale = score => {
+        // Ensure score is within 0-100 range
+        const safeScore = Math.max(0, Math.min(score, 100));
+        return chartHeight - (safeScore / 100) * chartHeight + padding.top;
+    };
     
     // Create path for the line
     const pathData = dataPoints.map((point, i) => {
@@ -56,7 +84,7 @@ function createScoreChart(username, results) {
     path.setAttribute('stroke', 'var(--primary)');
     path.setAttribute('stroke-width', '3');
     path.setAttribute('fill', 'none');
-    svg.appendChild(path);
+    chartGroup.appendChild(path);
     
     // Add area under the curve with gradient
     const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -84,10 +112,9 @@ function createScoreChart(username, results) {
     gradient.appendChild(stop1);
     gradient.appendChild(stop2);
     
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    defs.appendChild(gradient);
-    svg.appendChild(defs);
-    svg.appendChild(areaPath);
+    // Add gradient to the main SVG defs
+    svgDefs.appendChild(gradient);
+    chartGroup.appendChild(areaPath);
     
     // Add data points
     dataPoints.forEach((point, i) => {
@@ -105,7 +132,7 @@ function createScoreChart(username, results) {
         circle.addEventListener('mouseover', showTooltip);
         circle.addEventListener('mouseout', hideTooltip);
         
-        svg.appendChild(circle);
+        chartGroup.appendChild(circle);
     });
     
     // Add axes

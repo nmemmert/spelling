@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Save Results API</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      background-color: #f9f9f9;
+      white-space: pre-wrap;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .status {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Test Save Results API</h1>
+    
+    <h2>1. Test Save Results Endpoint</h2>
+    <p>This will send a test session for 'testuser' to the /saveResults endpoint</p>
+    <button id="saveButton">Save Test Session</button>
+    <div id="saveStatus" class="status"></div>
+    <div id="saveResult" class="result"></div>
+    
+    <h2>2. Test Get Results Endpoint</h2>
+    <p>This will retrieve all sessions from the /getResults endpoint</p>
+    <button id="getButton">Get All Sessions</button>
+    <div id="getStatus" class="status"></div>
+    <div id="getResult" class="result"></div>
+  </div>
+
+  <script>
+    // Test data for saving a session
+    const testSession = {
+      username: 'testuser',
+      result: {
+        score: 90,
+        completed: true,
+        answers: [
+          { word: 'apple', correct: true },
+          { word: 'banana', correct: true },
+          { word: 'cherry', correct: true },
+          { word: 'difficult', correct: false },
+          { word: 'elephant', correct: true }
+        ]
+      }
+    };
+    
+    // Function to format JSON with syntax highlighting
+    function formatJSON(json) {
+      if (typeof json === 'string') {
+        try {
+          json = JSON.parse(json);
+        } catch(e) {
+          return json;
+        }
+      }
+      return JSON.stringify(json, null, 2);
+    }
+    
+    // Test the save endpoint
+    document.getElementById('saveButton').addEventListener('click', async () => {
+      const saveStatus = document.getElementById('saveStatus');
+      const saveResult = document.getElementById('saveResult');
+      
+      saveStatus.textContent = 'Sending request...';
+      saveStatus.className = 'status';
+      
+      try {
+        const response = await fetch('/saveResults', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(testSession)
+        });
+        
+        const data = await response.text();
+        
+        if (response.ok) {
+          saveStatus.textContent = '✅ Success! Status: ' + response.status;
+          saveStatus.className = 'status success';
+        } else {
+          saveStatus.textContent = '❌ Failed! Status: ' + response.status;
+          saveStatus.className = 'status error';
+        }
+        
+        saveResult.textContent = data;
+      } catch (error) {
+        saveStatus.textContent = '❌ Error: ' + error.message;
+        saveStatus.className = 'status error';
+        saveResult.textContent = error.toString();
+      }
+    });
+    
+    // Test the get endpoint
+    document.getElementById('getButton').addEventListener('click', async () => {
+      const getStatus = document.getElementById('getStatus');
+      const getResult = document.getElementById('getResult');
+      
+      getStatus.textContent = 'Fetching data...';
+      getStatus.className = 'status';
+      
+      try {
+        const response = await fetch('/getResults');
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Count sessions for each user
+          const sessionCounts = {};
+          Object.entries(data).forEach(([user, sessions]) => {
+            sessionCounts[user] = sessions.length;
+          });
+          
+          getStatus.textContent = `✅ Success! Found data for ${Object.keys(data).length} users`;
+          getStatus.className = 'status success';
+          
+          const testUserSessions = data.testuser || [];
+          
+          // Display summary first, then full data
+          let summary = '// Summary:\n';
+          summary += `Users: ${Object.keys(data).join(', ')}\n`;
+          summary += `Sessions per user: ${JSON.stringify(sessionCounts, null, 2)}\n\n`;
+          
+          if (testUserSessions.length > 0) {
+            summary += `// Latest testuser session:\n${formatJSON(testUserSessions[testUserSessions.length-1])}\n\n`;
+          }
+          
+          summary += '// Full response data:\n';
+          
+          getResult.textContent = summary + formatJSON(data);
+        } else {
+          getStatus.textContent = '❌ Failed! Status: ' + response.status;
+          getStatus.className = 'status error';
+          getResult.textContent = formatJSON(data);
+        }
+      } catch (error) {
+        getStatus.textContent = '❌ Error: ' + error.message;
+        getStatus.className = 'status error';
+        getResult.textContent = error.toString();
+      }
+    });
+  </script>
+</body>
+</html>

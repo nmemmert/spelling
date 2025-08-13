@@ -21,12 +21,20 @@
     <script src="js/bible.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/export.js"></script>
+    <script src="js/session-helpers.js"></script>
     <script src="js/sessions.js"></script>
     <script src="js/admin-badges.js"></script>
     <script src="js/analytics.js"></script>
     <script src="js/gamification.js"></script>
     <script src="js/spaced-repetition.js"></script>
     <script src="js/main.js"></script>
+    <!-- Initialization script - loads last -->
+    <script src="js/chart-safety.js"></script>
+    <script src="js/user-dropdown-health.js"></script>
+    <script src="js/input-fix.js"></script>
+    <script src="js/init.js"></script>
+    <!-- Production scripts only -->
+    <script src="js/cleanup.js"></script>
 </head>
 <body>
     <div class="container">
@@ -180,7 +188,7 @@
                                 <option value="month">Last Month</option>
                                 <option value="quarter">Last 3 Months</option>
                             </select>
-                            <button onclick="refreshAnalytics()" class="btn-primary">🔄 Refresh Analytics</button>
+                            <button onclick="window.analyticsRefresh ? window.analyticsRefresh() : refreshAnalytics()" class="btn-primary">🔄 Refresh Analytics</button>
                         </div>
                     </div>
                     
@@ -548,14 +556,46 @@
                 </div>
                 <div class="word-box" id="wordBox"></div>
                 <div class="hidden" id="inputSection" style="text-align: center;">
-                    <input id="userInput" placeholder="Type the word you saw..." type="text" style="max-width: 400px;"/>
+                    <input id="userInput" placeholder="Type the word you saw..." type="text" 
+                        style="max-width: 400px; 
+                        color: black !important; 
+                        background-color: white !important;
+                        border: 2px solid #333 !important;
+                        font-size: 18px !important;
+                        padding: 12px !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        text-shadow: none !important;"/>
                     <button onclick="submitAnswer()" class="btn-primary">Submit Answer</button>
+                    <div id="wordFeedback" style="margin-top: 10px; font-weight: bold; min-height: 24px;"></div>
                 </div>
                 <!-- Game Summary -->
-                <div class="hidden" id="summary" class="card"></div>
+                <div id="summary" class="card hidden">
+                    <h3>Game Results</h3>
+                    <div class="summary-stats">
+                        <div class="stat-item">
+                            <label>Total Words:</label>
+                            <span id="totalWords">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Correct Words:</label>
+                            <span id="correctWords">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Accuracy:</label>
+                            <span id="accuracy">0%</span>
+                        </div>
+                    </div>
+                    <h4>Incorrect Words</h4>
+                    <ul id="incorrectList" class="incorrect-list"></ul>
+                    <div class="summary-actions">
+                        <button onclick="returnToStudentPanel()" class="btn-secondary">Return to Dashboard</button>
+                        <button onclick="startGame()" class="btn-primary">Try Again</button>
+                    </div>
+                </div>
                 <!-- Enhanced Badge Display -->
-                <div class="hidden" id="badgeDisplay" class="card badge-celebration">
-                    <h2>� Achievement Unlocked! 🎊</h2>
+                <div id="badgeDisplay" class="hidden card badge-celebration">
+                    <h2>🎊 Achievement Unlocked! 🎊</h2>
                     <div id="badgeList" class="badge-showcase"></div>
                     <div class="badge-actions">
                         <button onclick="document.getElementById('badgeDisplay').classList.add('hidden')" class="btn-secondary">Continue</button>

@@ -6,9 +6,9 @@
  * Words are assigned difficulty levels and review intervals are adjusted accordingly
  */
 
-// Global variables
+// Module variables
 let spacedRepetitionData = null;
-let currentUser = null;
+let srCurrentUser = null; // Renamed to avoid conflicts
 let currentWords = [];
 let reviewQueue = [];
 
@@ -16,8 +16,8 @@ let reviewQueue = [];
 document.addEventListener('DOMContentLoaded', function() {
   // Event listener will be triggered when a user logs in
   document.addEventListener('userLoggedIn', function(e) {
-    currentUser = e.detail.username;
-    initializeSpacedRepetition(currentUser);
+    srCurrentUser = e.detail.username;
+    initializeSpacedRepetition(srCurrentUser);
   });
 });
 
@@ -234,7 +234,7 @@ async function startSpacedReview() {
 
 // Process results from a spaced repetition session
 function processSpacedRepetitionResults(results) {
-  if (!currentUser || !spacedRepetitionData || !results || results.length === 0) return;
+  if (!srCurrentUser || !spacedRepetitionData || !results || results.length === 0) return;
   
   const now = new Date();
   const today = now.toISOString().split('T')[0];
@@ -304,7 +304,7 @@ function processSpacedRepetitionResults(results) {
 
 // Save the updated spaced repetition data to the server
 async function saveSpacedRepetitionData() {
-  if (!currentUser || !spacedRepetitionData) return;
+  if (!srCurrentUser || !spacedRepetitionData) return;
   
   try {
     const response = await fetch('/updateSpacedRepetitionData', {
@@ -313,7 +313,7 @@ async function saveSpacedRepetitionData() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        username: currentUser,
+        username: srCurrentUser,
         data: spacedRepetitionData
       })
     });
@@ -331,11 +331,11 @@ async function saveSpacedRepetitionData() {
 
 // Import new words to the spaced repetition system from a word list
 async function importWordsToSR() {
-  if (!currentUser || !spacedRepetitionData) return;
+  if (!srCurrentUser || !spacedRepetitionData) return;
   
   try {
     // Get user's word lists
-    const response = await fetch(`/getWordlistsForUser?username=${encodeURIComponent(currentUser)}`);
+    const response = await fetch(`/getWordlistsForUser?username=${encodeURIComponent(srCurrentUser)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch wordlists: ${response.status}`);
     }

@@ -14,6 +14,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 0);
 });
 // Global variables for admin functionality
+window.showDebugInfo = true; // Enable additional logging
 // --- Weeks input logic ---
 // Populate active week dropdown from weeksContainer
 window.populateActiveWeekDropdown = function() {
@@ -92,7 +93,8 @@ window.clearWeeks = function() {
   document.getElementById('weeksContainer').innerHTML = '';
 }
 let allWords = [];
-let adminUsers = [];
+// Make adminUsers available globally
+window.adminUsers = [];
 
 // 🧭 Admin tab switcher (make it globally accessible)
 window.switchTab = function switchTab(targetId) {
@@ -176,13 +178,29 @@ window.switchTab = function switchTab(targetId) {
 };
 
 // Load users from server
-async function loadUsers() {
+window.loadUsers = async function() {
   try {
+    console.log("📋 Loading users from server...");
     const res = await fetch('/getUsers');
-    adminUsers = await res.json();
+    console.log("GET /getUsers response:", res.status, res.statusText);
+    
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+    }
+    
+    const data = await res.json();
+    console.log(`📋 Loaded ${data.length} users:`, data.map(u => u.username));
+    window.adminUsers = data;
+    
+    // Populate all user dropdowns immediately
+    window.displayUserDropdown();
+    window.displayUserLists();
+    
+    return adminUsers;
   } catch (err) {
-    console.error("Failed to load users:", err);
-    adminUsers = [];
+    console.error("❌ Failed to load users:", err);
+    window.adminUsers = [];
+    return [];
   }
 }
 
@@ -224,12 +242,82 @@ async function addNewUser() {
 }
 
 // 🗑 Populate and delete users
-function displayUserDropdown() {
-  const dropdown = document.getElementById("userDropdown");
-  dropdown.innerHTML = `<option value="">-- Select a user --</option>`;
-  adminUsers.forEach(user => {
-    dropdown.innerHTML += `<option value="${user.username}">${user.username} (${user.role})</option>`;
+window.displayUserDropdown = function() {
+  console.log("📋 Populating user dropdowns...");
+  
+  // Get all user dropdowns in the application
+  const userSelectors = [
+    "userDropdown",
+    "wordUserSelect",
+    "passwordUsername",
+    "reportUser", 
+    "analyticsUserSelect"  // Also update analytics dropdown
+  ];
+  
+  userSelectors.forEach(id => {
+    const dropdown = document.getElementById(id);
+    if (!dropdown) {
+      console.log(`⚠️ Dropdown with ID "${id}" not found`);
+      return;
+    }
+    
+    // Save currently selected value if any
+    const currentValue = dropdown.value;
+    
+    // Clear existing options - keep first option if it exists
+    const firstOption = dropdown.options.length > 0 ? dropdown.options[0].cloneNode(true) : null;
+    dropdown.innerHTML = '';
+    if (firstOption && (firstOption.value === '' || firstOption.value === 'all')) {
+      dropdown.appendChild(firstOption);
+    } else {
+      dropdown.innerHTML = `<option value="">-- Select a user --</option>`;
+    }
+    
+    // Add users to dropdown
+    if (Array.isArray(window.adminUsers) && window.adminUsers.length > 0) {
+      window.adminUsers.forEach(user => {
+        const option = document.createElement("option");
+        option.value = user.username;
+        option.textContent = `${user.username} (${user.role})`;
+        dropdown.appendChild(option);
+      });
+      console.log(`✅ Added ${window.adminUsers.length} users to dropdown ${id}`);
+      
+      // Restore previously selected value if it exists in the new options
+      if (currentValue && [...dropdown.options].some(opt => opt.value === currentValue)) {
+        dropdown.value = currentValue;
+      }
+    } else {
+      console.warn(`⚠️ No users to populate in dropdown ${id}`);
+    }
   });
+}
+
+// Display users in list format
+function displayUserLists() {
+  console.log("📋 Updating user lists in tables...");
+  
+  const userTableBody = document.getElementById("userTableBody");
+  if (userTableBody) {
+    userTableBody.innerHTML = '';
+    
+    if (Array.isArray(adminUsers) && adminUsers.length > 0) {
+      adminUsers.forEach((user, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${user.username}</td>
+          <td>${user.role}</td>
+          <td>
+            <button class="btn-sm btn-danger" onclick="selectUserAction('${user.username}')">🗑️</button>
+          </td>
+        `;
+        userTableBody.appendChild(row);
+      });
+    } else {
+      userTableBody.innerHTML = `<tr><td colspan="4" class="text-center">No users found</td></tr>`;
+    }
+  }
 }
 
 function selectUserAction(username) {
@@ -461,9 +549,11 @@ async function loadUserDropdowns() {
 // Analytics functionality has been moved to analytics.js
 // This is now just a redirecting function
 async function refreshAnalytics() {
-  // The implementation is in analytics.js
-  if (typeof window.refreshAnalytics === 'function') {
-    return window.refreshAnalytics();
+  // To avoid circular references, we'll call the function by its name in analytics.js
+  console.log("Trying to call analyticsRefresh from window object...");
+  if (typeof window.analyticsRefresh === 'function') {
+    console.log("Found analyticsRefresh in window, calling it...");
+    return window.analyticsRefresh();
   } else {
     console.log("Loading legacy analytics implementation...");
     try {
@@ -778,15 +868,26 @@ window.loadStudentReport = async function(username) {
 
     document.getElementById("reportTitle").textContent = `Report for ${username}`;
     
-    // Safe access to score and answers
-    const score = latestReport.score || 0;
-    const answers = latestReport.answers || [];
-    document.getElementById("reportScore").textContent = `${score}/${answers.length} correct`;
+    // Safe access to score and answers, handling different data formats
+    const score = latestReport.score || latestReport.correct || 0;
+    
+    // Handle both answers array and words array formats
+    let answers = [];
+    if (latestReport.answers && Array.isArray(latestReport.answers)) {
+      answers = latestReport.answers;
+    } else if (latestReport.words && Array.isArray(latestReport.words)) {
+      answers = latestReport.words;
+    }
+    
+    const total = answers.length || latestReport.total || 0;
+    document.getElementById("reportScore").textContent = `${score}/${total} correct`;
     
     const wordList = document.getElementById("reportWords");
     wordList.innerHTML = "";
     if (answers.length > 0) {
-      answers.forEach(({ word, correct }) => {
+      answers.forEach((answer) => {
+        const word = answer.word || '';
+        const correct = answer.correct || false;
         const li = document.createElement("li");
         li.textContent = `${word} — ${correct ? '✅' : '❌'}`;
         wordList.appendChild(li);
@@ -871,27 +972,64 @@ async function populateSessionUserDropdown() {
 }
 
 async function loadUserSessions(username) {
-  const res = await fetch('/getResults');
-  const allResults = await res.json();
+  // Delegate to the window.loadUserSessions function in sessions.js
+  // This ensures we have consistent behavior
+  if (typeof window.loadUserSessions === 'function') {
+    window.loadUserSessions(username);
+  } else {
+    console.error("Error: window.loadUserSessions function not found");
+    
+    // Fallback implementation
+    const res = await fetch('/getResults');
+    const allResults = await res.json();
 
-  const userSessions = allResults[username] || [];
-  const list = document.getElementById("userSessionList");
-  list.innerHTML = "";
+    const userSessions = allResults[username] || [];
+    const list = document.getElementById("userSessionList");
+    list.innerHTML = "";
+    
+    if (userSessions.length === 0) {
+      list.innerHTML = '<li style="padding: 1rem; text-align: center;">No sessions found.</li>';
+      return;
+    }
 
-  userSessions.forEach(({ score, answers, timestamp }) => {
-    const sessionItem = document.createElement("li");
-    const dateStr = new Date(timestamp).toLocaleString();
-    const total = answers.length;
+    userSessions.forEach((session) => {
+      const sessionItem = document.createElement("li");
+      
+      // Support both timestamp and date fields
+      const sessionDate = session.timestamp || session.date || Date.now();
+      const dateStr = new Date(sessionDate).toLocaleString();
+      
+      // Handle various score formats
+      const score = session.score || session.correct || 0;
+      
+      // Handle different answer formats
+      let answersArray = [];
+      let total = 0;
+      
+      if (session.answers && Array.isArray(session.answers)) {
+        answersArray = session.answers;
+        total = answersArray.length;
+      } else if (session.words && Array.isArray(session.words)) {
+        answersArray = session.words;
+        total = answersArray.length;
+      } else if (session.total) {
+        total = session.total;
+      }
 
-    let html = `<p>🗓️ <strong>${dateStr}</strong> — ${score}/${total} correct</p><ul>`;
-    answers.forEach(({ word, correct }) => {
-      html += `<li>${correct ? '✅' : '❌'} ${word}</li>`;
+      let html = `<p>🗓️ <strong>${dateStr}</strong> — ${score}/${total} correct</p><ul>`;
+      
+      answersArray.forEach((answer) => {
+        const word = answer.word || '';
+        const correct = answer.correct || false;
+        html += `<li>${correct ? '✅' : '❌'} ${word}</li>`;
+      });
+      
+      html += "</ul>";
+
+      sessionItem.innerHTML = html;
+      list.appendChild(sessionItem);
     });
-    html += "</ul>";
-
-    sessionItem.innerHTML = html;
-    list.appendChild(sessionItem);
-  });
+  }
 }
 
 // File upload handler for word lists

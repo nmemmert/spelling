@@ -27,7 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Main function to refresh analytics
-async function refreshAnalytics() {
+async function analyticsRefresh() {
+  // This is the main implementation
+  console.log('📊 Refreshing analytics data...');
   try {
     // Update UI to show loading state
     updateLoadingState(true);
@@ -40,8 +42,8 @@ async function refreshAnalytics() {
     
     analyticsData = await response.json();
     
-    // Populate user dropdown
-    populateUserDropdown();
+    // Populate user dropdown (now async)
+    await populateUserDropdown();
     
     // Render the analytics dashboard with the new data
     renderAnalyticsDashboard();
@@ -89,23 +91,109 @@ function updateLoadingState(isLoading) {
 }
 
 // Populate user dropdown with available users
-function populateUserDropdown() {
+async function populateUserDropdown() {
+  console.log('🔄 Populating analytics user dropdown...');
   const userSelect = document.getElementById('analyticsUserSelect');
-  if (!userSelect || !analyticsData) return;
-  
-  // Clear existing options except the first one (All Users)
-  while (userSelect.options.length > 1) {
-    userSelect.remove(1);
+  if (!userSelect) {
+    console.error('⚠️ Analytics user select dropdown not found in the DOM!');
+    return;
   }
   
-  // Add all users from the analytics data
-  const users = Object.keys(analyticsData.userStats || {});
-  users.forEach(username => {
-    const option = document.createElement('option');
-    option.value = username;
-    option.textContent = username;
-    userSelect.appendChild(option);
-  });
+  // Check if we can use the shared admin users data
+  if (typeof window.adminUsers !== 'undefined' && Array.isArray(window.adminUsers) && window.adminUsers.length > 0) {
+    console.log('✅ Using shared admin users data:', window.adminUsers.map(u => u.username));
+    
+    // Clear existing options except the first one (All Users)
+    console.log('Clearing existing options...');
+    while (userSelect.options.length > 1) {
+      userSelect.remove(1);
+    }
+    
+    // Add users to dropdown
+    window.adminUsers.forEach(user => {
+      const option = document.createElement('option');
+      option.value = user.username;
+      option.textContent = user.username;
+      userSelect.appendChild(option);
+    });
+    
+    console.log(`✅ Added ${window.adminUsers.length} users to analytics dropdown`);
+    return;
+  }
+  
+  // If we can't use shared data, fetch from server
+  try {
+    // Clear existing options except the first one (All Users)
+    console.log('Clearing existing options...');
+    while (userSelect.options.length > 1) {
+      userSelect.remove(1);
+    }
+    
+    // Always fetch fresh users from server
+    console.log("📥 Fetching users directly from server...");
+    
+    // Add a loading option
+    const loadingOption = document.createElement('option');
+    loadingOption.value = "";
+    loadingOption.textContent = "Loading users...";
+    loadingOption.disabled = true;
+    userSelect.appendChild(loadingOption);
+    
+    const response = await fetch('/getUsers');
+    console.log("GET /getUsers response:", response.status, response.statusText);
+    
+    // Remove loading option
+    if (userSelect.contains(loadingOption)) {
+      userSelect.removeChild(loadingOption);
+    }
+    
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+    }
+    
+    const responseText = await response.text();
+    console.log("Raw server response:", responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
+    
+    let users = [];
+    try {
+      const allUsers = JSON.parse(responseText);
+      console.log("Parsed users data:", allUsers);
+      
+      if (Array.isArray(allUsers)) {
+        users = allUsers.map(user => user.username);
+        console.log(`✅ Loaded ${users.length} users from server:`, users);
+        
+        if (users.length === 0) {
+          console.warn("⚠️ Server returned empty users array!");
+          
+          // Add a warning option
+          const warningOption = document.createElement('option');
+          warningOption.value = "";
+          warningOption.textContent = "No users found";
+          warningOption.disabled = true;
+          userSelect.appendChild(warningOption);
+        }
+      } else {
+        console.error("❌ Server returned non-array data:", allUsers);
+        throw new Error("Invalid user data format");
+      }
+    } catch (jsonError) {
+      console.error("❌ Error parsing JSON response:", jsonError);
+      throw jsonError;
+    }
+    
+    // Add users to dropdown
+    console.log(`Adding ${users.length} users to dropdown`);
+    users.forEach(username => {
+      const option = document.createElement('option');
+      option.value = username;
+      option.textContent = username;
+      userSelect.appendChild(option);
+    });
+    console.log('✅ User dropdown populated successfully');
+  } catch (error) {
+    console.error("❌ Error populating user dropdown:", error);
+  }
 }
 
 // Render the entire analytics dashboard
@@ -295,35 +383,101 @@ function renderProgressChart(data) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', width);
   svg.setAttribute('height', height);
-  svg.style.overflow = 'visible';
+  svg.style.overflow = 'hidden';
   container.appendChild(svg);
   
-  // Scale functions
-  const xScale = index => (index / (trendData.length - 1 || 1)) * chartWidth + padding.left;
-  const yScale = value => chartHeight - (value / 100) * chartHeight + padding.top;
+  // Create a clipping path to ensure chart doesn't go outside boundaries
+  const svgDefs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  
+  const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+  clipPath.setAttribute('id', 'progress-chart-area');
+  const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  clipRect.setAttribute('x', padding.left);
+  clipRect.setAttribute('y', padding.top);
+  clipRect.setAttribute('width', chartWidth);
+  clipRect.setAttribute('height', chartHeight);
+  clipPath.appendChild(clipRect);
+  svgDefs.appendChild(clipPath);
+  
+  // Add a group for all chart elements that should be clipped
+  const chartGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  chartGroup.setAttribute('clip-path', 'url(#progress-chart-area)');
+  svg.appendChild(chartGroup);
+  svg.appendChild(svgDefs);
+  
+  // Scale functions with boundary checks
+  const xScale = index => {
+    // Ensure index is within bounds
+    const safeIndex = Math.max(0, Math.min(index, trendData.length - 1));
+    return (safeIndex / (trendData.length - 1 || 1)) * chartWidth + padding.left;
+  };
+  
+  const yScale = value => {
+    // Ensure score is within 0-100 range
+    const safeValue = Math.max(0, Math.min(value, 100));
+    return chartHeight - (safeValue / 100) * chartHeight + padding.top;
+  };
+  
+  // Smooth out the data to prevent sudden drops
+  const smoothedData = [...trendData];
+  
+  // Apply simple moving average to smooth out sudden drops
+  if (smoothedData.length > 2) {
+    for (let i = 1; i < smoothedData.length - 1; i++) {
+      const prevAccuracy = smoothedData[i-1].accuracy || 0;
+      const currAccuracy = smoothedData[i].accuracy || 0;
+      const nextAccuracy = smoothedData[i+1].accuracy || 0;
+      
+      // If there's a large drop (over 30%), smooth it out
+      if (currAccuracy < prevAccuracy - 30 && currAccuracy < nextAccuracy - 30) {
+        smoothedData[i].accuracy = (prevAccuracy + nextAccuracy) / 2;
+      }
+    }
+  }
   
   // Create path for the line
-  const pathData = trendData.map((point, i) => {
+  const pathData = smoothedData.map((point, i) => {
+    // Ensure we have valid coordinates
     const x = xScale(i);
     const y = yScale(point.accuracy || 0);
-    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-  }).join(' ');
+    
+    // Skip invalid coordinates
+    if (isNaN(x) || isNaN(y)) {
+      console.warn('Invalid coordinate for progress chart:', { x, y, point, i });
+      return '';
+    }
+    
+    return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).filter(segment => segment !== '').join(' ');
   
-  // Add the path
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', pathData);
-  path.setAttribute('stroke', 'var(--primary)');
-  path.setAttribute('stroke-width', '3');
-  path.setAttribute('fill', 'none');
-  svg.appendChild(path);
-  
-  // Add area under the curve
-  const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  const areaPathData = `${pathData} L ${xScale(trendData.length - 1)} ${chartHeight + padding.top} L ${xScale(0)} ${chartHeight + padding.top} Z`;
-  areaPath.setAttribute('d', areaPathData);
-  areaPath.setAttribute('fill', 'var(--primary)');
-  areaPath.setAttribute('opacity', '0.1');
-  svg.appendChild(areaPath);
+  // Only render if we have valid path data
+  if (pathData && pathData.length > 0 && !pathData.includes('NaN')) {
+    // Add the path
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathData);
+    path.setAttribute('stroke', 'var(--primary)');
+    path.setAttribute('stroke-width', '3');
+    path.setAttribute('fill', 'none');
+    chartGroup.appendChild(path);
+    
+    // Add area under the curve
+    try {
+      const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const lastValidIndex = trendData.length - 1;
+      const areaPathData = `${pathData} L ${xScale(lastValidIndex).toFixed(1)} ${(chartHeight + padding.top).toFixed(1)} L ${xScale(0).toFixed(1)} ${(chartHeight + padding.top).toFixed(1)} Z`;
+      
+      if (areaPathData && !areaPathData.includes('NaN')) {
+        areaPath.setAttribute('d', areaPathData);
+        areaPath.setAttribute('fill', 'var(--primary)');
+        areaPath.setAttribute('opacity', '0.1');
+        chartGroup.appendChild(areaPath);
+      }
+    } catch (error) {
+      console.error('Error creating area path:', error);
+    }
+  } else {
+    console.warn('Unable to create valid path data for progress chart');
+  }
   
   // Add data points
   trendData.forEach((point, i) => {
@@ -341,7 +495,7 @@ function renderProgressChart(data) {
     circle.addEventListener('mouseenter', showTooltip);
     circle.addEventListener('mouseleave', hideTooltip);
     
-    svg.appendChild(circle);
+    chartGroup.appendChild(circle);
   });
   
   // Add axes
@@ -417,8 +571,25 @@ function showTooltip(event) {
   
   // Position the tooltip
   const rect = this.getBoundingClientRect();
-  tooltip.style.left = `${rect.left}px`;
-  tooltip.style.top = `${rect.top - tooltip.offsetHeight - 10}px`;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // Calculate initial position
+  let left = rect.left;
+  let top = rect.top - tooltip.offsetHeight - 10;
+  
+  // Adjust to keep tooltip within viewport
+  if (left + tooltip.offsetWidth > viewportWidth) {
+    left = viewportWidth - tooltip.offsetWidth - 10;
+  }
+  
+  if (top < 0) {
+    // If not enough space above, position below
+    top = rect.bottom + 10;
+  }
+  
+  tooltip.style.left = `${Math.max(10, left)}px`;
+  tooltip.style.top = `${Math.max(10, top)}px`;
   
   // Show the tooltip
   tooltip.style.opacity = '1';
@@ -809,18 +980,42 @@ function createSparkline(container, trendData) {
   const xScale = index => (index / (trendData.length - 1)) * width;
   const yScale = accuracy => height - (accuracy / 100) * height;
   
-  // Create path for the line
-  const pathData = trendData.map((point, i) => {
-    return `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(point.accuracy || 0)}`;
-  }).join(' ');
+  // Create path for the line with validation to prevent NaN values
+  const validPoints = trendData.filter((point) => {
+    // Ensure we have valid accuracy data
+    return point && typeof point.accuracy === 'number' && !isNaN(point.accuracy);
+  });
   
-  // Add the path
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', pathData);
-  path.setAttribute('stroke', 'var(--accent)');
-  path.setAttribute('stroke-width', '2');
-  path.setAttribute('fill', 'none');
-  svg.appendChild(path);
+  if (validPoints.length > 0) {
+    // Create path only with valid data points
+    const pathData = validPoints.map((point, i) => {
+      // Ensure values are finite numbers
+      const x = xScale(i);
+      const y = yScale(Math.max(0, Math.min(100, point.accuracy || 0)));
+      
+      // Verify coordinates are valid numbers
+      if (isNaN(x) || isNaN(y)) {
+        console.warn('Invalid coordinate:', { x, y, point });
+        return '';
+      }
+      
+      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).filter(segment => segment !== '').join(' ');
+    
+    // Only add the path if we have valid path data
+    if (pathData && !pathData.includes('NaN')) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pathData);
+      path.setAttribute('stroke', 'var(--accent)');
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('fill', 'none');
+      svg.appendChild(path);
+    } else {
+      console.warn('Unable to create valid path data:', pathData);
+    }
+  } else {
+    console.warn('No valid data points for trend chart');
+  }
 }
 
 // Render recent activity feed
@@ -903,3 +1098,7 @@ function formatTimeAgo(date) {
   
   return 'just now';
 }
+
+// Export functions to window object
+window.analyticsRefresh = analyticsRefresh;
+window.populateUserDropdown = populateUserDropdown;

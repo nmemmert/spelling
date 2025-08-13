@@ -2,6 +2,8 @@
  * Spaced Repetition System API endpoints for the Spelling Practice App
  */
 
+module.exports = function(app, DATA_DIR, files, readJsonSafe, fs, path) {
+
 // Get spaced repetition data
 app.get('/getSpacedRepetitionData', (req, res) => {
   try {
@@ -154,4 +156,6 @@ function calculatePriority(wordData, today) {
   return daysOverdue * (5 - wordData.easeFactor);
 }
 
-console.log('📚 Spaced repetition system endpoints initialized');
+}; // Close the module.exports function
+
+// Will be logged when the module is properly required

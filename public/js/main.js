@@ -1,6 +1,19 @@
 document.addEventListener("DOMContentLoaded", async () => {
   console.log('🚀 Application starting...');
   
+  // Check if server is available
+  try {
+    console.log('🔄 Testing server connection...');
+    const serverTest = await fetch('/getUsers');
+    if (serverTest.ok) {
+      console.log('✅ Server connection successful');
+    } else {
+      console.error(`❌ Server responded with error: ${serverTest.status}`);
+    }
+  } catch (e) {
+    console.error('❌ Server connection failed:', e.message);
+  }
+  
   // Ensure all panels are hidden initially
   document.getElementById('adminPanel')?.classList.add('hidden');
   document.getElementById('studentPanel')?.classList.add('hidden');
@@ -13,6 +26,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Restore saved theme
   applySavedTheme();
 
+  // Global error handler for fetch operations
+  window.handleApiError = function(error, operation) {
+    console.error(`❌ API Error during ${operation}:`, error);
+    alert(`Network error during ${operation}. Please check your connection and try again.`);
+  };
+
   // Restore session if user was logged in
   const savedUser = localStorage.getItem("loggedInUser");
   if (savedUser) {
@@ -23,11 +42,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Load users for admin functionality only if user is admin
       if (user.role === 'admin') {
         try {
+          console.log('🔄 Loading admin data...');
           await loadUsers();
           displayUserDropdown();
-          populateWordUserDropdown();
+          displayUserLists();
+          
+          // Initialize all user dropdowns
+          if (typeof populateWordUserDropdown === 'function') {
+            populateWordUserDropdown();
+          }
+          if (typeof window.populateUserDropdown === 'function') {
+            window.populateUserDropdown();
+          }
         } catch (e) {
-          console.warn('Could not load admin data:', e);
+          console.warn('⚠️ Could not load admin data:', e);
         }
       }
       

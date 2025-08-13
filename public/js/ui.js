@@ -92,11 +92,18 @@ function showAdmin() {
     adminPanel.classList.remove("hidden");
     
     // Load user data for dropdowns
-    loadUserDropdowns().then(() => {
-      console.log("✅ User dropdowns loaded");
-    }).catch(e => {
-      console.warn("Could not load user dropdowns:", e);
-    });
+    if (typeof window.loadUsers === 'function') {
+      window.loadUsers().then(() => {
+        console.log("✅ Users loaded from server");
+        if (typeof window.displayUserDropdown === 'function') {
+          window.displayUserDropdown();
+        }
+      }).catch(e => {
+        console.warn("Could not load users from server:", e);
+      });
+    } else {
+      console.warn("loadUsers function not available");
+    }
     
     // Set default tab to tabWords and enable tab buttons
     document.querySelectorAll('#adminTabs button').forEach(btn => btn.disabled = false);
@@ -110,3 +117,45 @@ function showAdmin() {
     console.error("Admin panel not found");
   }
 }
+
+// Tab switching functionality
+window.switchTab = function(tabId) {
+  console.log(`🔄 Switching to tab: ${tabId}`);
+  
+  // Hide all tabs
+  document.querySelectorAll('.adminTab').forEach(tab => {
+    tab.classList.add('hidden');
+  });
+  
+  // Remove active class from all tab buttons
+  document.querySelectorAll('#adminTabs button').forEach(button => {
+    button.classList.remove('active');
+  });
+  
+  // Show the selected tab
+  const selectedTab = document.getElementById(tabId);
+  if (selectedTab) {
+    selectedTab.classList.remove('hidden');
+    
+    // Highlight the active tab button
+    const activeButton = document.querySelector(`#adminTabs button[data-tab="${tabId}"]`);
+    if (activeButton) {
+      activeButton.classList.add('active');
+    }
+    
+    // Special handling for each tab type
+    if (tabId === 'tabAnalytics' && typeof window.analyticsRefresh === 'function') {
+      console.log('📊 Loading analytics data...');
+      window.analyticsRefresh().catch(e => {
+        console.error('Error loading analytics:', e);
+      });
+    } else if (tabId === 'tabResults' && typeof window.loadStudentResults === 'function') {
+      console.log('📋 Loading results data...');
+      window.loadStudentResults().catch(e => {
+        console.error('Error loading results:', e);
+      });
+    }
+  } else {
+    console.error(`Tab '${tabId}' not found in the DOM`);
+  }
+};

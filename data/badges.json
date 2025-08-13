@@ -6,7 +6,20 @@
     "Practice Streak",
     "Vocabulary Pro"
   ],
-  "admin1": [],
+  "admin1": {
+    "earned": [
+      {
+        "id": "perfect_accuracy",
+        "name": "Perfect Score",
+        "icon": "🏆",
+        "category": "accuracy",
+        "earnedAt": "2025-08-13T20:29:17.744Z"
+      }
+    ],
+    "counts": {
+      "accuracy": 1
+    }
+  },
   "student1": [],
   "testuser": []
 }

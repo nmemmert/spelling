@@ -85,6 +85,18 @@ input, textarea, select {
   transition: var(--transition);
 }
 
+/* Special styling for game input */
+#userInput {
+  font-size: 1.2rem;
+  max-width: 400px;
+  text-align: center;
+  background-color: white !important;
+  color: var(--text-primary) !important;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  caret-color: var(--primary);
+}
+
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--primary);
@@ -458,6 +470,25 @@ button:disabled {
   border-radius: var(--radius);
   color: var(--primary);
   box-shadow: var(--shadow-lg);
+}
+
+/* Word feedback styles */
+#wordFeedback {
+  font-size: 1.2rem;
+  padding: 0.5rem;
+  margin-top: 1rem;
+  border-radius: var(--radius);
+  transition: var(--transition);
+}
+
+.feedback-correct {
+  color: var(--success);
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.feedback-incorrect {
+  color: var(--error);
+  background-color: rgba(239, 68, 68, 0.1);
   min-height: 120px;
   display: flex;
   align-items: center;
@@ -471,6 +502,77 @@ button:disabled {
   background: var(--bg-primary);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+
+/* Game Summary Styling */
+#summary {
+  margin-top: 2rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.summary-stats {
+  display: flex;
+  justify-content: space-around;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  padding: 1rem;
+  margin: 0.5rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  min-width: 150px;
+}
+
+.stat-item label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.stat-item span {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.incorrect-list {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.incorrect-list li {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  gap: 1rem;
+}
+
+.incorrect-list .word {
+  font-weight: 600;
+  color: var(--success);
+}
+
+.incorrect-list .attempt {
+  color: var(--error);
+  text-decoration: line-through;
+}
+
+.summary-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
 }
 
 /* Student controls specific styling */
@@ -559,4 +661,30 @@ li {
     font-size: 2rem;
     padding: 2rem 1rem;
   }
+}
+
+/* Enhanced Input Visibility Styles */
+.visible-input {
+  color: black !important;
+  background-color: white !important;
+  border: 2px solid #333 !important;
+  font-size: 18px !important;
+  padding: 12px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+  -webkit-text-fill-color: black !important;
+  display: inline-block !important;
+  width: 100% !important;
+  max-width: 400px !important;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2) !important;
+}
+
+/* Hide debug tools */
+#debugTools, 
+div[id*="debug-"],
+div[class*="debug-"],
+button[id*="debug"],
+[data-debug="true"] {
+  display: none !important;
 }

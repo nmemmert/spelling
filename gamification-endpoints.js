@@ -1,5 +1,7 @@
 // Gamification API endpoints for the Spelling Practice App
 
+module.exports = function(app, DATA_DIR, files, readJsonSafe, isToday, isSameDay) {
+
 // 🏆 Get leaderboards
 app.get('/getLeaderboards', (req, res) => {
   try {
@@ -468,3 +470,5 @@ function checkStreakAchievements(username, currentStreak) {
     console.error('Error checking streak achievements:', error);
   }
 }
+
+}; // Close the module.exports function

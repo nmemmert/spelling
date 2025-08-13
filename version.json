@@ -1,0 +1,14 @@
+{
+  "version": "1.1.0",
+  "name": "spelling-practice-app",
+  "description": "A comprehensive educational application for spelling practice",
+  "lastUpdated": "August 13, 2025",
+  "releaseNotes": [
+    "Fixed analytics graph display issues",
+    "Fixed results and sessions tabs data display",
+    "Added robust error handling for file operations",
+    "Improved session data compatibility",
+    "Added API test page for easier debugging",
+    "Enhanced documentation with troubleshooting guide"
+  ]
+}

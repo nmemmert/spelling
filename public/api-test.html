@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test Page</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Test Page</h1>
+        <p>This page allows you to test the API endpoints for the Spelling Practice App.</p>
+        
+        <div class="card">
+            <h2>GET /getResults</h2>
+            <p>Fetch all user sessions from the server.</p>
+            <div style="margin-bottom: 10px;">
+                <label for="filterUsername">Filter by Username:</label>
+                <select id="filterUsername">
+                    <option value="">All Users</option>
+                    <option value="admin1">admin1</option>
+                    <option value="student1">student1</option>
+                    <option value="nate">nate</option>
+                    <option value="testuser">testuser</option>
+                </select>
+                
+                <label for="limitResults" style="margin-left: 15px;">Limit Results:</label>
+                <input type="number" id="limitResults" value="5" min="1" max="100" style="width: 60px;">
+                
+                <label style="margin-left: 15px;">
+                    <input type="checkbox" id="recentFirst" checked> Recent First
+                </label>
+            </div>
+            <div class="button-row">
+                <button id="testGetResults" class="btn-primary">Test Endpoint</button>
+            </div>
+            <div id="getResultsResponse" class="hidden">
+                <h3>Response:</h3>
+                <pre id="getResultsResponseData"></pre>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>POST /saveResults</h2>
+            <p>Save a new test session.</p>
+            <div>
+                <label for="username">Username:</label>
+                <select id="username">
+                    <option value="admin1">admin1</option>
+                    <option value="student1">student1</option>
+                    <option value="nate">nate</option>
+                    <option value="testuser">testuser</option>
+                </select>
+            </div>
+            <div>
+                <label for="score">Score:</label>
+                <input type="number" id="score" value="90" min="0" max="100">
+            </div>
+            <div>
+                <label for="wordCount">Word Count:</label>
+                <input type="number" id="wordCount" value="10" min="1" max="50">
+            </div>
+            <div class="button-row">
+                <button id="testSaveResults" class="btn-primary">Save New Session</button>
+            </div>
+            <div id="saveResultsResponse" class="hidden">
+                <h3>Response:</h3>
+                <pre id="saveResultsResponseData"></pre>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Test Results</h2>
+            <p>View saved sessions for a specific user.</p>
+            <div>
+                <label for="viewUsername">Username:</label>
+                <select id="viewUsername">
+                    <option value="admin1">admin1</option>
+                    <option value="student1">student1</option>
+                    <option value="nate">nate</option>
+                    <option value="testuser">testuser</option>
+                </select>
+            </div>
+            <div class="button-row">
+                <button id="viewUserSessions" class="btn-primary">View Sessions</button>
+            </div>
+            <div id="userSessionsContainer" class="hidden">
+                <h3>Sessions for <span id="displayUsername"></span>:</h3>
+                <ul id="userSessionsList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test getResults endpoint
+        document.getElementById('testGetResults').addEventListener('click', async () => {
+            try {
+                const username = document.getElementById('filterUsername').value;
+                const limit = document.getElementById('limitResults').value;
+                const recent = document.getElementById('recentFirst').checked;
+                
+                // Build the URL with query parameters
+                let url = '/getResults';
+                const params = [];
+                if (username) params.push(`username=${encodeURIComponent(username)}`);
+                if (limit) params.push(`limit=${encodeURIComponent(limit)}`);
+                if (recent) params.push(`recent=true`);
+                if (params.length > 0) url += '?' + params.join('&');
+                
+                const startTime = performance.now();
+                const response = await fetch(url);
+                const data = await response.json();
+                const endTime = performance.now();
+                
+                const responseArea = document.getElementById('getResultsResponse');
+                const responseData = document.getElementById('getResultsResponseData');
+                
+                responseArea.classList.remove('hidden');
+                
+                // Format the response data
+                const userCount = Object.keys(data).length;
+                let sessionCount = 0;
+                Object.values(data).forEach(sessions => {
+                    if (Array.isArray(sessions)) {
+                        sessionCount += sessions.length;
+                    }
+                });
+                
+                const summaryText = `⏱️ Response time: ${Math.round(endTime - startTime)}ms\n` +
+                                    `👥 Users found: ${userCount}\n` +
+                                    `📊 Total sessions: ${sessionCount}\n` + 
+                                    `🔍 Filters: ${params.join(', ') || 'None'}\n\n` +
+                                    `📝 First 500 chars of raw data:\n` +
+                                    JSON.stringify(data, null, 2).substring(0, 500) + '...';
+                
+                responseData.textContent = summaryText;
+            } catch (error) {
+                console.error('Error testing getResults endpoint:', error);
+                document.getElementById('getResultsResponse').classList.remove('hidden');
+                document.getElementById('getResultsResponseData').textContent = `❌ Error: ${error.message}`;
+            }
+        });
+        
+        // Test saveResults endpoint
+        document.getElementById('testSaveResults').addEventListener('click', async () => {
+            try {
+                const username = document.getElementById('username').value;
+                const score = parseInt(document.getElementById('score').value);
+                const wordCount = parseInt(document.getElementById('wordCount').value);
+                
+                // Generate random words for the test
+                const words = [];
+                const possibleWords = ['apple', 'banana', 'cherry', 'date', 'elderberry', 
+                                      'fig', 'grape', 'honeydew', 'kiwi', 'lemon', 
+                                      'mango', 'orange', 'papaya', 'quince', 'raspberry'];
+                
+                // Calculate how many should be correct based on the score
+                const correctCount = Math.round((score / 100) * wordCount);
+                
+                for (let i = 0; i < wordCount; i++) {
+                    const wordIndex = Math.floor(Math.random() * possibleWords.length);
+                    words.push({
+                        word: possibleWords[wordIndex],
+                        correct: i < correctCount // Make first correctCount words correct
+                    });
+                }
+                
+                const payload = {
+                    username,
+                    result: {
+                        score: correctCount,
+                        answers: words,
+                        completed: true
+                    }
+                };
+                
+                const startTime = performance.now();
+                const response = await fetch('/saveResults', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.text();
+                const endTime = performance.now();
+                
+                const responseArea = document.getElementById('saveResultsResponse');
+                const responseData = document.getElementById('saveResultsResponseData');
+                
+                responseArea.classList.remove('hidden');
+                responseData.textContent = `⏱️ Response time: ${Math.round(endTime - startTime)}ms\n` +
+                                          `📊 Response: ${data}\n\n` +
+                                          `📝 Request payload:\n` +
+                                          JSON.stringify(payload, null, 2);
+                                          
+                // Auto-update the view after saving
+                if (document.getElementById('viewUsername').value === username) {
+                    document.getElementById('viewUserSessions').click();
+                }
+            } catch (error) {
+                console.error('Error testing saveResults endpoint:', error);
+                document.getElementById('saveResultsResponse').classList.remove('hidden');
+                document.getElementById('saveResultsResponseData').textContent = `❌ Error: ${error.message}`;
+            }
+        });
+        
+        // View user sessions
+        document.getElementById('viewUserSessions').addEventListener('click', async () => {
+            try {
+                const username = document.getElementById('viewUsername').value;
+                document.getElementById('displayUsername').textContent = username;
+                
+                const response = await fetch('/getResults');
+                const data = await response.json();
+                
+                const sessions = data[username] || [];
+                const sessionsList = document.getElementById('userSessionsList');
+                sessionsList.innerHTML = '';
+                
+                if (sessions.length === 0) {
+                    sessionsList.innerHTML = '<li>No sessions found for this user.</li>';
+                } else {
+                    sessions.forEach((session, index) => {
+                        // Support both timestamp and date fields
+                        const sessionDate = session.timestamp || session.date || Date.now();
+                        const date = new Date(sessionDate).toLocaleString();
+                        
+                        // Handle different score fields
+                        const score = session.score || session.correct || 0;
+                        
+                        // Handle different word count fields
+                        let total = 0;
+                        if (session.answers && Array.isArray(session.answers)) {
+                            total = session.answers.length;
+                        } else if (session.words && Array.isArray(session.words)) {
+                            total = session.words.length;
+                        } else if (session.total) {
+                            total = session.total;
+                        }
+                        
+                        const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+                        
+                        const li = document.createElement('li');
+                        li.className = 'card';
+                        li.innerHTML = `
+                            <div>
+                                <strong>${date}</strong>
+                                <div>Score: ${score}/${total} (${percent}%)</div>
+                            </div>
+                            <div>
+                                <details>
+                                    <summary>View Details</summary>
+                                    <pre>${JSON.stringify(session, null, 2)}</pre>
+                                </details>
+                            </div>
+                        `;
+                        
+                        sessionsList.appendChild(li);
+                    });
+                }
+                
+                document.getElementById('userSessionsContainer').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error viewing user sessions:', error);
+                document.getElementById('userSessionsContainer').classList.remove('hidden');
+                document.getElementById('userSessionsList').innerHTML = `<li>❌ Error: ${error.message}</li>`;
+            }
+        });
+    </script>
+</body>
+</html>

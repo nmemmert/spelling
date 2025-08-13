@@ -10,6 +10,12 @@ A comprehensive educational application featuring spelling practice, typing exer
 
 ---
 
+## 🔍 Troubleshooting
+
+If you encounter issues with the app, please refer to the [DEBUG.md](DEBUG.md) file for common problems and solutions.
+
+---
+
 ## [Watch the Demo Video](https://www.youtube.com/watch?v=K29zCFZPEjE)
 [![Demo Video](https://img.youtube.com/vi/K29zCFZPEjE/0.jpg)](https://www.youtube.com/watch?v=K29zCFZPEjE)
 

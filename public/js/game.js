@@ -3,8 +3,10 @@ let words = [];
 let currentWord = '';
 let currentIndex = 0;
 let results = [];
+let typingWords = [];
 let isSpacedRepetitionMode = false;
-// 📝 Check user's answer and move to next
+
+// 📝 Check user's answer and move to next word regardless of correctness
 window.submitAnswer = function() {
     const input = document.getElementById('userInput').value.trim();
     
@@ -14,22 +16,41 @@ window.submitAnswer = function() {
         attempt: input
     });
 
+    // Show feedback and move to next word regardless of correctness
     if (input.toLowerCase() === currentWord.toLowerCase()) {
-        currentIndex++;
-        document.getElementById('inputSection').classList.add('hidden');
-        setTimeout(() => showWord(), 500); // Brief pause before next word
+        // Correct answer - add visual feedback
+        const inputEl = document.getElementById('userInput');
+        inputEl.style.borderColor = 'var(--success)';
+        inputEl.style.backgroundColor = '#f0fdf4';
+        
+        // Add feedback text if element exists
+        const feedbackEl = document.getElementById('wordFeedback');
+        if (feedbackEl) {
+            feedbackEl.textContent = '✓ Correct!';
+            feedbackEl.className = 'feedback-correct';
+            feedbackEl.style.color = 'var(--success)';
+        }
     } else {
-        // Show feedback for incorrect answer
+        // Incorrect answer - show correct spelling but continue
         const inputEl = document.getElementById('userInput');
         inputEl.style.borderColor = 'var(--error)';
         inputEl.style.backgroundColor = '#fef2f2';
         
-        setTimeout(() => {
-            inputEl.style.borderColor = '';
-            inputEl.style.backgroundColor = '';
-            inputEl.focus();
-        }, 1000);
+        // Add feedback text if element exists
+        const feedbackEl = document.getElementById('wordFeedback');
+        if (feedbackEl) {
+            feedbackEl.textContent = `✗ Correct spelling: ${currentWord}`;
+            feedbackEl.className = 'feedback-incorrect';
+            feedbackEl.style.color = 'var(--error)';
+        }
     }
+    
+    // Always advance to next word
+    currentIndex++;
+    document.getElementById('inputSection').classList.add('hidden');
+    
+    // Small delay before showing next word
+    setTimeout(() => showWord(), 1500);
 }
 
 // Add Enter key support for game input
@@ -42,7 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-});[];
+});
+
 let currentSentence = '';
 
 function showStudent() {
@@ -110,19 +132,30 @@ window.startGame = async function(customWords = null, isSpacedRepetition = false
             console.log('Received words:', data);
             
             let weekWords = [];
-            // If weeks format and activeWeek is set, use only that week's words
-            if (data.words && Array.isArray(data.words)) {
-                weekWords = data.words;
-            } else if (data.words && data.words.weeks && data.words.activeWeek) {
-                const active = data.words.activeWeek;
-                const found = data.words.weeks.find(w => w.date === active);
-                if (found) weekWords = found.words;
-            } else if (Array.isArray(data)) {
-                // If data is already an array
-                weekWords = data;
+            // Safely handle various response formats
+            try {
+                if (data && data.words && Array.isArray(data.words)) {
+                    // Server returns {words: [array]}
+                    weekWords = data.words;
+                } else if (data && data.words && typeof data.words === 'object' && data.words.weeks && data.words.activeWeek) {
+                    // Server returns {words: {weeks: [], activeWeek: ""}}
+                    const active = data.words.activeWeek;
+                    const found = data.words.weeks.find(w => w.date === active);
+                    if (found && Array.isArray(found.words)) {
+                        weekWords = found.words;
+                    }
+                } else if (Array.isArray(data)) {
+                    // Server returns direct array
+                    weekWords = data;
+                } else if (typeof data === 'object' && Array.isArray(Object.values(data)[0])) {
+                    // Handle unexpected format as best we can
+                    weekWords = Object.values(data)[0];
+                }
+            } catch (err) {
+                console.error("Error processing word list data:", err);
             }
             
-            wordList = weekWords;
+            wordList = weekWords.length > 0 ? weekWords : ["default", "practice", "words"];
         }
 
         if (!wordList.length) {
@@ -156,325 +189,256 @@ function showWord() {
     const wordBox = document.getElementById('wordBox');
     const inputSection = document.getElementById('inputSection');
     
+    // Reset any feedback text
+    const feedbackEl = document.getElementById('wordFeedback');
+    if (feedbackEl) {
+        feedbackEl.textContent = '';
+        feedbackEl.className = '';
+    }
+    
     wordBox.textContent = currentWord;
     inputSection.classList.add('hidden');
 
     setTimeout(() => {
         wordBox.textContent = '';
+        // Make sure input section is visible
         inputSection.classList.remove('hidden');
-        document.getElementById('userInput').value = '';
-        document.getElementById('userInput').focus();
+        inputSection.style.display = 'block';
+        
+        // Reset and focus the input field with enhanced visibility
+        const userInput = document.getElementById('userInput');
+        userInput.value = '';
+        
+        // Use the class-based approach instead of inline styles
+        userInput.classList.add('visible-input');
+        
+        // Focus with a slight delay to ensure UI is ready
+        setTimeout(() => {
+            userInput.focus();
+            // Try to insert a cursor by setting a selection range
+            try {
+                userInput.setSelectionRange(0, 0);
+            } catch (e) {
+                console.log('Could not set selection range:', e);
+            }
+            console.log('🔍 Input focused, ready for typing');
+        }, 50);
     }, 2000);
 }
 
-// 📝 Check user’s answer and move to next
-function submitAnswer() {
-    const input = document.getElementById('userInput').value.trim();
-    
-    // Record the attempt
-    results.push({
-        word: currentWord,
-        attempt: input
-    });
-
-    if (input.toLowerCase() === currentWord.toLowerCase()) {
-        currentIndex++;
-        document.getElementById('inputSection').classList.add('hidden');
-        showWord();
-    } else {
-        alert('Try again!');
-    }
-}
-
-// 📊 Show results summary
 function showSummary() {
-  const summary = document.getElementById('summary');
-  let correct = 0;
-  let missed = [];
-  
-  // Process results to calculate correct answers and build a report
-  const report = results.map(({ word, attempt }) => {
-    const isCorrect = word.toLowerCase() === attempt.toLowerCase();
-    if (isCorrect) correct++;
-    else missed.push(word);
-    return `<li>${word} — <strong style="color:${isCorrect ? 'green' : 'red'}">${attempt || '(no answer)'}</strong></li>`;
-  }).join('');
-
-  // Create detailed results for spaced repetition processing
-  const detailedResults = results.map(({ word, attempt }) => {
-    return {
-      word,
-      correct: word.toLowerCase() === attempt.toLowerCase(),
-      attempt
-    };
-  });
-
-  // Dispatch event for spaced repetition system if in SR mode
-  if (isSpacedRepetitionMode) {
-    const event = new CustomEvent('gameResultsAvailable', {
-      detail: {
-        isSpacedRepetition: true,
-        results: detailedResults
-      }
-    });
-    document.dispatchEvent(event);
-  }
-
-  // Build and display summary
-  summary.innerHTML = `
-    <h2>Results</h2>
-    <p>You got ${correct} out of ${words.length} correct (${Math.round((correct / words.length) * 100)}%)</p>
-    <ul>${report}</ul>
-    ${missed.length ? `<button onclick='retryMissed(${JSON.stringify(missed)})'>Retry Missed Words</button>` : ''}
-    ${isSpacedRepetitionMode ? `<button onclick='backToStudentDashboard()' class="btn-primary">Back to Dashboard</button>` : ''}
-  `;
-
-  summary.classList.remove('hidden');
-
-  // 🏆 Badge evaluation
-  const earnedBadges = [];
-  
-  // Performance badges
-  if (correct === words.length) earnedBadges.push({
-    id: "perfect_round",
-    name: "Perfect Round",
-    description: "Got all words correct in a round",
-    icon: "🎯",
-    color: "#ffd700",
-    category: "achievement"
-  });
-  
-  if (missed.length === 0) earnedBadges.push({
-    id: "no_misses",
-    name: "No Misses", 
-    description: "Completed a round without any mistakes",
-    icon: "⭐", 
-    color: "#ff9500",
-    category: "achievement"
-  });
-  
-  // Speed badges
-  const averageTime = totalTime / words.length;
-  if (averageTime < 5 && words.length >= 5) earnedBadges.push({
-    id: "speed_demon",
-    name: "Speed Demon",
-    description: "Average time less than 5 seconds per word",
-    icon: "⚡",
-    color: "#00b4d8",
-    category: "speed"
-  });
-  
-  if (totalTime < 30 && words.length >= 10) earnedBadges.push({
-    id: "quick_study",
-    name: "Quick Study",
-    description: "Complete 10+ words in under 30 seconds",
-    icon: "🚀",
-    color: "#8338ec",
-    category: "speed"
-  });
-  
-  // Difficulty badges
-  const averageLength = words.reduce((sum, word) => sum + word.length, 0) / words.length;
-  if (averageLength > 8 && correct > words.length * 0.8) earnedBadges.push({
-    id: "word_wizard",
-    name: "Word Wizard",
-    description: "Master of complex vocabulary",
-    icon: "🧙‍♂️",
-    color: "#7209b7",
-    category: "mastery"
-  });
-  
-  // Streak tracking (access from localStorage)
-  let streakCount = parseInt(localStorage.getItem('practice_streak') || '0');
-  if (correct / words.length >= 0.7) { // At least 70% correct to count for streak
-    streakCount++;
-    localStorage.setItem('practice_streak', streakCount);
-  } else {
-    streakCount = 0;
-    localStorage.setItem('practice_streak', '0');
-  }
-  
-  // Streak badges
-  if (streakCount >= 3) earnedBadges.push({
-    id: "consistent_learner",
-    name: "Consistent Learner",
-    description: "3-day practice streak with 70%+ accuracy",
-    icon: "🔥",
-    color: "#ff006e",
-    category: "consistency"
-  });
-  
-  if (streakCount >= 7) earnedBadges.push({
-    id: "weekly_warrior",
-    name: "Weekly Warrior",
-    description: "7-day practice streak with 70%+ accuracy",
-    icon: "⚔️",
-    color: "#3a0ca3",
-    category: "consistency"
-  });
-
-  const user = JSON.parse(localStorage.getItem('loggedInUser'));
-  if (user) {
-    // 📡 Save structured results
-    fetch('/saveResults', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: user.username,
-        result: {
-          score: correct,
-          completed: true,
-          answers: results.map(({ word, attempt }) => ({
-            word,
-            correct: word.toLowerCase() === attempt.toLowerCase()
-          }))
-        }
-      })
-    });
-
-    // 🎖 Send earned badges
-    if (earnedBadges.length) {
-      fetch('/awardBadges', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: user.username,
-          badges: earnedBadges
-        })
-      });
-
-      // 🎨 Display badges with improved visuals
-      const badgeSection = document.getElementById("badgeDisplay");
-      const badgeList = document.getElementById("badgeList");
-
-      badgeList.innerHTML = "";
-      
-      // Add header for the badge showcase
-      const badgeHeader = document.createElement("div");
-      badgeHeader.className = "badge-showcase-header";
-      badgeHeader.innerHTML = `<span class="badge-count">${earnedBadges.length}</span> New Badge${earnedBadges.length > 1 ? 's' : ''} Earned!`;
-      badgeList.appendChild(badgeHeader);
-      
-      // Create badge container
-      const badgeContainer = document.createElement("div");
-      badgeContainer.className = "badge-container";
-      
-      earnedBadges.forEach(badge => {
-        const badgeCard = document.createElement("div");
-        badgeCard.className = "badge-card";
-        badgeCard.style.borderColor = badge.color || "#4a5568";
-        badgeCard.style.boxShadow = `0 4px 6px rgba(0,0,0,0.1), 0 0 10px ${badge.color}40`;
-        
-        badgeCard.innerHTML = `
-          <div class="badge-icon" style="background-color: ${badge.color}40">
-            <span>${badge.icon || "🏅"}</span>
-          </div>
-          <div class="badge-info">
-            <h3>${badge.name}</h3>
-            <p>${badge.description}</p>
-          </div>
-        `;
-        
-        // Add animation class after a small delay for staggered effect
-        setTimeout(() => {
-          badgeCard.classList.add("badge-card-animate");
-        }, 150 * badgeContainer.children.length);
-        
-        badgeContainer.appendChild(badgeCard);
-      });
-      
-      badgeList.appendChild(badgeContainer);
-      badgeSection.classList.remove("hidden");
-    } else {
-      document.getElementById("badgeDisplay")?.classList.add("hidden");
-    }
-  }
-}
-
-// 🔁 Retry only the missed words
-function retryMissed(missedWords) {
-  words = missedWords;
-  current = 0;
-  results = [];
-
-  document.getElementById('summary')?.classList.add('hidden');
-  document.getElementById('badgeDisplay')?.classList.add('hidden');
-  showWord();
-}
-
-// New function to start typing practice
-async function startTypingPractice() {
-    console.log("⌨️ Starting typing practice...");
-    const user = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (!user) {
-        console.error("No user logged in");
-        return;
-    }
-
-    try {
-        const res = await fetch(`/getWordList?username=${encodeURIComponent(user.username)}`);
-        const data = await res.json();
-        const words = data.words || [];
-
-        if (!words.length) {
-            alert("No words found for practice. Please contact your teacher.");
-            return;
-        }
-
-        // Hide game section, show typing section
-        document.getElementById('gameSection')?.classList.add('hidden');
-        document.getElementById('typingSection').classList.remove('hidden');
-        
-        // Initialize typing practice
-        localStorage.setItem('typingWords', JSON.stringify(words));
-        showNextTypingSentence();
-    } catch (error) {
-        console.error('Error starting typing practice:', error);
-        alert('Error loading typing practice. Please try again.');
-    }
-}
-
-function createSentenceWithWord(word) {
-    const templates = [
-        `The word to spell is "${word}."`,
-        `Please spell the word "${word}."`,
-        `Type the word "${word}" carefully.`,
-        `Practice spelling "${word}" in this sentence.`
-    ];
-    return templates[Math.floor(Math.random() * templates.length)];
-}
-
-function showNextTypingSentence() {
-    console.log('Showing next sentence...'); // Debug log
+    console.log('Game completed, showing summary');
+    document.getElementById('inputSection').classList.add('hidden');
     
-    if (!typingWords.length) {
-        document.getElementById('typingPrompt').textContent = '🎉 All done! Great job!';
-        document.getElementById('typingInput').disabled = true;
-        return;
+    // Calculate stats
+    let correctCount = 0;
+    const incorrectWords = [];
+    
+    results.forEach(result => {
+        if (result.attempt.toLowerCase() === result.word.toLowerCase()) {
+            correctCount++;
+        } else {
+            incorrectWords.push(result);
+        }
+    });
+    
+    const accuracy = Math.round((correctCount / results.length) * 100);
+    
+    // Show summary
+    document.getElementById('summary').classList.remove('hidden');
+    document.getElementById('totalWords').textContent = results.length;
+    document.getElementById('correctWords').textContent = correctCount;
+    document.getElementById('accuracy').textContent = `${accuracy}%`;
+    
+    // Show incorrect words
+    const incorrectList = document.getElementById('incorrectList');
+    incorrectList.innerHTML = '';
+    
+    if (incorrectWords.length === 0) {
+        incorrectList.innerHTML = '<li>Perfect! No mistakes.</li>';
+    } else {
+        incorrectWords.forEach(item => {
+            incorrectList.innerHTML += `
+                <li>
+                    <span class="word">${item.word}</span>
+                    <span class="attempt">${item.attempt}</span>
+                </li>
+            `;
+        });
     }
-
-    const word = typingWords[0];
-    currentSentence = createSentenceWithWord(word);
-    console.log('Current sentence:', currentSentence); // Debug log
-
-    document.getElementById('typingPrompt').textContent = currentSentence;
-    document.getElementById('typingInput').value = '';
-    document.getElementById('typingInput').disabled = false;
-    document.getElementById('typingInput').focus();
-    document.getElementById('typingFeedback').textContent = '';
+    
+    // Save results if not in spaced repetition mode
+    if (!isSpacedRepetitionMode) {
+        saveResults(results, accuracy);
+    } else {
+        console.log('In spaced repetition mode, not saving normal results');
+        // Update spaced repetition data
+        updateSpacedRepetitionResults(results);
+    }
 }
 
-function submitTyping() {
-    const input = document.getElementById('typingInput').value.trim();
-    const feedback = document.getElementById('typingFeedback');
+async function saveResults(resultData, accuracy) {
+    try {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!user) return;
+        
+        // Transform the result data to match server's expected format
+        const answers = resultData.map(item => ({
+            word: item.word,
+            attempt: item.attempt,
+            correct: item.attempt.toLowerCase() === item.word.toLowerCase()
+        }));
+        
+        const payload = {
+            username: user.username,
+            result: {
+                score: accuracy,
+                completed: true,
+                answers: answers,
+                timestamp: new Date().toISOString()
+            }
+        };
+        
+        const response = await fetch('/saveResults', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+            console.log('Results saved successfully');
+            checkForBadges(accuracy, resultData.length);
+        }
+    } catch (error) {
+        console.error('Error saving results:', error);
+    }
+}
 
-    if (input.toLowerCase() === currentSentence.toLowerCase()) {
-        feedback.textContent = '✅ Perfect!';
-        feedback.style.color = 'green';
-        typingWords.shift(); // Remove completed word
-        setTimeout(showNextTypingSentence, 1500);
-    } else {
-        feedback.textContent = '❌ Try again. Type the exact sentence as shown.';
-        feedback.style.color = 'red';
+async function checkForBadges(accuracy, wordCount) {
+    try {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!user) return;
+        
+        // Check for earned badges
+        const response = await fetch(`/checkBadges?username=${user.username}&accuracy=${accuracy}&wordCount=${wordCount}`);
+        const data = await response.json();
+        
+        if (data && data.newBadges && data.newBadges.length > 0) {
+            // Show badge notification
+            showBadgeNotification(data.newBadges);
+        }
+    } catch (error) {
+        console.error('Error checking badges:', error);
+    }
+}
+
+function showBadgeNotification(badges) {
+    const badgeDisplay = document.getElementById('badgeDisplay');
+    if (!badgeDisplay) {
+        console.error('Badge display element not found!');
+        return;
+    }
+    
+    const badgeList = document.getElementById('badgeList');
+    if (!badgeList) {
+        console.error('Badge list element not found!');
+        return;
+    }
+    
+    badgeList.innerHTML = '';
+    
+    badges.forEach(badge => {
+        // Ensure badge has all required properties
+        const badgeIcon = badge.icon || '🏅';
+        const badgeName = badge.name || 'Achievement Unlocked!';
+        const description = badge.description || 'Great job on your spelling practice!';
+        
+        // Log the badge data to ensure it's correct
+        console.log('Badge data:', { icon: badgeIcon, name: badgeName, description: description });
+        
+        badgeList.innerHTML += `
+            <div class="badge-item">
+                <div class="badge-icon">${badgeIcon}</div>
+                <div class="badge-info">
+                    <h4>${badgeName}</h4>
+                    <p>${description}</p>
+                </div>
+            </div>
+        `;
+    });
+    
+    console.log('Showing badge notification for', badges.length, 'badges');
+    badgeDisplay.classList.remove('hidden');
+}
+
+// Function to check if user has completed all words for today
+async function checkDailyCompletion() {
+    try {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!user) return;
+        
+        const response = await fetch(`/checkDailyCompletion?username=${user.username}`);
+        const data = await response.json();
+        
+        return data.completed;
+    } catch (error) {
+        console.error('Error checking daily completion:', error);
+        return false;
+    }
+}
+
+// Return to student panel
+window.returnToStudentPanel = function() {
+    // Hide game and typing sections
+    document.getElementById('gameSection').style.display = 'none';
+    document.getElementById('typingSection').style.display = 'none';
+    document.getElementById('bibleSection').style.display = 'none';
+    
+    // Show student panel
+    document.getElementById('studentPanel').style.display = 'block';
+    
+    // Force panel to be visible
+    showStudent();
+}
+
+// Alias for returnToStudentPanel for backward compatibility
+window.backToStudentDashboard = function() {
+    window.returnToStudentPanel();
+}
+
+// Handle spaced repetition results
+async function updateSpacedRepetitionResults(resultData) {
+    try {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!user) return;
+        
+        // Process results for spaced repetition algorithm
+        const processedResults = resultData.map(result => ({
+            word: result.word,
+            isCorrect: result.attempt.toLowerCase() === result.word.toLowerCase(),
+            timestamp: new Date().toISOString()
+        }));
+        
+        // Send to server
+        const response = await fetch('/updateSpacedRepetition', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: user.username,
+                results: processedResults
+            })
+        });
+        
+        if (response.ok) {
+            console.log('Spaced repetition data updated successfully');
+        } else {
+            console.error('Failed to update spaced repetition data');
+        }
+    } catch (error) {
+        console.error('Error updating spaced repetition data:', error);
     }
 }

@@ -21,9 +21,25 @@ window.loadUserSessions = async function(username) {
     }
     
     userSessions.forEach((session, index) => {
-      const date = new Date(session.timestamp || Date.now()).toLocaleString();
-      const score = session.score || 0;
-      const total = (session.answers && session.answers.length) || 0;
+      // Support both timestamp and date fields for backward compatibility
+      const sessionDate = session.timestamp || session.date || Date.now();
+      const date = new Date(sessionDate).toLocaleString();
+      const score = session.score || session.correct || 0;
+      
+      // Handle both answers array and words array formats
+      let total = 0;
+      let answersArray = [];
+      
+      if (session.answers && Array.isArray(session.answers)) {
+        total = session.answers.length;
+        answersArray = session.answers;
+      } else if (session.words && Array.isArray(session.words)) {
+        total = session.words.length;
+        answersArray = session.words;
+      } else if (session.total) {
+        total = session.total;
+      }
+      
       const percent = total > 0 ? Math.round((score / total) * 100) : 0;
       
       const li = document.createElement('li');
@@ -46,9 +62,7 @@ window.loadUserSessions = async function(username) {
         <div class="sessionDetails hidden" id="session${index}">
           <h4 style="margin-top: 1rem;">Words:</h4>
           <ul>
-            ${session.answers ? session.answers.map(a => 
-              `<li>${a.word} - ${a.correct ? '✅ Correct' : '❌ Incorrect'}</li>`
-            ).join('') : ''}
+            ${renderSessionWords(session)}
           </ul>
         </div>
       `;
@@ -88,13 +102,30 @@ window.exportAllSessionsCSV = function() {
   let csvContent = 'Date,Score,Total Words,Percentage,Words Correct,Words Incorrect\n';
   
   sessions.forEach(session => {
-    const date = new Date(session.timestamp || Date.now()).toLocaleDateString();
-    const score = session.score || 0;
-    const total = (session.answers && session.answers.length) || 0;
+    // Support both timestamp and date fields
+    const sessionDate = session.timestamp || session.date || Date.now();
+    const date = new Date(sessionDate).toLocaleDateString();
+    
+    const score = session.score || session.correct || 0;
+    
+    // Handle both answers array and words array formats
+    let total = 0;
+    let answersArray = [];
+    
+    if (session.answers && Array.isArray(session.answers)) {
+      total = session.answers.length;
+      answersArray = session.answers;
+    } else if (session.words && Array.isArray(session.words)) {
+      total = session.words.length;
+      answersArray = session.words;
+    } else if (session.total) {
+      total = session.total;
+    }
+    
     const percent = total > 0 ? Math.round((score / total) * 100) : 0;
     
     // Count correct and incorrect words
-    const correctWords = session.answers ? session.answers.filter(a => a.correct).length : 0;
+    const correctWords = answersArray.filter(a => a.correct).length;
     const incorrectWords = total - correctWords;
     
     csvContent += `${date},${score},${total},${percent}%,${correctWords},${incorrectWords}\n`;

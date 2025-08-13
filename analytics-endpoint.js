@@ -1,5 +1,7 @@
 // Enhanced Analytics API endpoint for the Spelling Practice App
 
+module.exports = function(app, DATA_DIR, files, readJsonSafe, path) {
+
 // Get analytics data with additional metrics
 app.get('/getAnalytics', (req, res) => {
   try {
@@ -162,3 +164,5 @@ app.get('/getAnalytics', (req, res) => {
     res.status(500).send('Error generating analytics data');
   }
 });
+
+}; // Close the module.exports function
