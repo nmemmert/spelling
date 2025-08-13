@@ -1,0 +1,119 @@
+/* Mobile optimizations for Spelling Practice App */
+
+@media screen and (max-width: 768px) {
+    /* Global layout */
+    body {
+        padding: 1rem 0.5rem;
+    }
+    
+    .container {
+        padding: 0 0.5rem;
+    }
+    
+    h1 {
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.2rem;
+    }
+    
+    /* Grid layouts convert to single column */
+    #adminTabs {
+        overflow-x: auto;
+        padding: 0.5rem;
+        gap: 0.25rem;
+    }
+    
+    #adminTabs button {
+        font-size: 0.875rem;
+        padding: 0.5rem;
+        white-space: nowrap;
+    }
+    
+    /* Convert grid to single column */
+    [style*="grid-template-columns:"] {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* Adjust buttons for mobile */
+    button {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        margin: 0.25rem 0.125rem;
+    }
+    
+    /* Adjust form controls */
+    input, select, textarea {
+        font-size: 16px; /* Prevents iOS zoom */
+        padding: 0.5rem;
+        margin: 0.25rem 0;
+    }
+    
+    /* Navigation */
+    #nav {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    /* Cards and sections */
+    .card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Admin panel tabs */
+    .adminTab {
+        padding: 0.5rem;
+    }
+    
+    /* Game/typing sections */
+    #gameSection, #typingSection, #bibleSection {
+        padding: 0.5rem;
+    }
+    
+    #wordBox {
+        font-size: 2rem;
+        padding: 1rem;
+    }
+    
+    /* Student dashboard */
+    #activityOptions {
+        flex-direction: column;
+    }
+    
+    /* Bible typing */
+    #bibleVerseDisplay {
+        padding: 1rem;
+        font-size: 1rem;
+        line-height: 1.4;
+        min-height: 80px;
+    }
+    
+    #bibleInput {
+        min-height: 100px;
+    }
+    
+    /* Stats */
+    #bibleStats {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* Reports */
+    #progressChart, #wordDifficultyChart {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    
+    /* Toast notifications */
+    .toast {
+        width: 80%;
+        left: 10%;
+        bottom: 10px;
+    }
+}

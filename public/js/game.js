@@ -195,8 +195,85 @@ function showSummary() {
 
   // 🏆 Badge evaluation
   const earnedBadges = [];
-  if (correct === words.length) earnedBadges.push("Perfect Round");
-  if (missed.length === 0) earnedBadges.push("No Misses");
+  
+  // Performance badges
+  if (correct === words.length) earnedBadges.push({
+    id: "perfect_round",
+    name: "Perfect Round",
+    description: "Got all words correct in a round",
+    icon: "🎯",
+    color: "#ffd700",
+    category: "achievement"
+  });
+  
+  if (missed.length === 0) earnedBadges.push({
+    id: "no_misses",
+    name: "No Misses", 
+    description: "Completed a round without any mistakes",
+    icon: "⭐", 
+    color: "#ff9500",
+    category: "achievement"
+  });
+  
+  // Speed badges
+  const averageTime = totalTime / words.length;
+  if (averageTime < 5 && words.length >= 5) earnedBadges.push({
+    id: "speed_demon",
+    name: "Speed Demon",
+    description: "Average time less than 5 seconds per word",
+    icon: "⚡",
+    color: "#00b4d8",
+    category: "speed"
+  });
+  
+  if (totalTime < 30 && words.length >= 10) earnedBadges.push({
+    id: "quick_study",
+    name: "Quick Study",
+    description: "Complete 10+ words in under 30 seconds",
+    icon: "🚀",
+    color: "#8338ec",
+    category: "speed"
+  });
+  
+  // Difficulty badges
+  const averageLength = words.reduce((sum, word) => sum + word.length, 0) / words.length;
+  if (averageLength > 8 && correct > words.length * 0.8) earnedBadges.push({
+    id: "word_wizard",
+    name: "Word Wizard",
+    description: "Master of complex vocabulary",
+    icon: "🧙‍♂️",
+    color: "#7209b7",
+    category: "mastery"
+  });
+  
+  // Streak tracking (access from localStorage)
+  let streakCount = parseInt(localStorage.getItem('practice_streak') || '0');
+  if (correct / words.length >= 0.7) { // At least 70% correct to count for streak
+    streakCount++;
+    localStorage.setItem('practice_streak', streakCount);
+  } else {
+    streakCount = 0;
+    localStorage.setItem('practice_streak', '0');
+  }
+  
+  // Streak badges
+  if (streakCount >= 3) earnedBadges.push({
+    id: "consistent_learner",
+    name: "Consistent Learner",
+    description: "3-day practice streak with 70%+ accuracy",
+    icon: "🔥",
+    color: "#ff006e",
+    category: "consistency"
+  });
+  
+  if (streakCount >= 7) earnedBadges.push({
+    id: "weekly_warrior",
+    name: "Weekly Warrior",
+    description: "7-day practice streak with 70%+ accuracy",
+    icon: "⚔️",
+    color: "#3a0ca3",
+    category: "consistency"
+  });
 
   const user = JSON.parse(localStorage.getItem('loggedInUser'));
   if (user) {
@@ -228,17 +305,47 @@ function showSummary() {
         })
       });
 
-      // 🎨 Display badges
+      // 🎨 Display badges with improved visuals
       const badgeSection = document.getElementById("badgeDisplay");
       const badgeList = document.getElementById("badgeList");
 
       badgeList.innerHTML = "";
-      earnedBadges.forEach(b => {
-        const li = document.createElement("li");
-        li.textContent = `🏅 ${b}`;
-        badgeList.appendChild(li);
+      
+      // Add header for the badge showcase
+      const badgeHeader = document.createElement("div");
+      badgeHeader.className = "badge-showcase-header";
+      badgeHeader.innerHTML = `<span class="badge-count">${earnedBadges.length}</span> New Badge${earnedBadges.length > 1 ? 's' : ''} Earned!`;
+      badgeList.appendChild(badgeHeader);
+      
+      // Create badge container
+      const badgeContainer = document.createElement("div");
+      badgeContainer.className = "badge-container";
+      
+      earnedBadges.forEach(badge => {
+        const badgeCard = document.createElement("div");
+        badgeCard.className = "badge-card";
+        badgeCard.style.borderColor = badge.color || "#4a5568";
+        badgeCard.style.boxShadow = `0 4px 6px rgba(0,0,0,0.1), 0 0 10px ${badge.color}40`;
+        
+        badgeCard.innerHTML = `
+          <div class="badge-icon" style="background-color: ${badge.color}40">
+            <span>${badge.icon || "🏅"}</span>
+          </div>
+          <div class="badge-info">
+            <h3>${badge.name}</h3>
+            <p>${badge.description}</p>
+          </div>
+        `;
+        
+        // Add animation class after a small delay for staggered effect
+        setTimeout(() => {
+          badgeCard.classList.add("badge-card-animate");
+        }, 150 * badgeContainer.children.length);
+        
+        badgeContainer.appendChild(badgeCard);
       });
-
+      
+      badgeList.appendChild(badgeContainer);
       badgeSection.classList.remove("hidden");
     } else {
       document.getElementById("badgeDisplay")?.classList.add("hidden");

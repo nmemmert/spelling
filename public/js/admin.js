@@ -515,34 +515,240 @@ async function loadBadgeViewer() {
 
   const userList = document.getElementById("badgeUserList");
   userList.innerHTML = "";
-
+  
+  // Keep track of badge statistics
+  let totalBadges = 0;
+  let mostBadgesStudent = { name: '-', count: 0 };
+  let badgeCounts = {};
+  let badgesThisWeek = 0;
+  let currentWeekStart = new Date();
+  currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+  
+  // Process badge data
   for (const username in badgeData) {
+    // Create student list items
     const li = document.createElement("li");
     li.innerHTML = `<button onclick="showUserBadges('${username}')">${username}</button>`;
     userList.appendChild(li);
+    
+    // Calculate badge statistics
+    let userBadgeCount = 0;
+    
+    if (Array.isArray(badgeData[username])) {
+      // Old format
+      userBadgeCount = badgeData[username].length;
+      
+      // Track badge types
+      badgeData[username].forEach(badge => {
+        if (!badgeCounts[badge]) badgeCounts[badge] = 0;
+        badgeCounts[badge]++;
+      });
+      
+    } else if (badgeData[username] && badgeData[username].earned) {
+      // New format
+      userBadgeCount = badgeData[username].earned.length;
+      
+      // Track badge types
+      badgeData[username].earned.forEach(badge => {
+        // Count total badges
+        totalBadges++;
+        
+        // Count by badge name
+        const badgeName = badge.name;
+        if (!badgeCounts[badgeName]) badgeCounts[badgeName] = 0;
+        badgeCounts[badgeName]++;
+        
+        // Count recent badges
+        if (badge.earnedAt) {
+          const earnedDate = new Date(badge.earnedAt);
+          if (earnedDate > currentWeekStart) {
+            badgesThisWeek++;
+          }
+        }
+      });
+    }
+    
+    // Track user with most badges
+    if (userBadgeCount > mostBadgesStudent.count) {
+      mostBadgesStudent = { name: username, count: userBadgeCount };
+    }
   }
+  
+  // Find most common badge
+  let mostCommonBadge = { name: '-', count: 0 };
+  for (const badge in badgeCounts) {
+    if (badgeCounts[badge] > mostCommonBadge.count) {
+      mostCommonBadge = { name: badge, count: badgeCounts[badge] };
+    }
+  }
+  
+  // Update badge statistics display
+  document.getElementById('totalBadgesAwarded').textContent = totalBadges;
+  document.getElementById('mostBadgesStudent').textContent = mostBadgesStudent.name !== '-' ? 
+    `${mostBadgesStudent.name} (${mostBadgesStudent.count})` : '-';
+  document.getElementById('mostCommonBadge').textContent = mostCommonBadge.name !== '-' ?
+    `${mostCommonBadge.name} (${mostCommonBadge.count})` : '-';
+  document.getElementById('badgesThisWeek').textContent = badgesThisWeek;
+  
+  // Add search functionality
+  const searchInput = document.getElementById('badgeStudentSearch');
+  searchInput.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    document.querySelectorAll('#badgeUserList li').forEach(li => {
+      const username = li.textContent.toLowerCase();
+      if (username.includes(searchTerm)) {
+        li.style.display = '';
+      } else {
+        li.style.display = 'none';
+      }
+    });
+  });
+  
+  // Add filter functionality
+  document.querySelectorAll('.badge-filters button').forEach(button => {
+    button.addEventListener('click', function() {
+      // Update active state
+      document.querySelectorAll('.badge-filters button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      this.classList.add('active');
+      
+      // Apply filter
+      const filter = this.getAttribute('data-filter');
+      const badgeCards = document.querySelectorAll('.admin-badge-card');
+      
+      badgeCards.forEach(card => {
+        if (filter === 'all' || card.getAttribute('data-category') === filter) {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  });
+  
+  // Initialize print certificates functionality
+  document.getElementById('printBadges').addEventListener('click', function() {
+    const username = document.getElementById('badgeUserTitle').textContent.replace('Badges for ', '');
+    printBadgeCertificate(username);
+  });
+  
+  // Initialize custom badge award functionality
+  document.getElementById('awardCustomBadge').addEventListener('click', function() {
+    const username = document.getElementById('badgeUserTitle').textContent.replace('Badges for ', '');
+    showCustomBadgeModal(username);
+  });
 }
 
 function showUserBadges(username) {
   fetch('/getBadges')
     .then(res => res.json())
     .then(data => {
-      const badges = data[username] || [];
+      const userBadgeData = data[username];
       const title = document.getElementById("badgeUserTitle");
       const badgeList = document.getElementById("badgeUserBadges");
       const details = document.getElementById("badgeDetails");
+      let badges = [];
+      
+      // Handle different badge data formats
+      if (!userBadgeData) {
+        badges = [];
+      } else if (Array.isArray(userBadgeData)) {
+        // Old format
+        badges = userBadgeData.map(name => ({ 
+          name, 
+          icon: "🏅", 
+          color: "#4a5568" 
+        }));
+      } else if (userBadgeData.earned) {
+        // New format
+        badges = userBadgeData.earned;
+      }
 
       title.textContent = `Badges for ${username}`;
       badgeList.innerHTML = "";
+      
+      // Create badge stats summary
+      const badgeStats = document.createElement("div");
+      badgeStats.className = "badge-stats";
+      
+      // Calculate badge counts by category
+      const categoryStats = {};
+      if (userBadgeData && userBadgeData.counts) {
+        Object.entries(userBadgeData.counts).forEach(([category, count]) => {
+          categoryStats[category] = count;
+        });
+      } else {
+        // Calculate from badges array
+        badges.forEach(badge => {
+          const category = badge.category || 'other';
+          if (!categoryStats[category]) categoryStats[category] = 0;
+          categoryStats[category]++;
+        });
+      }
+      
+      // Create badge summary
+      badgeStats.innerHTML = `
+        <div class="badge-summary">
+          <h3>Badge Summary</h3>
+          <div class="badge-total">
+            <span class="badge-count">${badges.length}</span>
+            <span class="badge-label">Total Badges</span>
+          </div>
+          <div class="badge-categories">
+            ${Object.entries(categoryStats).map(([category, count]) => `
+              <div class="badge-category">
+                <span class="category-name">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                <span class="category-count">${count}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      badgeList.appendChild(badgeStats);
 
       if (!badges.length) {
-        badgeList.innerHTML = "<li><em>No badges earned yet.</em></li>";
+        const emptyState = document.createElement("div");
+        emptyState.className = "empty-badges";
+        emptyState.innerHTML = `
+          <div class="empty-badge-icon">🏆</div>
+          <h3>No badges earned yet</h3>
+          <p>Complete spelling activities to earn badges!</p>
+        `;
+        badgeList.appendChild(emptyState);
       } else {
-        badges.forEach(b => {
-          const li = document.createElement("li");
-          li.textContent = `🏅 ${b}`;
-          badgeList.appendChild(li);
+        // Create badge grid for displaying badges
+        const badgeGrid = document.createElement("div");
+        badgeGrid.className = "badge-grid";
+        
+        badges.forEach(badge => {
+          const badgeCard = document.createElement("div");
+          badgeCard.className = "admin-badge-card";
+          
+          const badgeIcon = badge.icon || "🏅";
+          const badgeColor = badge.color || "#4a5568";
+          const badgeName = badge.name;
+          const badgeDesc = badge.description || "";
+          const badgeDate = badge.earnedAt ? new Date(badge.earnedAt).toLocaleDateString() : "";
+          
+          badgeCard.style.borderColor = badgeColor;
+          
+          badgeCard.innerHTML = `
+            <div class="admin-badge-icon" style="background-color: ${badgeColor}40">
+              <span>${badgeIcon}</span>
+            </div>
+            <div class="admin-badge-info">
+              <h4>${badgeName}</h4>
+              ${badgeDesc ? `<p class="admin-badge-desc">${badgeDesc}</p>` : ''}
+              ${badgeDate ? `<div class="admin-badge-date">Earned: ${badgeDate}</div>` : ''}
+            </div>
+          `;
+          
+          badgeGrid.appendChild(badgeCard);
         });
+        
+        badgeList.appendChild(badgeGrid);
       }
 
       details.classList.remove("hidden");
@@ -576,12 +782,15 @@ window.loadStudentReport = async function(username) {
 
     // Handle case where userResults might be an array or undefined
     let latestReport = null;
+    let allUserResults = [];
     if (Array.isArray(userResults) && userResults.length > 0) {
       // Get the most recent result
       latestReport = userResults[userResults.length - 1];
+      allUserResults = userResults;
     } else if (userResults && typeof userResults === 'object') {
       // Handle single result object
       latestReport = userResults;
+      allUserResults = [userResults];
     }
 
     if (!latestReport) {
@@ -619,6 +828,16 @@ window.loadStudentReport = async function(username) {
       });
     } else {
       badgeContainer.innerHTML = "<li><em>No badges earned yet.</em></li>";
+    }
+
+    // Generate progress chart if function exists
+    if (typeof window.createScoreChart === 'function') {
+      createScoreChart(username, allUserResults);
+    }
+
+    // Generate word difficulty chart if function exists
+    if (typeof window.createWordDifficultyChart === 'function') {
+      createWordDifficultyChart(username, allUserResults);
     }
 
     document.getElementById("reportContent").classList.remove("hidden");

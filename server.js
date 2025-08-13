@@ -445,13 +445,49 @@ app.post('/awardBadges', (req, res) => {
 
   const badgePath = path.join(DATA_DIR, files.badges);
   const allBadges = readJsonSafe(badgePath);
-  if (!allBadges[username]) allBadges[username] = [];
+  if (!allBadges[username]) allBadges[username] = { earned: [], counts: {} };
+  
+  // Initialize structure if old format
+  if (Array.isArray(allBadges[username])) {
+    // Convert from old format to new format
+    const oldBadges = [...allBadges[username]];
+    allBadges[username] = { 
+      earned: oldBadges.map(name => ({ 
+        id: name.toLowerCase().replace(/\s/g, '_'),
+        name,
+        icon: "🏅",
+        earnedAt: new Date().toISOString()
+      })), 
+      counts: {} 
+    };
+  }
 
-  badges.forEach(b => {
-    if (!allBadges[username].includes(b)) {
-      allBadges[username].push(b);
+  badges.forEach(badge => {
+    // Check if badge already exists by ID
+    const existingBadge = allBadges[username].earned.find(b => {
+      return (typeof b === 'object' && b.id === badge.id) || 
+             (typeof b === 'string' && b === badge.name);
+    });
+    
+    if (!existingBadge) {
+      // Add new badge with timestamp
+      const badgeToAdd = {
+        ...badge,
+        earnedAt: new Date().toISOString()
+      };
+      
+      allBadges[username].earned.push(badgeToAdd);
+      
+      // Track badge counts by category
+      if (badge.category) {
+        if (!allBadges[username].counts[badge.category]) {
+          allBadges[username].counts[badge.category] = 0;
+        }
+        allBadges[username].counts[badge.category]++;
+      }
     }
   });
+  
   fs.writeFileSync(badgePath, JSON.stringify(allBadges, null, 2));
   res.send(`🎉 Badges updated for ${username}`);
 });

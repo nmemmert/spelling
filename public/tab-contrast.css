@@ -1,0 +1,40 @@
+/* Additional styling to improve tab contrast */
+
+/* Make emojis in tab buttons more visible */
+#adminTabs button {
+  position: relative;
+  padding-left: 2rem;
+  /* Apply consistent gray appearance like btn-secondary */
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 2px solid #e2e8f0 !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+}
+
+/* Style the emojis in tab buttons */
+#adminTabs button::before {
+  content: attr(data-emoji);
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.1rem;
+  filter: saturate(1.2) brightness(1.1);
+}
+
+/* Hover effect like btn-secondary */
+#adminTabs button:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Active tab styling - consistent across all themes */
+#adminTabs button.active {
+  background-color: #64748b !important;
+  color: #ffffff !important;
+  border-color: #475569 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+  font-weight: 700 !important;
+}

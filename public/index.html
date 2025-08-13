@@ -5,6 +5,9 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>✨ Modern Spelling Practice</title>
     <link href="styles.css" rel="stylesheet"/>
+    <link href="mobile.css" rel="stylesheet"/>
+    <link href="tab-contrast.css" rel="stylesheet"/>
+    <link href="badges.css" rel="stylesheet"/>
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js"></script>
     <script src="js/auth.js"></script>
@@ -13,6 +16,10 @@
     <script src="js/game.js"></script>
     <script src="js/typing.js"></script>
     <script src="js/bible.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/sessions.js"></script>
+    <script src="js/admin-badges.js"></script>
     <script src="js/main.js"></script>
 </head>
 <body>
@@ -55,15 +62,15 @@
             
             <!-- Admin Tabs -->
             <div id="adminTabs">
-                <button class="active" data-tab="tabUsers">👤 Users</button>
-                <button data-tab="tabWords">📝 Word Lists</button>
-                <button data-tab="tabAnalytics">📊 Analytics</button>
-                <button data-tab="tabResults">📋 Results</button>
-                <button data-tab="tabReports">📘 Reports</button>
-                <button data-tab="tabSessions">📅 Sessions</button>
-                <button data-tab="tabBadges">🏅 Badges</button>
-                <button data-tab="tabPasswords">🔐 Passwords</button>
-                <button data-tab="tabTheme">🎨 Themes</button>
+                <button class="active" data-tab="tabUsers" data-emoji="👤">Users</button>
+                <button data-tab="tabWords" data-emoji="📝">Word Lists</button>
+                <button data-tab="tabAnalytics" data-emoji="📊">Analytics</button>
+                <button data-tab="tabResults" data-emoji="📋">Results</button>
+                <button data-tab="tabReports" data-emoji="📘">Reports</button>
+                <button data-tab="tabSessions" data-emoji="📅">Sessions</button>
+                <button data-tab="tabBadges" data-emoji="🏅">Badges</button>
+                <button data-tab="tabPasswords" data-emoji="🔐">Passwords</button>
+                <button data-tab="tabTheme" data-emoji="🎨">Themes</button>
             </div>
             
             <!-- Users Tab -->
@@ -177,18 +184,68 @@
                 </div>
             </div>
             
-            <!-- Badges Tab -->
+            <!-- Enhanced Badges Tab -->
             <div class="adminTab hidden" id="tabBadges">
                 <div class="card">
-                    <h3>🏅 Student Badges</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
-                        <div>
+                    <h3>🏅 Student Achievement System</h3>
+                    <p class="badge-system-intro">Track student progress and celebrate achievements through badges and rewards.</p>
+                    
+                    <div class="badge-admin-layout">
+                        <div class="badge-student-selector">
                             <h4>Select Student</h4>
-                            <ul id="badgeUserList"></ul>
+                            <div class="badge-search">
+                                <input type="text" id="badgeStudentSearch" placeholder="Search students..." class="form-control">
+                            </div>
+                            <div class="badge-student-list">
+                                <ul id="badgeUserList"></ul>
+                            </div>
                         </div>
+                        
                         <div class="hidden" id="badgeDetails">
-                            <h4 id="badgeUserTitle"></h4>
-                            <ul id="badgeUserBadges"></ul>
+                            <div class="badge-user-header">
+                                <h3 id="badgeUserTitle"></h3>
+                                <div class="badge-filters">
+                                    <button class="btn-sm btn-secondary active" data-filter="all">All</button>
+                                    <button class="btn-sm btn-secondary" data-filter="achievement">Achievement</button>
+                                    <button class="btn-sm btn-secondary" data-filter="speed">Speed</button>
+                                    <button class="btn-sm btn-secondary" data-filter="mastery">Mastery</button>
+                                    <button class="btn-sm btn-secondary" data-filter="consistency">Consistency</button>
+                                </div>
+                            </div>
+                            
+                            <div id="badgeUserBadges" class="badge-user-collection"></div>
+                            
+                            <div class="badge-user-actions">
+                                <button id="printBadges" class="btn-secondary">Print Certificate</button>
+                                <button id="awardCustomBadge" class="btn-primary">Award Custom Badge</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Badge Statistics -->
+                <div class="card mt-4">
+                    <h3>📊 Badge Statistics</h3>
+                    <div class="badge-stats-grid">
+                        <div class="badge-stat-card">
+                            <div class="stat-icon">🏆</div>
+                            <div class="stat-value" id="totalBadgesAwarded">0</div>
+                            <div class="stat-label">Total Badges</div>
+                        </div>
+                        <div class="badge-stat-card">
+                            <div class="stat-icon">👑</div>
+                            <div class="stat-value" id="mostBadgesStudent">-</div>
+                            <div class="stat-label">Most Badges</div>
+                        </div>
+                        <div class="badge-stat-card">
+                            <div class="stat-icon">⭐</div>
+                            <div class="stat-value" id="mostCommonBadge">-</div>
+                            <div class="stat-label">Popular Badge</div>
+                        </div>
+                        <div class="badge-stat-card">
+                            <div class="stat-icon">🆕</div>
+                            <div class="stat-value" id="badgesThisWeek">0</div>
+                            <div class="stat-label">This Week</div>
                         </div>
                     </div>
                 </div>
@@ -275,10 +332,26 @@
                                     <ul id="reportBadges"></ul>
                                 </div>
                             </div>
+
+                            <div style="margin-top: 2rem;">
+                                <h4>📈 Progress Visualization</h4>
+                                <div style="display: grid; grid-template-columns: 1fr; gap: 2rem; margin-top: 1rem;">
+                                    <div>
+                                        <h5>Progress Over Time</h5>
+                                        <div id="progressChart" style="width: 100%; height: 250px; margin-top: 1rem;"></div>
+                                    </div>
+                                    <div>
+                                        <h5>Word Difficulty Analysis</h5>
+                                        <div id="wordDifficultyChart" style="width: 100%; height: 300px; margin-top: 1rem;"></div>
+                                    </div>
+                                </div>
+                            </div>
                             
-                            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                            <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                                 <button onclick="window.print()" class="btn-secondary">🖨️ Print Report</button>
                                 <button onclick="copyReportToClipboard()" class="btn-primary">📋 Copy to Clipboard</button>
+                                <button onclick="exportToPDF()" class="btn-primary">📄 Export as PDF</button>
+                                <button onclick="exportToCSV()" class="btn-secondary">📊 Export Data (CSV)</button>
                             </div>
                         </div>
                     </div>
@@ -294,6 +367,9 @@
                         <select id="sessionUserSelect" onchange="loadUserSessions(this.value)" style="width: 100%; max-width: 300px;">
                             <option value="">-- Select a student --</option>
                         </select>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <button onclick="exportAllSessionsCSV()" class="btn-secondary">📊 Export All Sessions (CSV)</button>
                     </div>
                     <ul id="userSessionList" style="max-height: 400px; overflow-y: auto;"></ul>
                 </div>
@@ -352,11 +428,14 @@
                 </div>
                 <!-- Game Summary -->
                 <div class="hidden" id="summary" class="card"></div>
-                <!-- Badge Display -->
-                <div class="hidden" id="badgeDisplay" class="card">
-                    <h3>🏅 Congratulations!</h3>
-                    <p>You've earned new badges:</p>
-                    <ul id="badgeList"></ul>
+                <!-- Enhanced Badge Display -->
+                <div class="hidden" id="badgeDisplay" class="card badge-celebration">
+                    <h2>� Achievement Unlocked! 🎊</h2>
+                    <div id="badgeList" class="badge-showcase"></div>
+                    <div class="badge-actions">
+                        <button onclick="document.getElementById('badgeDisplay').classList.add('hidden')" class="btn-secondary">Continue</button>
+                        <button onclick="window.location.reload()" class="btn-primary">Play Again</button>
+                    </div>
                 </div>
             </div>
         </div>
