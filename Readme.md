@@ -340,13 +340,42 @@ For Docker installations, map the data directory:
 
 ## 🔄 Updates & Maintenance
 
+### Updating the Docker Container
 
-### Updating the Application
+#### Using Docker Compose (Recommended)
 ```bash
-# Pull latest image from GitHub Container Registry (GHCR)
+# Pull latest image and restart
+docker-compose pull
+docker-compose down
+docker-compose up -d
+```
+
+#### Using Docker CLI
+```bash
+# Pull latest image
 docker pull ghcr.io/nmemmert/spelling:latest
 
-# Restart container
+# Stop and remove the old container
+docker stop spelling-app
+docker rm spelling-app
+
+# Run the new container with the same settings
+docker run -d \
+  --name spelling-app \
+  -p 3000:3000 \
+  -v ./data:/app/data \
+  --restart unless-stopped \
+  ghcr.io/nmemmert/spelling:latest
+```
+
+#### Updating to a Specific Version
+```bash
+# Edit your docker-compose.yml file and change:
+# image: ghcr.io/nmemmert/spelling:latest
+# to:
+# image: ghcr.io/nmemmert/spelling:1.1.0
+
+# Then restart:
 docker-compose down && docker-compose up -d
 ```
 
@@ -354,13 +383,46 @@ docker-compose down && docker-compose up -d
 
 ## Docker Image (GitHub Container Registry)
 
-To pull and run the latest Docker image for this app from GitHub Container Registry:
+The application is available as a Docker image on GitHub Container Registry (GHCR). You can use it with:
 
-```sh
+### Pull the Image
+
+```bash
+# Pull the latest version
 docker pull ghcr.io/nmemmert/spelling:latest
+
+# Or pull a specific version
+docker pull ghcr.io/nmemmert/spelling:1.1.0
 ```
 
-You must be logged in to GHCR with a GitHub account that has access to the repository. See https://github.com/nmemmert/spelling/packages for the image.
+### Run the Container
+
+```bash
+# Basic run command
+docker run -d -p 3000:3000 -v ./data:/app/data ghcr.io/nmemmert/spelling:latest
+
+# Advanced run command with all options
+docker run -d \
+  --name spelling-app \
+  -p 3000:3000 \
+  -v ./data:/app/data \
+  --restart unless-stopped \
+  --health-cmd "wget -q -O - http://localhost:3000/health || exit 1" \
+  --health-interval 30s \
+  --health-retries 3 \
+  ghcr.io/nmemmert/spelling:latest
+```
+
+### Container Details
+
+- **Base Image**: Node 18 Alpine (minimal footprint)
+- **Container Size**: ~293MB (optimized multi-stage build)
+- **Exposed Port**: 3000
+- **Volume Mount**: /app/data (for persistent data storage)
+- **Health Check**: Enabled (checks application availability every 30s)
+- **Security**: Non-root user, minimal dependencies, security scanning
+
+The image is publicly available at: https://github.com/nmemmert/spelling/pkgs/container/spelling
 
 ### Backup Data
 ```bash
