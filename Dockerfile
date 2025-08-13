@@ -13,6 +13,7 @@ FROM node:20-slim
 # Install tini for proper signal handling
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tini \
+    wget \
  && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for better security
@@ -37,7 +38,8 @@ USER spelling
 # Set version label
 LABEL version="1.1.0" \
       description="Spelling Practice Application" \
-      maintainer="nmemmert"
+      maintainer="nmemmert" \
+      org.opencontainers.image.source="https://github.com/nmemmert/spelling"
 
 # Expose application port
 EXPOSE 3000
