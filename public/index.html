@@ -8,6 +8,7 @@
     <link href="mobile.css" rel="stylesheet"/>
     <link href="tab-contrast.css" rel="stylesheet"/>
     <link href="badges.css" rel="stylesheet"/>
+    <link href="analytics.css" rel="stylesheet"/>
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js"></script>
     <script src="js/auth.js"></script>
@@ -20,6 +21,7 @@
     <script src="js/export.js"></script>
     <script src="js/sessions.js"></script>
     <script src="js/admin-badges.js"></script>
+    <script src="js/analytics.js"></script>
     <script src="js/main.js"></script>
 </head>
 <body>
@@ -163,22 +165,95 @@
                 <div class="card">
                     <div class="card-header">
                         <h3>📊 Performance Analytics</h3>
-                        <button onclick="refreshAnalytics()" class="btn-primary">🔄 Refresh Analytics</button>
+                        <div class="flex gap-3">
+                            <select id="analyticsUserSelect" class="form-control">
+                                <option value="all">All Users</option>
+                                <!-- Additional users will be added here dynamically -->
+                            </select>
+                            <select id="analyticsTimeRange" class="form-control">
+                                <option value="all">All Time</option>
+                                <option value="week">Last Week</option>
+                                <option value="month">Last Month</option>
+                                <option value="quarter">Last 3 Months</option>
+                            </select>
+                            <button onclick="refreshAnalytics()" class="btn-primary">🔄 Refresh Analytics</button>
+                        </div>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                        <div>
-                            <h4>Summary Statistics</h4>
-                            <ul id="analyticsSummary" style="background: var(--bg-secondary); border-radius: var(--radius); padding: 1rem;">
-                                <li><strong>Average Score:</strong> –</li>
-                                <li><strong>Total Sessions:</strong> –</li>
-                                <li><strong>Most Missed Word:</strong> –</li>
-                            </ul>
+                    <div class="analytics-grid">
+                        <!-- Dashboard Summary Cards -->
+                        <div class="stat-card">
+                            <h5>Total Sessions</h5>
+                            <div class="stat-value" id="statTotalSessions">-</div>
+                            <div class="stat-change" id="statSessionsChange"></div>
                         </div>
                         
-                        <div>
-                            <h4>Student Breakdown</h4>
-                            <ul id="studentBreakdown" style="max-height: 300px; overflow-y: auto;"></ul>
+                        <div class="stat-card">
+                            <h5>Overall Accuracy</h5>
+                            <div class="stat-value" id="statOverallAccuracy">-</div>
+                            <div class="stat-change" id="statAccuracyChange"></div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <h5>Total Words</h5>
+                            <div class="stat-value" id="statTotalWords">-</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <h5>Average Score</h5>
+                            <div class="stat-value" id="statAverageScore">-</div>
+                        </div>
+                        
+                        <!-- Progress Over Time Chart -->
+                        <div class="chart-container">
+                            <h4>Progress Over Time</h4>
+                            <div id="progressChartContainer" class="chart"></div>
+                        </div>
+                        
+                        <!-- Activity Heatmap -->
+                        <div class="chart-container">
+                            <h4>Activity Calendar</h4>
+                            <div id="activityHeatmap" class="chart"></div>
+                        </div>
+                        
+                        <!-- Problem Words -->
+                        <div class="chart-container">
+                            <h4>Most Challenging Words</h4>
+                            <div id="problemWordsContainer">
+                                <div id="problemWordsList"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- User Performance Comparison -->
+                        <div class="chart-container">
+                            <h4>User Performance Comparison</h4>
+                            <div id="userComparisonChart" class="chart"></div>
+                        </div>
+                        
+                        <!-- Student Breakdown (Updated) -->
+                        <div class="chart-container">
+                            <h4>Student Performance</h4>
+                            <div id="studentBreakdownContainer">
+                                <table id="studentBreakdownTable" class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Student</th>
+                                            <th>Sessions</th>
+                                            <th>Words</th>
+                                            <th>Accuracy</th>
+                                            <th>Trend</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="studentBreakdown">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Activity -->
+                        <div class="chart-container">
+                            <h4>Recent Activity</h4>
+                            <div id="recentActivityList" class="activity-feed"></div>
                         </div>
                     </div>
                 </div>

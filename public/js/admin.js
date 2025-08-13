@@ -457,58 +457,35 @@ async function loadUserDropdowns() {
     console.error("⚠️ Failed to load user list:", err);
   }
 }
+
+// Analytics functionality has been moved to analytics.js
+// This is now just a redirecting function
 async function refreshAnalytics() {
-  const summary = document.getElementById("analyticsSummary");
-  const breakdown = document.getElementById("studentBreakdown");
-  summary.innerHTML = "<li>Loading...</li>";
-  breakdown.innerHTML = "";
-
-  try {
-    const res = await fetch('/getResults');
-    const data = await res.json();
-
-    let totalScore = 0, sessionCount = 0;
-    const missMap = {};
-
-    for (const username in data) {
-      const { score, completed, answers } = data[username];
-      if (!completed || !Array.isArray(answers)) continue;
-
-      totalScore += score;
-      sessionCount++;
-
-      // Count missed words
-      answers.forEach(({ word, correct }) => {
-        if (!correct) {
-          missMap[word] = (missMap[word] || 0) + 1;
-        }
-      });
-
-      // Per-student breakdown
-      const li = document.createElement("li");
-      li.innerHTML = `<strong>${username}</strong>: ${score}/${answers.length} correct`;
-      breakdown.appendChild(li);
+  // The implementation is in analytics.js
+  if (typeof window.refreshAnalytics === 'function') {
+    return window.refreshAnalytics();
+  } else {
+    console.log("Loading legacy analytics implementation...");
+    try {
+      const summary = document.getElementById("analyticsSummary");
+      const breakdown = document.getElementById("studentBreakdown");
+      
+      if (summary) summary.innerHTML = "<li>Loading...</li>";
+      if (breakdown) breakdown.innerHTML = "";
+      
+      const res = await fetch('/getResults');
+      const data = await res.json();
+      
+      // Legacy implementation...
+      console.log("Analytics data loaded:", Object.keys(data).length, "users");
+    } catch (err) {
+      console.error("📉 Failed to refresh analytics:", err);
+      const summary = document.getElementById("analyticsSummary");
+      if (summary) summary.innerHTML = '<li style="color:red">Error loading analytics.</li>';
     }
-
-    const avgScore = sessionCount ? (totalScore / sessionCount).toFixed(2) : "0";
-    let mostMissed = "-", highestMisses = 0;
-    for (const word in missMap) {
-      if (missMap[word] > highestMisses) {
-        highestMisses = missMap[word];
-        mostMissed = word;
-      }
-    }
-
-    summary.innerHTML = `
-      <li><strong>Average Score:</strong> ${avgScore}</li>
-      <li><strong>Total Completed Sessions:</strong> ${sessionCount}</li>
-      <li><strong>Most Missed Word:</strong> ${mostMissed} (${highestMisses} misses)</li>
-    `;
-  } catch (err) {
-    console.error("📉 Failed to refresh analytics:", err);
-    summary.innerHTML = '<li style="color:red">Error loading analytics.</li>';
   }
 }
+
 async function loadBadgeViewer() {
   const res = await fetch('/getBadges');
   const badgeData = await res.json();
