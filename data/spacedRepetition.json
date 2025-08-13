@@ -1,0 +1,300 @@
+{
+  "nate": {
+    "settings": {
+      "dailyLimit": 20,
+      "reviewThreshold": 3,
+      "newWordsPerDay": 5
+    },
+    "stats": {
+      "totalReviews": 15,
+      "correctReviews": 9,
+      "totalWords": 6,
+      "masteredWords": 0
+    },
+    "words": {
+      "computer": {
+        "easeFactor": 2.5,
+        "interval": 3,
+        "repetitions": 3,
+        "lastReview": "2025-08-10",
+        "nextReview": "2025-08-13"
+      },
+      "keyboard": {
+        "easeFactor": 2.3,
+        "interval": 2,
+        "repetitions": 2,
+        "lastReview": "2025-08-11",
+        "nextReview": "2025-08-13"
+      },
+      "mouse": {
+        "easeFactor": 2.8,
+        "interval": 4,
+        "repetitions": 4,
+        "lastReview": "2025-08-09",
+        "nextReview": "2025-08-13"
+      },
+      "screen": {
+        "easeFactor": 3,
+        "interval": 6,
+        "repetitions": 5,
+        "lastReview": "2025-08-07",
+        "nextReview": "2025-08-13"
+      },
+      "printer": {
+        "easeFactor": 2.2,
+        "interval": 1,
+        "repetitions": 1,
+        "lastReview": "2025-08-12",
+        "nextReview": "2025-08-13"
+      },
+      "not": {
+        "easeFactor": 2.6,
+        "interval": 7,
+        "repetitions": 3,
+        "lastReview": "2025-08-12",
+        "nextReview": "2025-08-20"
+      },
+      "bot": {
+        "easeFactor": 2.8,
+        "interval": 15,
+        "repetitions": 4,
+        "lastReview": "2025-08-05",
+        "nextReview": "2025-08-14"
+      },
+      "snot": {
+        "easeFactor": 2.2,
+        "interval": 1,
+        "repetitions": 1,
+        "lastReview": "2025-08-12",
+        "nextReview": "2025-08-14"
+      },
+      "bate": {
+        "easeFactor": 2.1,
+        "interval": 1,
+        "repetitions": 1,
+        "lastReview": "2025-08-12",
+        "nextReview": "2025-08-14"
+      },
+      "hate": {
+        "easeFactor": 2.2,
+        "interval": 3,
+        "repetitions": 2,
+        "lastReview": "2025-08-10",
+        "nextReview": "2025-08-15"
+      },
+      "late": {
+        "easeFactor": 2.5,
+        "interval": 15,
+        "repetitions": 4,
+        "lastReview": "2025-08-11",
+        "nextReview": "2025-08-11"
+      }
+    }
+  },
+  "student1": {
+    "settings": {
+      "dailyLimit": 20,
+      "reviewThreshold": 3,
+      "newWordsPerDay": 5
+    },
+    "stats": {
+      "totalReviews": 10,
+      "correctReviews": 5,
+      "totalWords": 5,
+      "masteredWords": 0
+    },
+    "words": {
+      "apple": {
+        "easeFactor": 2.2,
+        "interval": 3,
+        "repetitions": 2,
+        "lastReview": "2025-08-10",
+        "nextReview": "2025-08-10"
+      },
+      "banana": {
+        "easeFactor": 2.1,
+        "interval": 1,
+        "repetitions": 1,
+        "lastReview": "2025-08-12",
+        "nextReview": "2025-08-14"
+      },
+      "cherry": {
+        "easeFactor": 2.4,
+        "interval": 3,
+        "repetitions": 2,
+        "lastReview": "2025-08-11",
+        "nextReview": "2025-08-16"
+      },
+      "date": {
+        "easeFactor": 2.5,
+        "interval": 1,
+        "repetitions": 1,
+        "lastReview": "2025-08-12",
+        "nextReview": "2025-08-13"
+      },
+      "elderberry": {
+        "easeFactor": 2.3,
+        "interval": 15,
+        "repetitions": 4,
+        "lastReview": "2025-08-11",
+        "nextReview": "2025-08-11"
+      }
+    }
+  },
+  "admin1": {
+    "settings": {
+      "dailyLimit": 20,
+      "reviewThreshold": 3,
+      "newWordsPerDay": 5
+    },
+    "stats": {
+      "totalReviews": 12,
+      "correctReviews": 9,
+      "totalWords": 3,
+      "masteredWords": 1
+    },
+    "words": {
+      "administration": {
+        "easeFactor": 2.5,
+        "interval": 3,
+        "repetitions": 3,
+        "lastReview": "2025-08-10",
+        "nextReview": "2025-08-13"
+      },
+      "education": {
+        "easeFactor": 2.8,
+        "interval": 4,
+        "repetitions": 4,
+        "lastReview": "2025-08-09",
+        "nextReview": "2025-08-13"
+      },
+      "technology": {
+        "easeFactor": 2.3,
+        "interval": 2,
+        "repetitions": 2,
+        "lastReview": "2025-08-11",
+        "nextReview": "2025-08-13"
+      },
+      "development": {
+        "easeFactor": 3,
+        "interval": 6,
+        "repetitions": 5,
+        "lastReview": "2025-08-07",
+        "nextReview": "2025-08-13"
+      },
+      "programming": {
+        "easeFactor": 3,
+        "interval": 6,
+        "repetitions": 5,
+        "lastReview": "2025-08-07",
+        "nextReview": "2025-08-13"
+      },
+      "boy": {
+        "easeFactor": 2.7,
+        "interval": 15,
+        "repetitions": 4,
+        "lastReview": "2025-08-09",
+        "nextReview": "2025-08-20"
+      },
+      "bot": {
+        "easeFactor": 2.6,
+        "interval": 40,
+        "repetitions": 6,
+        "lastReview": "2025-07-23",
+        "nextReview": "2025-08-25"
+      },
+      "snot": {
+        "easeFactor": 2.4,
+        "interval": 3,
+        "repetitions": 2,
+        "lastReview": "2025-08-10",
+        "nextReview": "2025-08-10"
+      }
+    }
+  },
+  "testuser": {
+    "settings": {
+      "dailyLimit": 20,
+      "reviewThreshold": 3,
+      "newWordsPerDay": 5
+    },
+    "stats": {
+      "totalReviews": 32,
+      "correctReviews": 23,
+      "totalWords": 10,
+      "masteredWords": 3
+    },
+    "words": {
+      "hello": {
+        "easeFactor": 2.4,
+        "interval": 7,
+        "repetitions": 3,
+        "lastReview": "2025-08-07",
+        "nextReview": "2025-08-14"
+      },
+      "world": {
+        "easeFactor": 2.2,
+        "interval": 3,
+        "repetitions": 2,
+        "lastReview": "2025-08-10",
+        "nextReview": "2025-08-14"
+      },
+      "test": {
+        "easeFactor": 2.2,
+        "interval": 7,
+        "repetitions": 3,
+        "lastReview": "2025-08-08",
+        "nextReview": "2025-08-14"
+      },
+      "sample": {
+        "easeFactor": 2.2,
+        "interval": 3,
+        "repetitions": 2,
+        "lastReview": "2025-08-11",
+        "nextReview": "2025-08-16"
+      },
+      "basic": {
+        "easeFactor": 2.7,
+        "interval": 40,
+        "repetitions": 6,
+        "lastReview": "2025-08-03",
+        "nextReview": "2025-08-14"
+      },
+      "learn": {
+        "easeFactor": 2.4,
+        "interval": 0,
+        "repetitions": 0,
+        "lastReview": null,
+        "nextReview": "2025-08-13"
+      },
+      "spell": {
+        "easeFactor": 2.2,
+        "interval": 1,
+        "repetitions": 1,
+        "lastReview": "2025-08-12",
+        "nextReview": "2025-08-14"
+      },
+      "word": {
+        "easeFactor": 2.9,
+        "interval": 20,
+        "repetitions": 5,
+        "lastReview": "2025-07-27",
+        "nextReview": "2025-08-27"
+      },
+      "study": {
+        "easeFactor": 2.4,
+        "interval": 7,
+        "repetitions": 3,
+        "lastReview": "2025-08-08",
+        "nextReview": "2025-08-14"
+      },
+      "practice": {
+        "easeFactor": 2.8,
+        "interval": 80,
+        "repetitions": 7,
+        "lastReview": "2025-07-06",
+        "nextReview": "2025-08-14"
+      }
+    }
+  }
+}

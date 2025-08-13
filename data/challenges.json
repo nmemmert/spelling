@@ -1,0 +1,89 @@
+{
+  "daily": [
+    {
+      "id": "daily-practice-10",
+      "name": "Practice Makes Perfect",
+      "description": "Complete 10 practice words in a day",
+      "type": "daily",
+      "target": 10,
+      "points": 50,
+      "icon": "🎯"
+    },
+    {
+      "id": "daily-accuracy-90",
+      "name": "Sharp Shooter",
+      "description": "Achieve 90% accuracy in daily practice",
+      "type": "daily",
+      "target": 0.9,
+      "points": 75,
+      "icon": "🎯"
+    },
+    {
+      "id": "daily-streak-3",
+      "name": "On Fire",
+      "description": "Get 3 words correct in a row",
+      "type": "daily",
+      "target": 3,
+      "points": 30,
+      "icon": "🔥"
+    }
+  ],
+  "weekly": [
+    {
+      "id": "weekly-words-50",
+      "name": "Word Warrior",
+      "description": "Practice 50 words in a week",
+      "type": "weekly",
+      "target": 50,
+      "points": 200,
+      "icon": "⚔️"
+    },
+    {
+      "id": "weekly-days-5",
+      "name": "Dedicated Scholar",
+      "description": "Practice on 5 different days this week",
+      "type": "weekly",
+      "target": 5,
+      "points": 250,
+      "icon": "📚"
+    }
+  ],
+  "achievements": [
+    {
+      "id": "achievement-words-100",
+      "name": "Century Club",
+      "description": "Practice 100 total words",
+      "type": "achievement",
+      "target": 100,
+      "points": 100,
+      "icon": "🏆"
+    },
+    {
+      "id": "achievement-words-500",
+      "name": "Word Master",
+      "description": "Practice 500 total words",
+      "type": "achievement",
+      "target": 500,
+      "points": 500,
+      "icon": "👑"
+    },
+    {
+      "id": "achievement-streak-7",
+      "name": "Weekly Warrior",
+      "description": "Maintain a 7-day practice streak",
+      "type": "achievement",
+      "target": 7,
+      "points": 300,
+      "icon": "📅"
+    },
+    {
+      "id": "achievement-accuracy-95",
+      "name": "Spelling Bee Champion",
+      "description": "Maintain 95% accuracy across 100 words",
+      "type": "achievement",
+      "target": 0.95,
+      "points": 400,
+      "icon": "🐝"
+    }
+  ]
+}

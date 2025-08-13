@@ -19,12 +19,67 @@ const DATA_DIR = path.join(__dirname, 'data');
 const SEED_DIR = path.join(__dirname, 'seed');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
+// Date utility functions for gamification features
+function getWeekNumber(date) {
+  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+  const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+  return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+}
+
+function getWeekStartDate(date) {
+  const result = new Date(date);
+  result.setDate(result.getDate() - result.getDay());
+  return result;
+}
+
+function getWeekEndDate(date) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + (6 - result.getDay()));
+  return result;
+}
+
+function isToday(dateString) {
+  if (!dateString) return false;
+  const today = new Date().toISOString().split('T')[0];
+  return dateString.split('T')[0] === today;
+}
+
+function isSameDay(date1, date2) {
+  return date1.toISOString().split('T')[0] === date2.toISOString().split('T')[0];
+}
+
+function daysInARow(dateStrings) {
+  if (!dateStrings || !dateStrings.length) return 0;
+  
+  // Convert strings to Date objects
+  const dates = dateStrings.map(d => new Date(d)).sort((a, b) => a - b);
+  
+  let currentStreak = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const prevDate = new Date(dates[i-1]);
+    prevDate.setDate(prevDate.getDate() + 1);
+    
+    // If consecutive days
+    if (isSameDay(prevDate, dates[i])) {
+      currentStreak++;
+    } else {
+      break;
+    }
+  }
+  
+  return currentStreak;
+}
+
 // 🗃 File mapping
 const files = {
   users: 'users.json',
   wordlists: 'wordlists.json',
   results: 'results.json',
-  badges: 'badges.json'
+  badges: 'badges.json',
+  leaderboards: 'leaderboards.json',
+  challenges: 'challenges.json',
+  progress: 'progress.json',
+  spacedRepetition: 'spacedRepetition.json'
 };
 
 // 🌱 Initialize data from seeds if missing/empty
@@ -82,6 +137,156 @@ function ensureFileWithSeed(name, fallback = '{}') {
         };
         fs.writeFileSync(targetPath, JSON.stringify(defaultBadges, null, 2));
         console.log(`🏆 Created default badge structure`);
+      } else if (name === 'leaderboards.json') {
+        const defaultLeaderboards = {
+          "allTime": {
+            "accuracy": [],
+            "totalWords": [],
+            "sessionsCompleted": [],
+            "streakDays": []
+          },
+          "weekly": {
+            "accuracy": [],
+            "totalWords": [],
+            "sessionsCompleted": []
+          },
+          "lastUpdated": new Date().toISOString()
+        };
+        fs.writeFileSync(targetPath, JSON.stringify(defaultLeaderboards, null, 2));
+        console.log(`🏅 Created default leaderboards structure`);
+      } else if (name === 'challenges.json') {
+        const today = new Date();
+        const dayString = today.toISOString().split('T')[0];
+        const weekNum = getWeekNumber(today);
+        const yearNum = today.getFullYear();
+        
+        const defaultChallenges = {
+          "daily": {
+            "current": {
+              "id": `daily-${dayString}`,
+              "title": `${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} Challenge`,
+              "description": "Complete a spelling session with at least 90% accuracy",
+              "type": "accuracy",
+              "target": 90,
+              "reward": {
+                "points": 50,
+                "badge": null
+              },
+              "date": dayString
+            },
+            "history": []
+          },
+          "weekly": {
+            "current": {
+              "id": `weekly-${yearNum}-${weekNum}`,
+              "title": `Week ${weekNum} Challenge`,
+              "description": "Practice spelling for 5 consecutive days",
+              "type": "streak",
+              "target": 5,
+              "reward": {
+                "points": 100,
+                "badge": "Weekly Warrior"
+              },
+              "startDate": getWeekStartDate(today).toISOString().split('T')[0],
+              "endDate": getWeekEndDate(today).toISOString().split('T')[0]
+            },
+            "history": []
+          },
+          "achievements": [
+            {
+              "id": "perfect-accuracy",
+              "title": "Perfect Accuracy",
+              "description": "Complete a session with 100% accuracy",
+              "type": "session",
+              "condition": "accuracy",
+              "target": 100,
+              "reward": {
+                "points": 75,
+                "badge": "Perfection"
+              }
+            },
+            {
+              "id": "persistent-learner",
+              "title": "Persistent Learner",
+              "description": "Practice for 7 days in a row",
+              "type": "streak",
+              "condition": "dailyLogin",
+              "target": 7,
+              "reward": {
+                "points": 200,
+                "badge": "Persistence"
+              }
+            },
+            {
+              "id": "spelling-veteran",
+              "title": "Spelling Veteran",
+              "description": "Complete 50 spelling sessions",
+              "type": "cumulative",
+              "condition": "sessions",
+              "target": 50,
+              "reward": {
+                "points": 300,
+                "badge": "Veteran"
+              }
+            }
+          ],
+          "lastUpdated": new Date().toISOString()
+        };
+        fs.writeFileSync(targetPath, JSON.stringify(defaultChallenges, null, 2));
+        console.log(`🎯 Created default challenges structure`);
+      } else if (name === 'progress.json') {
+        // Create empty progress structure for each user
+        const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
+        const defaultProgress = {};
+        
+        users.forEach(user => {
+          defaultProgress[user.username] = {
+            "stats": {
+              "points": 0,
+              "totalSessions": 0,
+              "totalWords": 0,
+              "correctWords": 0,
+              "accuracy": 0
+            },
+            "streaks": {
+              "current": 0,
+              "longest": 0,
+              "lastActivity": null
+            },
+            "challengesCompleted": {
+              "daily": [],
+              "weekly": [],
+              "achievements": []
+            }
+          };
+        });
+        
+        fs.writeFileSync(targetPath, JSON.stringify(defaultProgress, null, 2));
+        console.log(`📈 Created default progress structure for ${Object.keys(defaultProgress).length} users`);
+      } else if (name === 'spacedRepetition.json') {
+        // Create empty spaced repetition structure for each user
+        const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
+        const defaultSRData = {};
+        
+        users.forEach(user => {
+          defaultSRData[user.username] = {
+            "settings": {
+              "dailyLimit": 20,
+              "reviewThreshold": 3,
+              "newWordsPerDay": 5
+            },
+            "stats": {
+              "totalReviews": 0,
+              "correctReviews": 0,
+              "totalWords": 0,
+              "masteredWords": 0
+            },
+            "words": {}
+          };
+        });
+        
+        fs.writeFileSync(targetPath, JSON.stringify(defaultSRData, null, 2));
+        console.log(`📚 Created default spaced repetition structure for ${Object.keys(defaultSRData).length} users`);
       } else {
         fs.writeFileSync(targetPath, fallback);
         console.log(`📄 Initialized ${name} with default`);
@@ -160,6 +365,55 @@ function initializeUserInAllFiles(username) {
     badges[username] = [];
     fs.writeFileSync(badgesPath, JSON.stringify(badges, null, 2));
     console.log(`🏆 Added badge tracking for "${username}"`);
+  }
+  
+  // Initialize in progress.json
+  const progressPath = path.join(DATA_DIR, files.progress);
+  const progress = readJsonSafe(progressPath, {});
+  if (!progress[username]) {
+    progress[username] = {
+      stats: {
+        points: 0,
+        totalSessions: 0,
+        totalWords: 0,
+        correctWords: 0,
+        accuracy: 0
+      },
+      streaks: {
+        current: 0,
+        longest: 0,
+        lastActivity: null
+      },
+      challengesCompleted: {
+        daily: [],
+        weekly: [],
+        achievements: []
+      }
+    };
+    fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
+    console.log(`📈 Added progress tracking for "${username}"`);
+  }
+  
+  // Initialize in spacedRepetition.json
+  const srPath = path.join(DATA_DIR, files.spacedRepetition);
+  const srData = readJsonSafe(srPath, {});
+  if (!srData[username]) {
+    srData[username] = {
+      settings: {
+        dailyLimit: 20,
+        reviewThreshold: 3,
+        newWordsPerDay: 5
+      },
+      stats: {
+        totalReviews: 0,
+        correctReviews: 0,
+        totalWords: 0,
+        masteredWords: 0
+      },
+      words: {}
+    };
+    fs.writeFileSync(srPath, JSON.stringify(srData, null, 2));
+    console.log(`📚 Added spaced repetition data for "${username}"`);
   }
 }
 
@@ -383,6 +637,14 @@ app.get('/getResults', (req, res) => {
   const results = readJsonSafe(path.join(DATA_DIR, files.results));
   res.json(results);
 });
+
+// Include gamification endpoints
+const gamificationEndpoints = fs.readFileSync(path.join(__dirname, 'gamification-endpoints.js'), 'utf8');
+eval(gamificationEndpoints);
+
+// Include spaced repetition endpoints
+const spacedRepetitionEndpoints = fs.readFileSync(path.join(__dirname, 'spaced-repetition-endpoints.js'), 'utf8');
+eval(spacedRepetitionEndpoints);
 
 // 📈 Enhanced Analytics API endpoint
 app.get('/getAnalytics', (req, res) => {

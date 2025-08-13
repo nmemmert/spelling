@@ -1,0 +1,511 @@
+{
+  "allTime": {
+    "accuracy": [
+      {
+        "username": "benjamina31",
+        "value": 94.4,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "loganm87",
+        "value": 93.4,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "williamh77",
+        "value": 90,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "logant84",
+        "value": 88.8,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "sophiaa25",
+        "value": 87.5,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "emmaa72",
+        "value": 86.7,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "jacobg47",
+        "value": 84.6,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "oliverb12",
+        "value": 81.7,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "student1",
+        "value": 79,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "admin1",
+        "value": 77.1,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "testuser",
+        "value": 77.1,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "nate",
+        "value": 76.3,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "ameliab34",
+        "value": 74.5,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "masonl4",
+        "value": 73.1,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      }
+    ],
+    "totalWords": [
+      {
+        "username": "nate",
+        "value": 1352,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "logant84",
+        "value": 966,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "williamh77",
+        "value": 846,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "oliverb12",
+        "value": 835,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "student1",
+        "value": 819,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "testuser",
+        "value": 761,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "ameliab34",
+        "value": 743,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "admin1",
+        "value": 724,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "masonl4",
+        "value": 530,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "sophiaa25",
+        "value": 419,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "benjamina31",
+        "value": 344,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "emmaa72",
+        "value": 304,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "loganm87",
+        "value": 252,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "jacobg47",
+        "value": 110,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      }
+    ],
+    "sessionsCompleted": [
+      {
+        "username": "nate",
+        "value": 129,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "student1",
+        "value": 80,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "admin1",
+        "value": 73,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "testuser",
+        "value": 71,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "logant84",
+        "value": 45,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "benjamina31",
+        "value": 41,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "jacobg47",
+        "value": 37,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "loganm87",
+        "value": 33,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "sophiaa25",
+        "value": 31,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "emmaa72",
+        "value": 28,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "masonl4",
+        "value": 22,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "williamh77",
+        "value": 21,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "ameliab34",
+        "value": 9,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "oliverb12",
+        "value": 7,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      }
+    ],
+    "streakDays": [
+      {
+        "username": "nate",
+        "value": 18,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "loganm87",
+        "value": 14,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "logant84",
+        "value": 12,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "benjamina31",
+        "value": 12,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "student1",
+        "value": 10,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "sophiaa25",
+        "value": 10,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "williamh77",
+        "value": 9,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "oliverb12",
+        "value": 8,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "testuser",
+        "value": 7,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "ameliab34",
+        "value": 7,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "admin1",
+        "value": 6,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "jacobg47",
+        "value": 2,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "emmaa72",
+        "value": 1,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "masonl4",
+        "value": 1,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      }
+    ]
+  },
+  "weekly": {
+    "accuracy": [
+      {
+        "username": "benjamina31",
+        "value": 98.2,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "loganm87",
+        "value": 95.80000000000001,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "logant84",
+        "value": 89.8,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "emmaa72",
+        "value": 89.3,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "williamh77",
+        "value": 88.8,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "sophiaa25",
+        "value": 87.5,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "student1",
+        "value": 83.7,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "jacobg47",
+        "value": 81.19999999999999,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "oliverb12",
+        "value": 80.10000000000001,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "nate",
+        "value": 77.2,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "ameliab34",
+        "value": 76.9,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "masonl4",
+        "value": 75.39999999999999,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "testuser",
+        "value": 74.1,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "admin1",
+        "value": 73.19999999999999,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      }
+    ],
+    "totalWords": [
+      {
+        "username": "logant84",
+        "value": 53,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "masonl4",
+        "value": 52,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "oliverb12",
+        "value": 50,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "ameliab34",
+        "value": 40,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "admin1",
+        "value": 35,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "sophiaa25",
+        "value": 34,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "student1",
+        "value": 33,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "testuser",
+        "value": 32,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "benjamina31",
+        "value": 31,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "nate",
+        "value": 21,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "emmaa72",
+        "value": 19,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "loganm87",
+        "value": 17,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "williamh77",
+        "value": 15,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      },
+      {
+        "username": "jacobg47",
+        "value": 11,
+        "timestamp": "2025-08-13T16:18:54.828Z"
+      }
+    ],
+    "sessionsCompleted": [
+      {
+        "username": "logant84",
+        "value": 7,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "admin1",
+        "value": 6,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "loganm87",
+        "value": 5,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "emmaa72",
+        "value": 5,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "jacobg47",
+        "value": 5,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "benjamina31",
+        "value": 5,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "masonl4",
+        "value": 4,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "williamh77",
+        "value": 3,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "nate",
+        "value": 2,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "student1",
+        "value": 2,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "sophiaa25",
+        "value": 2,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "testuser",
+        "value": 1,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "ameliab34",
+        "value": 1,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      },
+      {
+        "username": "oliverb12",
+        "value": 1,
+        "timestamp": "2025-08-13T16:18:54.829Z"
+      }
+    ]
+  },
+  "currentWeek": "2025-3"
+}

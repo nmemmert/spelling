@@ -3,6 +3,7 @@ let words = [];
 let currentWord = '';
 let currentIndex = 0;
 let results = [];
+let isSpacedRepetitionMode = false;
 // 📝 Check user's answer and move to next
 window.submitAnswer = function() {
     const input = document.getElementById('userInput').value.trim();
@@ -73,7 +74,7 @@ function showStudent() {
 }
 
 // 🚀 Begin game session
-window.startGame = async function() {
+window.startGame = async function(customWords = null, isSpacedRepetition = false) {
     console.log('🎮 Starting spelling game');
     
     const user = JSON.parse(localStorage.getItem('loggedInUser'));
@@ -95,29 +96,43 @@ window.startGame = async function() {
         document.getElementById('summary')?.classList.add('hidden');
         document.getElementById('badgeDisplay')?.classList.add('hidden');
 
-        // Fetch words
-        const response = await fetch(`/getWordList?username=${user.username}`);
-        const data = await response.json();
-        console.log('Received words:', data);
-
-        let weekWords = [];
-        // If weeks format and activeWeek is set, use only that week's words
-        if (data.words && Array.isArray(data.words)) {
-            weekWords = data.words;
-        } else if (data.words && data.words.weeks && data.words.activeWeek) {
-            const active = data.words.activeWeek;
-            const found = data.words.weeks.find(w => w.date === active);
-            if (found) weekWords = found.words;
+        let wordList;
+        
+        // Use custom words if provided (for spaced repetition)
+        if (customWords && Array.isArray(customWords) && customWords.length > 0) {
+            wordList = customWords;
+            isSpacedRepetitionMode = isSpacedRepetition;
+            console.log('Using custom word list for spaced repetition:', wordList);
+        } else {
+            // Fetch words from user's word list
+            const response = await fetch(`/getWordList?username=${user.username}`);
+            const data = await response.json();
+            console.log('Received words:', data);
+            
+            let weekWords = [];
+            // If weeks format and activeWeek is set, use only that week's words
+            if (data.words && Array.isArray(data.words)) {
+                weekWords = data.words;
+            } else if (data.words && data.words.weeks && data.words.activeWeek) {
+                const active = data.words.activeWeek;
+                const found = data.words.weeks.find(w => w.date === active);
+                if (found) weekWords = found.words;
+            } else if (Array.isArray(data)) {
+                // If data is already an array
+                weekWords = data;
+            }
+            
+            wordList = weekWords;
         }
 
-        if (!weekWords.length) {
+        if (!wordList.length) {
             alert('No words found for practice');
             return;
         }
 
         // Start game
-        words = [...weekWords];
-        typingWords = [...weekWords]; // Initialize typing words too
+        words = [...wordList];
+        typingWords = [...wordList]; // Initialize typing words too
         currentIndex = 0;
         results = [];  // Reset results array
         showWord();
@@ -176,7 +191,8 @@ function showSummary() {
   const summary = document.getElementById('summary');
   let correct = 0;
   let missed = [];
-
+  
+  // Process results to calculate correct answers and build a report
   const report = results.map(({ word, attempt }) => {
     const isCorrect = word.toLowerCase() === attempt.toLowerCase();
     if (isCorrect) correct++;
@@ -184,11 +200,33 @@ function showSummary() {
     return `<li>${word} — <strong style="color:${isCorrect ? 'green' : 'red'}">${attempt || '(no answer)'}</strong></li>`;
   }).join('');
 
+  // Create detailed results for spaced repetition processing
+  const detailedResults = results.map(({ word, attempt }) => {
+    return {
+      word,
+      correct: word.toLowerCase() === attempt.toLowerCase(),
+      attempt
+    };
+  });
+
+  // Dispatch event for spaced repetition system if in SR mode
+  if (isSpacedRepetitionMode) {
+    const event = new CustomEvent('gameResultsAvailable', {
+      detail: {
+        isSpacedRepetition: true,
+        results: detailedResults
+      }
+    });
+    document.dispatchEvent(event);
+  }
+
+  // Build and display summary
   summary.innerHTML = `
     <h2>Results</h2>
     <p>You got ${correct} out of ${words.length} correct (${Math.round((correct / words.length) * 100)}%)</p>
     <ul>${report}</ul>
     ${missed.length ? `<button onclick='retryMissed(${JSON.stringify(missed)})'>Retry Missed Words</button>` : ''}
+    ${isSpacedRepetitionMode ? `<button onclick='backToStudentDashboard()' class="btn-primary">Back to Dashboard</button>` : ''}
   `;
 
   summary.classList.remove('hidden');

@@ -9,6 +9,8 @@
     <link href="tab-contrast.css" rel="stylesheet"/>
     <link href="badges.css" rel="stylesheet"/>
     <link href="analytics.css" rel="stylesheet"/>
+    <link href="gamification.css" rel="stylesheet"/>
+    <link href="spaced-repetition.css" rel="stylesheet"/>
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js"></script>
     <script src="js/auth.js"></script>
@@ -22,6 +24,8 @@
     <script src="js/sessions.js"></script>
     <script src="js/admin-badges.js"></script>
     <script src="js/analytics.js"></script>
+    <script src="js/gamification.js"></script>
+    <script src="js/spaced-repetition.js"></script>
     <script src="js/main.js"></script>
 </head>
 <body>
@@ -459,6 +463,12 @@
                     <p style="color: var(--text-secondary);">Choose an activity to start practicing</p>
                 </div>
                 
+                <!-- Streak & User Stats Section -->
+                <div class="dashboard-section">
+                    <div id="streakContainer" class="card dashboard-card"></div>
+                    <div id="userStatsContainer" class="card dashboard-card"></div>
+                </div>
+                
                 <!-- Theme Selection for Students -->
                 <div class="card" style="margin-bottom: 1.5rem;">
                     <h4>🎨 Choose Your Theme</h4>
@@ -483,6 +493,46 @@
                             📖 Bible Typing
                         </button>
                     </div>
+                </div>
+                
+                <!-- Challenges Section -->
+                <div class="card dashboard-section" style="margin-top: 1.5rem;">
+                    <div class="section-header">
+                        <h3>🎯 Active Challenges</h3>
+                    </div>
+                    <div id="challengesContainer" class="challenges-section"></div>
+                </div>
+                
+                <!-- Leaderboards Section -->
+                <div class="card dashboard-section" style="margin-top: 1.5rem;">
+                    <div class="section-header">
+                        <h3>🏆 Leaderboards</h3>
+                    </div>
+                    <div id="leaderboardsContainer" class="leaderboards-section"></div>
+                </div>
+                
+                <!-- Spaced Repetition Section -->
+                <div class="card dashboard-section" style="margin-top: 1.5rem;">
+                    <div class="section-header">
+                        <h3>📚 Spaced Repetition</h3>
+                    </div>
+                    
+                    <div class="sr-info">
+                        <h4>How Spaced Repetition Works</h4>
+                        <p>Words you find difficult will appear more frequently, while words you know well will appear less often. This helps you learn more efficiently!</p>
+                    </div>
+                    
+                    <!-- SR Stats -->
+                    <div id="srStatsContainer" class="sr-stats-container"></div>
+                    
+                    <!-- SR Actions -->
+                    <div class="sr-actions">
+                        <button id="startSpacedReviewBtn" class="btn-primary" onclick="startSpacedReview()">🔄 Start Review</button>
+                        <button class="btn-secondary" onclick="importWordsToSR()">📥 Import Words</button>
+                    </div>
+                    
+                    <!-- SR Progress -->
+                    <div id="srProgressContainer" class="sr-progress-container"></div>
                 </div>
             </div>
         </div>

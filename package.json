@@ -1,7 +1,7 @@
 {
   "name": "modern-spelling-practice",
-  "version": "2.1.0",
-  "description": "A modern, multi-user spelling practice application with admin controls, customizable themes, and analytics",
+  "version": "3.0.0",
+  "description": "A modern, multi-user spelling practice application with admin controls, customizable themes, analytics, gamification, and spaced repetition learning",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

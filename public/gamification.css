@@ -1,0 +1,346 @@
+/* Gamification CSS for Spelling Practice App */
+
+/* Leaderboard styles */
+.leaderboard-container {
+  margin-top: 1rem;
+}
+
+.leaderboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.leaderboard-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.leaderboard-tab {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  background-color: var(--bg-secondary);
+  transition: all 0.2s ease;
+}
+
+.leaderboard-tab.active {
+  background-color: var(--primary);
+  color: white;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.leaderboard-table th {
+  background-color: var(--bg-secondary);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.leaderboard-table tr:nth-child(even) {
+  background-color: var(--bg-secondary);
+}
+
+.leaderboard-table tr:hover {
+  background-color: var(--bg-hover);
+}
+
+.leaderboard-table td {
+  padding: 0.75rem 1rem;
+}
+
+.leaderboard-rank {
+  font-weight: 700;
+  text-align: center;
+  width: 3rem;
+}
+
+.leaderboard-value {
+  font-weight: 600;
+  text-align: right;
+}
+
+.leaderboard-date {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+/* Top ranks */
+.leaderboard-table tr:nth-child(1) .leaderboard-rank {
+  color: gold;
+}
+
+.leaderboard-table tr:nth-child(2) .leaderboard-rank {
+  color: silver;
+}
+
+.leaderboard-table tr:nth-child(3) .leaderboard-rank {
+  color: #cd7f32; /* bronze */
+}
+
+/* Challenges styles */
+.challenges-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.challenge-card {
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.challenge-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+
+.challenge-card.daily {
+  border-left: 4px solid var(--primary);
+}
+
+.challenge-card.weekly {
+  border-left: 4px solid var(--accent);
+}
+
+.challenge-card.achievement {
+  border-left: 4px solid var(--success);
+}
+
+.challenge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.challenge-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.challenge-badge {
+  font-size: 0.9rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 99px;
+  background-color: var(--bg-primary);
+}
+
+.challenge-badge.daily {
+  background-color: var(--primary-soft);
+  color: var(--primary);
+}
+
+.challenge-badge.weekly {
+  background-color: var(--accent-soft);
+  color: var(--accent);
+}
+
+.challenge-badge.achievement {
+  background-color: var(--success-soft);
+  color: var(--success);
+}
+
+.challenge-description {
+  margin: 0.5rem 0;
+  color: var(--text-secondary);
+}
+
+.challenge-progress {
+  margin-top: 1rem;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 0.5rem;
+  background-color: var(--bg-primary);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--primary);
+  transition: width 0.3s ease;
+}
+
+.progress-bar-fill.daily {
+  background-color: var(--primary);
+}
+
+.progress-bar-fill.weekly {
+  background-color: var(--accent);
+}
+
+.progress-bar-fill.achievement {
+  background-color: var(--success);
+}
+
+.challenge-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.challenge-meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.challenge-reward {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.challenge-points {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.challenge-complete-btn {
+  padding: 0.5rem 1rem;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.challenge-complete-btn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+}
+
+.challenge-complete-btn:active {
+  transform: translateY(0);
+}
+
+.challenge-complete-btn.completed {
+  background-color: var(--success);
+  pointer-events: none;
+}
+
+.challenge-complete-btn.locked {
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+/* User profile stats */
+.user-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0.25rem 0;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Streak indicator */
+.streak-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.streak-flame {
+  font-size: 1.5rem;
+}
+
+.streak-info {
+  flex: 1;
+}
+
+.streak-days {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.streak-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.streak-progress {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.streak-day {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+}
+
+.streak-day.active {
+  background-color: var(--primary);
+}
+
+/* Achievements grid */
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .user-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .challenge-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .challenge-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
