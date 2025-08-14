@@ -16,7 +16,53 @@
     }
   ],
   "student1": [],
-  "nate": [],
+  "nate": [
+    {
+      "score": 3,
+      "completed": true,
+      "answers": [
+        {
+          "word": "bate",
+          "input": "bate",
+          "correct": true
+        },
+        {
+          "word": "hate",
+          "input": "hate",
+          "correct": true
+        },
+        {
+          "word": "late",
+          "input": "late",
+          "correct": true
+        }
+      ],
+      "timestamp": "2025-08-14T13:36:05.098Z",
+      "type": "typing"
+    },
+    {
+      "score": 100,
+      "completed": true,
+      "answers": [
+        {
+          "word": "bate",
+          "attempt": "bate",
+          "correct": true
+        },
+        {
+          "word": "hate",
+          "attempt": "hate",
+          "correct": true
+        },
+        {
+          "word": "late",
+          "attempt": "late",
+          "correct": true
+        }
+      ],
+      "timestamp": "2025-08-14T13:36:30.685Z"
+    }
+  ],
   "testuser": [
     {
       "score": 85,

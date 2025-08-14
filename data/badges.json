@@ -1,11 +1,49 @@
 {
-  "nate": [
-    "Perfect Round",
-    "No Misses",
-    "Accuracy Master",
-    "Practice Streak",
-    "Vocabulary Pro"
-  ],
+  "nate": {
+    "earned": [
+      {
+        "id": "perfect_round",
+        "name": "Perfect Round",
+        "icon": "🏅",
+        "earnedAt": "2025-08-14T13:36:30.690Z"
+      },
+      {
+        "id": "no_misses",
+        "name": "No Misses",
+        "icon": "🏅",
+        "earnedAt": "2025-08-14T13:36:30.690Z"
+      },
+      {
+        "id": "accuracy_master",
+        "name": "Accuracy Master",
+        "icon": "🏅",
+        "earnedAt": "2025-08-14T13:36:30.690Z"
+      },
+      {
+        "id": "practice_streak",
+        "name": "Practice Streak",
+        "icon": "🏅",
+        "earnedAt": "2025-08-14T13:36:30.690Z"
+      },
+      {
+        "id": "vocabulary_pro",
+        "name": "Vocabulary Pro",
+        "icon": "🏅",
+        "earnedAt": "2025-08-14T13:36:30.690Z"
+      },
+      {
+        "id": "perfect_accuracy",
+        "name": "Perfect Score",
+        "icon": "🏆",
+        "description": "You scored 100% on your spelling test!",
+        "category": "accuracy",
+        "earnedAt": "2025-08-14T13:36:30.690Z"
+      }
+    ],
+    "counts": {
+      "accuracy": 1
+    }
+  },
   "admin1": {
     "earned": [
       {
