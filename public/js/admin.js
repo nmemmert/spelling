@@ -217,26 +217,51 @@ async function addNewUser() {
     return;
   }
 
-  const hash = hashPassword(password);
-  if (hashPreview) hashPreview.textContent = hash;
+  // Check if hashPassword function exists
+  let hash;
+  try {
+    hash = hashPassword(password);
+    console.log("✅ Password hashed successfully");
+    if (hashPreview) hashPreview.textContent = hash;
+  } catch (e) {
+    console.error("❌ Error hashing password:", e);
+    msg.textContent = "Error: Unable to hash password. Check console for details.";
+    return;
+  }
 
   try {
-    await fetch('/addUser', {
+    console.log(`🔄 Sending request to add user: ${username} (${role})`);
+    
+    const response = await fetch('/addUser', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, hash, role })
     });
+    
+    console.log(`📥 Server response: ${response.status} ${response.statusText}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Server returned ${response.status}: ${errorText}`);
+    }
+    
+    const successText = await response.text();
+    console.log(`✅ Success: ${successText}`);
     msg.textContent = `✅ User "${username}" added to server.`;
 
+    // Clear form
     document.getElementById("newUsername").value = '';
     document.getElementById("newPassword").value = '';
     if (hashPreview) hashPreview.textContent = '[auto]';
 
-  await loadUsers();
-  displayUserDropdown();
-  populateWordUserDropdown();
+    // Refresh user lists
+    await loadUsers();
+    displayUserDropdown();
+    if (typeof populateWordUserDropdown === 'function') {
+      populateWordUserDropdown();
+    }
   } catch (e) {
-    msg.textContent = "❌ Failed to add user.";
+    msg.textContent = `❌ Failed to add user: ${e.message}`;
     console.error("Add user error:", e);
   }
 }

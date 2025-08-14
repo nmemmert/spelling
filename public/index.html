@@ -12,7 +12,20 @@
     <link href="gamification.css" rel="stylesheet"/>
     <link href="spaced-repetition.css" rel="stylesheet"/>
     <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js" integrity="sha512-MK4YCs3cv9dRCsEzFP5rehiUXbU0iKdwILVZ2SylXqCFFWOk1F4vGRrGGXc0qbHWM7S6gy4Xv/MGK19vKZbvKA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Fallback for jsSHA library if CDN fails -->
+    <script>
+      window.addEventListener('DOMContentLoaded', function() {
+        if (typeof jsSHA === 'undefined') {
+          console.warn('jsSHA not loaded from CDN, using fallback');
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/jssha@3.3.0/dist/sha.js';
+          document.head.appendChild(script);
+        } else {
+          console.log('jsSHA loaded successfully');
+        }
+      });
+    </script>
     <script src="js/auth.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/themes.js"></script>

@@ -490,27 +490,58 @@ app.post('/verifyUser', (req, res) => {
 
 // ➕ Add user
 app.post('/addUser', (req, res) => {
-  const { username, hash, role } = req.body;
-  if (
-    typeof username !== 'string' || 
-    typeof hash !== 'string' || 
-    typeof role !== 'string' || 
-    !['admin', 'student'].includes(role.trim().toLowerCase())
-  ) return res.status(400).send("Invalid user data");
+  try {
+    console.log(`📥 Received addUser request:`, req.body);
+    
+    const { username, hash, role } = req.body;
+    
+    // Validate required fields
+    if (!username || !hash || !role) {
+      console.error(`❌ Missing required fields: ${!username ? 'username' : ''} ${!hash ? 'hash' : ''} ${!role ? 'role' : ''}`);
+      return res.status(400).send("Missing required fields");
+    }
+    
+    // Validate data types and values
+    if (
+      typeof username !== 'string' || 
+      typeof hash !== 'string' || 
+      typeof role !== 'string' || 
+      !['admin', 'student'].includes(role.trim().toLowerCase())
+    ) {
+      console.error(`❌ Invalid user data types or values`);
+      return res.status(400).send("Invalid user data");
+    }
 
-  const users = readJsonSafe(path.join(DATA_DIR, files.users), []);
-  if (users.find(u => u.username === username)) {
-    return res.status(409).send("User already exists");
+    // Trim inputs
+    const trimmedUsername = username.trim();
+    const trimmedRole = role.trim().toLowerCase();
+    
+    // Check for existing user
+    const usersPath = path.join(DATA_DIR, files.users);
+    const users = readJsonSafe(usersPath, []);
+    if (users.find(u => u.username === trimmedUsername)) {
+      console.error(`❌ User "${trimmedUsername}" already exists`);
+      return res.status(409).send(`User "${trimmedUsername}" already exists`);
+    }
+    
+    console.log(`✏️ Adding new ${trimmedRole} user: ${trimmedUsername}`);
+    
+    // Add user to users.json
+    users.push({ username: trimmedUsername, hash, role: trimmedRole });
+    
+    // Write to file
+    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+    console.log(`✅ Added user to users.json: ${trimmedUsername}`);
+    
+    // Initialize user in all other data files
+    initializeUserInAllFiles(trimmedUsername);
+    
+    console.log(`✅ User "${trimmedUsername}" successfully added and initialized`);
+    res.send(`✅ User "${trimmedUsername}" added and initialized`);
+  } catch (error) {
+    console.error(`🔴 Error in /addUser:`, error);
+    res.status(500).send(`Server error: ${error.message}`);
   }
-  
-  // Add user to users.json
-  users.push({ username: username.trim(), hash, role: role.trim() });
-  fs.writeFileSync(path.join(DATA_DIR, files.users), JSON.stringify(users, null, 2));
-  
-  // Initialize user in all other data files
-  initializeUserInAllFiles(username.trim());
-  
-  res.send(`✅ User "${username}" added and initialized`);
 });
 
 // ❌ Delete user
