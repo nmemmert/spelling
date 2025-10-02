@@ -1,0 +1,393 @@
+/* Tablet-optimized styles for Spelling Practice App */
+
+/* Tablet and touch device optimizations */
+@media screen and (min-width: 600px), (pointer: coarse) {
+    
+    /* Enhanced touch targets and spacing */
+    :root {
+        --touch-target: 48px; /* Minimum touch target size */
+        --tablet-padding: 2rem;
+        --tablet-margin: 1.5rem;
+        --tablet-font-large: 2.5rem;
+        --tablet-font-medium: 1.5rem;
+        --tablet-font-small: 1.125rem;
+    }
+    
+    /* Body and container adjustments */
+    body {
+        padding: var(--tablet-padding);
+        font-size: var(--tablet-font-small);
+    }
+    
+    .container {
+        max-width: 900px;
+        padding: 0 var(--tablet-padding);
+    }
+    
+    /* Enhanced typography for tablet viewing */
+    h1 {
+        font-size: var(--tablet-font-large);
+        margin-bottom: 2.5rem;
+        text-align: center;
+    }
+    
+    h2 {
+        font-size: 2.25rem;
+        margin-bottom: 2rem;
+    }
+    
+    h3 {
+        font-size: 1.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Enhanced buttons for touch interaction */
+    button {
+        min-height: var(--touch-target);
+        min-width: var(--touch-target);
+        padding: 1rem 2rem;
+        font-size: var(--tablet-font-small);
+        margin: 0.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+    }
+    
+    button:hover, button:focus {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    button:active {
+        transform: translateY(0);
+    }
+    
+    /* Primary buttons get special treatment */
+    button.primary, #startGameBtn, #startTypingBtn, #submitAnswer {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        border: none;
+        font-size: 1.25rem;
+        padding: 1.25rem 2.5rem;
+        min-height: 60px;
+    }
+    
+    /* Enhanced form controls for touch */
+    input, textarea, select {
+        min-height: var(--touch-target);
+        padding: 1rem 1.5rem;
+        font-size: var(--tablet-font-small);
+        border-radius: 12px;
+        border: 2px solid var(--border);
+        margin: 0.75rem;
+        max-width: 500px;
+    }
+    
+    /* Special styling for game input */
+    #userInput {
+        font-size: 1.75rem;
+        min-height: 60px;
+        text-align: center;
+        font-weight: 600;
+        letter-spacing: 1px;
+        max-width: 600px;
+        border: 3px solid var(--primary);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    /* Word display optimization */
+    #wordBox {
+        font-size: 3.5rem;
+        padding: 2rem;
+        margin: 2rem auto;
+        border-radius: 20px;
+        background: linear-gradient(135deg, var(--bg-primary) 0%, var(--secondary) 100%);
+        box-shadow: var(--shadow-lg);
+        text-align: center;
+        font-weight: 700;
+        letter-spacing: 2px;
+        min-height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Navigation improvements */
+    #nav {
+        padding: 1.5rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    #nav button {
+        min-width: 120px;
+        font-size: 1.125rem;
+    }
+    
+    /* Admin tabs for tablet */
+    #adminTabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        justify-content: center;
+    }
+    
+    #adminTabs button {
+        min-height: 50px;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 25px;
+    }
+    
+    /* Card layouts optimized for tablet */
+    .card, .adminTab {
+        padding: 2rem;
+        margin: 1.5rem 0;
+        border-radius: 16px;
+        box-shadow: var(--shadow-lg);
+    }
+    
+    /* Game section enhancements */
+    #gameSection {
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    #inputSection {
+        margin-top: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+    }
+    
+    /* Typing section improvements */
+    #typingSection {
+        padding: 2rem;
+    }
+    
+    #bibleVerseDisplay {
+        font-size: 1.25rem;
+        line-height: 1.8;
+        padding: 2rem;
+        margin: 2rem 0;
+        border-radius: 16px;
+        min-height: 150px;
+    }
+    
+    #bibleInput, #typingInput {
+        min-height: 200px;
+        font-size: 1.125rem;
+        line-height: 1.6;
+        padding: 1.5rem;
+    }
+    
+    /* Activity options layout */
+    #activityOptions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+    
+    .activity-option {
+        background: var(--bg-primary);
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: var(--shadow);
+        transition: var(--transition);
+        cursor: pointer;
+        border: 2px solid var(--border);
+    }
+    
+    .activity-option:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary);
+    }
+    
+    /* Summary and results improvements */
+    #summary {
+        background: var(--bg-primary);
+        border-radius: 20px;
+        padding: 3rem;
+        margin: 2rem auto;
+        box-shadow: var(--shadow-lg);
+        text-align: center;
+    }
+    
+    #summary h2 {
+        font-size: 2.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    #summary p {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Login panel optimizations */
+    #loginPanel {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 3rem;
+        background: var(--bg-primary);
+        border-radius: 20px;
+        box-shadow: var(--shadow-lg);
+    }
+    
+    #loginPanel h2 {
+        text-align: center;
+        margin-bottom: 2.5rem;
+    }
+    
+    #loginPanel input {
+        width: 100%;
+        margin: 1rem 0;
+    }
+    
+    #loginPanel button {
+        width: 100%;
+        margin-top: 1.5rem;
+    }
+    
+    /* User dropdown improvements */
+    #userDropdown select {
+        min-height: 50px;
+        font-size: 1.125rem;
+        padding: 1rem;
+    }
+    
+    /* Progress indicators */
+    .progress-bar {
+        height: 12px;
+        border-radius: 6px;
+        margin: 1rem 0;
+    }
+    
+    /* Feedback messages */
+    .feedback-correct, .feedback-incorrect {
+        font-size: 1.25rem;
+        font-weight: 600;
+        padding: 1rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        text-align: center;
+    }
+    
+    .feedback-correct {
+        background-color: #f0fdf4;
+        color: var(--success);
+        border: 2px solid var(--success);
+    }
+    
+    .feedback-incorrect {
+        background-color: #fef2f2;
+        color: var(--error);
+        border: 2px solid var(--error);
+    }
+    
+    /* Badge display improvements */
+    .badge {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 25px;
+        margin: 0.5rem;
+    }
+    
+    /* Charts and analytics */
+    .chart-container {
+        margin: 2rem 0;
+        padding: 2rem;
+        background: var(--bg-primary);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+    }
+    
+    /* Responsive grid layouts */
+    .tablet-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .tablet-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+    
+    /* Utility classes for tablet */
+    .tablet-center {
+        text-align: center;
+        margin: 0 auto;
+    }
+    
+    .tablet-large-text {
+        font-size: var(--tablet-font-medium);
+        font-weight: 600;
+    }
+    
+    .tablet-padding {
+        padding: var(--tablet-padding);
+    }
+    
+    .tablet-margin {
+        margin: var(--tablet-margin);
+    }
+}
+
+/* Landscape tablet specific adjustments */
+@media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    
+    body {
+        padding: 1rem 2rem;
+    }
+    
+    #wordBox {
+        font-size: 3rem;
+        padding: 1.5rem;
+        margin: 1.5rem auto;
+        min-height: 100px;
+    }
+    
+    #gameSection, #typingSection {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 70vh;
+    }
+    
+    #nav {
+        padding: 1rem;
+    }
+    
+    .tablet-grid-3 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Portrait tablet specific adjustments */
+@media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    
+    #activityOptions {
+        grid-template-columns: 1fr;
+        max-width: 400px;
+        margin: 2rem auto;
+    }
+    
+    .tablet-grid-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    .tablet-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

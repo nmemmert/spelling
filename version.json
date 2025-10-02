@@ -1,14 +1,18 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0-tablet",
   "name": "spelling-practice-app",
-  "description": "A comprehensive educational application for spelling practice",
-  "lastUpdated": "August 13, 2025",
+  "description": "A comprehensive educational application for spelling practice with tablet handwriting support",
+  "lastUpdated": "October 2, 2025",
   "releaseNotes": [
-    "Fixed analytics graph display issues",
-    "Fixed results and sessions tabs data display",
-    "Added robust error handling for file operations",
-    "Improved session data compatibility",
-    "Added API test page for easier debugging",
-    "Enhanced documentation with troubleshooting guide"
+    "Added native tablet handwriting recognition support",
+    "Integrated Web Handwriting API for modern browsers",
+    "Added Windows Ink Platform compatibility",
+    "Enhanced pointer events for pressure-sensitive stylus",
+    "Added touch events optimization for tablets",
+    "Improved UI for tablet-friendly interface",
+    "Added handwriting canvas with enhanced recognition",
+    "Created comprehensive pattern matching for spelling words",
+    "Added tablet detection and feature optimization",
+    "Enhanced recognition accuracy for educational content"
   ]
 }

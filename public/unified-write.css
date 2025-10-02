@@ -1,0 +1,297 @@
+/* Unified Write Mode - Large Canvas + Keyboard Support */
+
+.unified-write-mode {
+    width: 100%;
+    max-width: none;
+    padding: 20px;
+}
+
+.large-writing-canvas {
+    width: 100%;
+    min-height: 300px;
+    height: 40vh;
+    border: 3px solid #e1e8ed;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 
+        inset 0 2px 4px rgba(0,0,0,0.06),
+        0 4px 20px rgba(0,0,0,0.1);
+    position: relative;
+    cursor: text;
+    touch-action: none;
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    font-size: 32px;
+    line-height: 1.4;
+    padding: 20px;
+    color: #2c3e50;
+    overflow: hidden;
+}
+
+.large-writing-canvas:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 
+        inset 0 2px 4px rgba(0,0,0,0.06),
+        0 4px 20px rgba(59, 130, 246, 0.2),
+        0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.canvas-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.canvas-overlay.active {
+    pointer-events: all;
+}
+
+.text-input-area {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+    resize: none;
+    z-index: 2;
+}
+
+.text-input-area::placeholder {
+    color: #94a3b8;
+    opacity: 0.8;
+}
+
+.input-mode-selector {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.mode-button {
+    padding: 12px 24px;
+    border: 2px solid #e1e8ed;
+    border-radius: 25px;
+    background: white;
+    color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+}
+
+.mode-button:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.mode-button.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    border-color: #1d4ed8;
+    color: white;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.mode-button .icon {
+    font-size: 18px;
+}
+
+.canvas-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.canvas-controls .btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.btn-recognize {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.btn-recognize:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+}
+
+.btn-clear {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.btn-clear:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    font-size: 16px;
+    padding: 14px 28px;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.recognition-feedback {
+    margin-top: 15px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 500;
+    text-align: center;
+    min-height: 24px;
+}
+
+.recognition-feedback.success {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+.recognition-feedback.processing {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+.recognition-feedback.error {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+/* Tablet optimizations */
+@media (min-width: 768px) {
+    .large-writing-canvas {
+        min-height: 400px;
+        height: 50vh;
+        font-size: 36px;
+        padding: 30px;
+    }
+    
+    .mode-button {
+        padding: 16px 32px;
+        font-size: 18px;
+    }
+    
+    .canvas-controls .btn {
+        padding: 16px 28px;
+        font-size: 16px;
+    }
+    
+    .btn-submit {
+        font-size: 18px;
+        padding: 18px 36px;
+    }
+}
+
+/* Large tablets and desktop */
+@media (min-width: 1024px) {
+    .large-writing-canvas {
+        min-height: 450px;
+        height: 55vh;
+        font-size: 40px;
+        padding: 40px;
+    }
+    
+    .unified-write-mode {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+}
+
+/* Stylus and fine pointer support */
+@media (pointer: fine) {
+    .large-writing-canvas {
+        cursor: crosshair;
+    }
+    
+    .text-input-area {
+        cursor: text;
+    }
+}
+
+/* Handwriting mode specific styles */
+.handwriting-mode .text-input-area {
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+.handwriting-mode .canvas-overlay {
+    pointer-events: all;
+}
+
+/* Keyboard mode specific styles */
+.keyboard-mode .canvas-overlay {
+    pointer-events: none;
+}
+
+.keyboard-mode .text-input-area {
+    pointer-events: all;
+    opacity: 1;
+}
+
+/* Visual feedback for active mode */
+.handwriting-mode .large-writing-canvas {
+    background: linear-gradient(145deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.keyboard-mode .large-writing-canvas {
+    background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+/* Input method indicator */
+.input-method-indicator {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    background: rgba(0,0,0,0.1);
+    color: #64748b;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 3;
+}
+
+.handwriting-mode .input-method-indicator {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.keyboard-mode .input-method-indicator {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}

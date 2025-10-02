@@ -1,0 +1,94 @@
+/* Native Handwriting Recognition Status Styles */
+
+.native-recognition-status {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin: 8px 0;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+.native-recognition-status.native-supported {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.native-recognition-status.fallback {
+    background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+    color: #2d3436;
+}
+
+.native-recognition-status .status-icon {
+    margin-right: 6px;
+}
+
+.recognition-method-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 8px;
+}
+
+.recognition-method-info .method-badge {
+    background: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.recognition-method-info .method-badge.native {
+    background: linear-gradient(135deg, #a8e6cf 0%, #7fcdcd 100%);
+    color: #2d3436;
+}
+
+.recognition-method-info .method-badge.enhanced {
+    background: linear-gradient(135deg, #ffd3a5 0%, #fd9853 100%);
+    color: #2d3436;
+}
+
+@keyframes statusPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.02); opacity: 0.9; }
+}
+
+/* Tablet optimizations for recognition status */
+@media (min-width: 768px) {
+    .native-recognition-status {
+        font-size: 1rem;
+        padding: 12px 20px;
+        margin: 12px 0;
+    }
+    
+    .recognition-method-info {
+        font-size: 0.9rem;
+        margin-top: 10px;
+    }
+    
+    .recognition-method-info .method-badge {
+        padding: 4px 12px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Enhanced handwriting canvas for tablet use */
+@media (min-width: 768px) {
+    #handwritingCanvas {
+        border: 3px solid #e1e8ed;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        background: #fafbfc;
+        cursor: crosshair;
+        touch-action: none; /* Prevent default touch behaviors */
+    }
+    
+    #handwritingCanvas:active {
+        border-color: #1da1f2;
+        box-shadow: 0 4px 20px rgba(29, 161, 242, 0.2);
+    }
+}

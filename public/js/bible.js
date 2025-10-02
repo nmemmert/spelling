@@ -62,7 +62,7 @@ const bibleVerses = [
     {
         reference: "Matthew 6:33",
         text: "But seek first the kingdom of God and his righteousness, and all these things will be added to you."
-    }
+    },
     {
         reference: "John 11:36",
         text: "Jesus wept."

@@ -167,12 +167,12 @@ async function completeChallenge(challengeId, challengeType) {
 // Render streak indicator in student panel
 function renderStreakIndicator() {
   const streakContainer = document.getElementById('streakContainer');
-  if (!streakContainer || !userProgress) return;
+  if (!streakContainer) return;
   
   // Clear previous content
   streakContainer.innerHTML = '';
   
-  const currentStreak = userProgress.streaks.current || 0;
+  const currentStreak = userProgress?.streaks?.current || 0;
   
   // Create streak element
   const streakEl = document.createElement('div');
@@ -191,7 +191,7 @@ function renderStreakIndicator() {
     </div>
     <div class="streak-record">
       <div class="streak-subtitle">Best</div>
-      <div class="streak-best">${userProgress.streaks.longest || 0}</div>
+      <div class="streak-best">${userProgress?.streaks?.longest || 0}</div>
     </div>
   `;
   
@@ -201,7 +201,7 @@ function renderStreakIndicator() {
 // Render user stats in student panel
 function renderUserStats() {
   const statsContainer = document.getElementById('userStatsContainer');
-  if (!statsContainer || !userProgress) return;
+  if (!statsContainer) return;
   
   // Clear previous content
   statsContainer.innerHTML = '';
@@ -213,24 +213,39 @@ function renderUserStats() {
   // Add stat cards
   statsEl.innerHTML = `
     <div class="stat-card">
-      <div class="stat-value">${userProgress.stats.points || 0}</div>
+      <div class="stat-value">${userProgress?.stats?.points || 0}</div>
       <div class="stat-label">Points</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">${userProgress.stats.accuracy ? userProgress.stats.accuracy.toFixed(1) + '%' : '0%'}</div>
+      <div class="stat-value">${userProgress?.stats?.accuracy ? userProgress.stats.accuracy.toFixed(1) + '%' : '0%'}</div>
       <div class="stat-label">Accuracy</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">${userProgress.stats.totalSessions || 0}</div>
+      <div class="stat-value">${userProgress?.stats?.totalSessions || 0}</div>
       <div class="stat-label">Sessions</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">${userProgress.stats.totalWords || 0}</div>
+      <div class="stat-value">${userProgress?.stats?.totalWords || 0}</div>
       <div class="stat-label">Words</div>
     </div>
   `;
   
   statsContainer.appendChild(statsEl);
+}
+
+// Initialize containers with default content
+function initializeStudentContainers() {
+  // Initialize streak container immediately
+  const streakContainer = document.getElementById('streakContainer');
+  if (streakContainer && !streakContainer.innerHTML.trim()) {
+    renderStreakIndicator();
+  }
+  
+  // Initialize stats container immediately
+  const statsContainer = document.getElementById('userStatsContainer');
+  if (statsContainer && !statsContainer.innerHTML.trim()) {
+    renderUserStats();
+  }
 }
 
 // Render challenges in student panel

@@ -1,35 +1,58 @@
 // 🎭 Role-Based UI Setup
 function setupSession(user) {
-  document.getElementById('loginPanel').classList.add('hidden');
-  document.getElementById('adminPanel').classList.add('hidden');
-  document.getElementById('studentPanel').classList.add('hidden');
-  document.getElementById('nav').classList.remove('hidden');
+  // Safe element hiding/showing with null checks
+  const loginPanel = document.getElementById('loginPanel');
+  const adminPanel = document.getElementById('adminPanel');
+  const studentPanel = document.getElementById('studentPanel');
+  const nav = document.getElementById('nav');
+  
+  if (loginPanel) loginPanel.classList.add('hidden');
+  if (adminPanel) adminPanel.classList.add('hidden');
+  if (studentPanel) studentPanel.classList.add('hidden');
+  if (nav) nav.classList.remove('hidden');
 
-  document.getElementById('userInfo').textContent = `${user.username} (${user.role})`;
+  // Store current user globally for tablet menu manager
+  window.currentUser = user;
+  
+  const userInfo = document.getElementById('userInfo');
+  if (userInfo) {
+    userInfo.textContent = `${user.username} (${user.role})`;
+  }
 
   // 🎨 Banner Setup
   const roleBanner = document.getElementById('roleBanner');
-  roleBanner.classList.remove('hidden', 'admin', 'student');
-  roleBanner.classList.add(user.role);
-  roleBanner.textContent = user.role === "admin"
-    ? "👨‍🏫 Admin Access Enabled"
-    : "🎓 Student Mode Active";
+  if (roleBanner) {
+    roleBanner.classList.remove('hidden', 'admin', 'student');
+    roleBanner.classList.add(user.role);
+    roleBanner.textContent = user.role === "admin"
+      ? "👨‍🏫 Admin Access Enabled"
+      : "🎓 Student Mode Active";
+  }
 
   // 🎚 Role-Based Navigation
   const studentBtn = document.getElementById('studentBtn');
   const adminBtn = document.getElementById('adminBtn');
 
   if (user.role === "admin") {
-    studentBtn.classList.remove('hidden');
-    adminBtn.classList.remove('hidden');
+    if (studentBtn) studentBtn.classList.remove('hidden');
+    if (adminBtn) adminBtn.classList.remove('hidden');
     showAdmin();
   } else if (user.role === "student") {
-    studentBtn.classList.add('hidden');
-    adminBtn.classList.add('hidden');
+    if (studentBtn) studentBtn.classList.add('hidden');
+    if (adminBtn) adminBtn.classList.add('hidden');
     showStudent();
   } else {
     alert("Unknown role. Logging out for safety.");
     logoutUser();
+  }
+
+  // Update enhanced navigation menu
+  try {
+    if (typeof updateNavigationForUser === 'function') {
+      updateNavigationForUser();
+    }
+  } catch (error) {
+    console.warn('Enhanced navigation update failed:', error);
   }
 
   showToast(`Welcome, ${user.role}!`);
@@ -77,6 +100,20 @@ function showStudent() {
     if (studentThemeSelect) {
       studentThemeSelect.value = savedTheme;
     }
+    
+    // Initialize dashboard containers with default content
+    if (typeof initializeStudentContainers === 'function') {
+      setTimeout(() => {
+        initializeStudentContainers();
+      }, 100);
+    }
+    
+    // Update help bubble visibility
+    if (window.tabletMenuManager && typeof window.tabletMenuManager.updateHelpBubbleVisibility === 'function') {
+      setTimeout(() => {
+        window.tabletMenuManager.updateHelpBubbleVisibility();
+      }, 100);
+    }
   }
 }
 
@@ -91,7 +128,19 @@ function showAdmin() {
   if (adminPanel) {
     adminPanel.classList.remove("hidden");
     
-    // Load user data for dropdowns
+    // Show dashboard view by default
+    if (typeof showAdminDashboard === 'function') {
+      showAdminDashboard();
+    }
+    
+    // Update help bubble visibility for admin
+    if (window.tabletMenuManager && typeof window.tabletMenuManager.updateHelpBubbleVisibility === 'function') {
+      setTimeout(() => {
+        window.tabletMenuManager.updateHelpBubbleVisibility();
+      }, 100);
+    }
+    
+    // Load user data for dropdowns (for when tabs are accessed)
     if (typeof window.loadUsers === 'function') {
       window.loadUsers().then(() => {
         console.log("✅ Users loaded from server");

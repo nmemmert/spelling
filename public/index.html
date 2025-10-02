@@ -2,17 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=no">
     <title>✨ Modern Spelling Practice</title>
     <link href="styles.css" rel="stylesheet"/>
     <link href="mobile.css" rel="stylesheet"/>
+    <link href="tablet.css" rel="stylesheet"/>
+    <link href="tablet-menu.css" rel="stylesheet"/>
+    <link href="handwriting.css" rel="stylesheet"/>
+    <link href="native-recognition.css" rel="stylesheet"/>
+    <link href="unified-write.css" rel="stylesheet"/>
     <link href="tab-contrast.css" rel="stylesheet"/>
     <link href="badges.css" rel="stylesheet"/>
     <link href="analytics.css" rel="stylesheet"/>
     <link href="gamification.css" rel="stylesheet"/>
     <link href="spaced-repetition.css" rel="stylesheet"/>
     <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.4.2/sha.js" integrity="sha512-MK4YCs3cv9dRCsEzFP5rehiUXbU0iKdwILVZ2SylXqCFFWOk1F4vGRrGGXc0qbHWM7S6gy4Xv/MGK19vKZbvKA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.3.1/sha.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- TensorFlow.js for better handwriting recognition -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
     <!-- Fallback for jsSHA library if CDN fails -->
     <script>
       window.addEventListener('DOMContentLoaded', function() {
@@ -40,6 +50,11 @@
     <script src="js/analytics.js"></script>
     <script src="js/gamification.js"></script>
     <script src="js/spaced-repetition.js"></script>
+    <script src="js/native-handwriting.js"></script>
+    <script src="js/handwriting.js"></script>
+    <script src="js/unified-write.js"></script>
+    <script src="js/tablet-menu.js"></script>
+    <script src="js/tablet-utils.js"></script>
     <script src="js/main.js"></script>
     <!-- Initialization script - loads last -->
     <script src="js/chart-safety.js"></script>
@@ -70,50 +85,233 @@
             <p id="loginMessage" style="margin-top: 1rem; text-align: center;"></p>
         </div>
         
-        <!-- Navigation -->
+        <!-- Enhanced Navigation Menu -->
         <div id="nav" class="hidden">
-            <p><strong id="userInfo"></strong></p>
-            <div class="flex gap-4 justify-center" style="margin-top: 1rem;">
-                <button class="hidden" id="adminBtn" onclick="showAdmin()">👨‍💼 Admin Panel</button>
-                <button class="hidden" id="studentBtn" onclick="showStudent()">🎓 Student Panel</button>
-                <button id="logoutBtn" onclick="logoutUser()" class="btn-secondary">Sign Out</button>
+            <div class="nav-header">
+                <p><strong id="userInfo"></strong></p>
+                <div class="user-badge" id="userBadge"></div>
+            </div>
+            
+            <!-- Student Menu Items -->
+            <div id="studentNavItems" class="nav-section hidden">
+                <h4>🎓 Activities</h4>
+                <div class="nav-grid">
+                    <button onclick="startGame(); closeMenuIfTablet();" class="nav-activity-btn">
+                        <span class="nav-icon">🎮</span>
+                        <div>
+                            <div class="nav-title">Spelling Game</div>
+                            <div class="nav-subtitle">Interactive challenges</div>
+                        </div>
+                    </button>
+                    <button onclick="startTypingPractice(); closeMenuIfTablet();" class="nav-activity-btn">
+                        <span class="nav-icon">⌨️</span>
+                        <div>
+                            <div class="nav-title">Typing Practice</div>
+                            <div class="nav-subtitle">Improve speed & accuracy</div>
+                        </div>
+                    </button>
+                    <button onclick="startBibleTyping(); closeMenuIfTablet();" class="nav-activity-btn">
+                        <span class="nav-icon">📖</span>
+                        <div>
+                            <div class="nav-title">Bible Typing</div>
+                            <div class="nav-subtitle">Spiritual practice</div>
+                        </div>
+                    </button>
+                    <button onclick="startSpacedReview(); closeMenuIfTablet();" class="nav-activity-btn">
+                        <span class="nav-icon">🔄</span>
+                        <div>
+                            <div class="nav-title">Spaced Review</div>
+                            <div class="nav-subtitle">Smart learning</div>
+                        </div>
+                    </button>
+                </div>
+                
+                <h4>📊 Progress</h4>
+                <div class="nav-list">
+                    <button onclick="showStudent(); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">📈</span>Dashboard
+                    </button>
+                    <button onclick="showChallenges(); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">🎯</span>Challenges
+                    </button>
+                    <button onclick="showLeaderboards(); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">🏆</span>Leaderboards
+                    </button>
+                    <button onclick="showBadges(); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">🏅</span>My Badges
+                    </button>
+                </div>
+                
+                <h4>⚙️ Settings</h4>
+                <div class="nav-list">
+                    <button onclick="showThemeSelector(); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">🎨</span>Themes
+                    </button>
+                    <button onclick="showInputSettings(); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">✏️</span>Input Method
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Admin Menu Items -->
+            <div id="adminNavItems" class="nav-section hidden">
+                <h4>👨‍💼 Administration</h4>
+                <div class="nav-list">
+                    <button onclick="showAdmin(); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">🏠</span>Dashboard
+                    </button>
+                    <button onclick="showAdminTab('tabUsers'); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">👤</span>User Management
+                    </button>
+                    <button onclick="showAdminTab('tabWords'); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">📝</span>Word Lists
+                    </button>
+                    <button onclick="showAdminTab('tabAnalytics'); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">📊</span>Analytics
+                    </button>
+                    <button onclick="showAdminTab('tabResults'); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">📋</span>Results
+                    </button>
+                    <button onclick="showAdminTab('tabReports'); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">📘</span>Reports
+                    </button>
+                    <button onclick="showAdminTab('tabSessions'); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">📅</span>Sessions
+                    </button>
+                    <button onclick="showAdminTab('tabBadges'); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">�</span>Badge System
+                    </button>
+                    <button onclick="showAdminTab('tabPasswords'); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">🔐</span>Passwords
+                    </button>
+                    <button onclick="showAdminTab('tabTheme'); closeMenuIfTablet();" class="nav-list-btn">
+                        <span class="nav-icon">🎨</span>Themes
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Common Actions -->
+            <div class="nav-section nav-footer">
+                <button id="logoutBtn" onclick="logoutUser()" class="nav-logout-btn">
+                    <span class="nav-icon">🚪</span>Sign Out
+                </button>
             </div>
         </div>
         
         <!-- Admin Panel -->
         <div class="hidden" id="adminPanel">
-            <div class="card-header">
-                <h2>👨‍💼 Admin Dashboard</h2>
-                <p style="color: var(--text-secondary);">Manage users, word lists, and view analytics</p>
+            <!-- Admin Dashboard Overview -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>👨‍💼 Admin Dashboard</h2>
+                    <p style="color: var(--text-secondary);">System overview and quick access to admin functions</p>
+                </div>
+                
+                <!-- Quick Stats Overview -->
+                <div class="admin-overview">
+                    <div class="overview-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="totalUsers">-</div>
+                                <div class="stat-label">Total Users</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📝</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="totalWordLists">-</div>
+                                <div class="stat-label">Word Lists</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="totalSessions">-</div>
+                                <div class="stat-label">Active Sessions</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🏆</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="totalBadges">-</div>
+                                <div class="stat-label">Badges Awarded</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Help Bubble for Admin Functions -->
+                <div class="help-bubble-container">
+                    <button class="help-bubble" id="adminHelpBubble" title="View admin functions guide">
+                        <span class="help-icon">?</span>
+                    </button>
+                </div>
+                
+                <!-- Hidden Menu Instructions (shown in popup) -->
+                <div class="menu-instructions hidden" id="adminHelpContent">
+                    <h3>📱 Access Admin Functions</h3>
+                    <p>Use the menu button (<strong>☰</strong>) in the top-right corner to access all admin functions:</p>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <span class="instruction-icon">👤</span>
+                            <span><strong>User Management</strong> - Add/remove users</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="instruction-icon">📝</span>
+                            <span><strong>Word Lists</strong> - Manage spelling lists</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="instruction-icon">📊</span>
+                            <span><strong>Analytics</strong> - View detailed statistics</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="instruction-icon">📋</span>
+                            <span><strong>Results</strong> - Check student performance</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="instruction-icon">📘</span>
+                            <span><strong>Reports</strong> - Generate reports</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="instruction-icon">⚙️</span>
+                            <span><strong>Settings</strong> - System configuration</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <!-- Admin Tabs -->
-            <div id="adminTabs">
-                <button class="active" data-tab="tabUsers" data-emoji="👤">Users</button>
-                <button data-tab="tabWords" data-emoji="📝">Word Lists</button>
-                <button data-tab="tabAnalytics" data-emoji="📊">Analytics</button>
-                <button data-tab="tabResults" data-emoji="📋">Results</button>
-                <button data-tab="tabReports" data-emoji="📘">Reports</button>
-                <button data-tab="tabSessions" data-emoji="📅">Sessions</button>
-                <button data-tab="tabBadges" data-emoji="🏅">Badges</button>
-                <button data-tab="tabPasswords" data-emoji="🔐">Passwords</button>
-                <button data-tab="tabTheme" data-emoji="🎨">Themes</button>
+            <!-- Hidden Admin Tabs - Accessed via Menu -->
+            <div style="display: none;">
+                <div id="adminTabs">
+                    <button class="active" data-tab="tabUsers" data-emoji="👤">Users</button>
+                    <button data-tab="tabWords" data-emoji="📝">Word Lists</button>
+                    <button data-tab="tabAnalytics" data-emoji="📊">Analytics</button>
+                    <button data-tab="tabResults" data-emoji="📋">Results</button>
+                    <button data-tab="tabReports" data-emoji="📘">Reports</button>
+                    <button data-tab="tabSessions" data-emoji="📅">Sessions</button>
+                    <button data-tab="tabBadges" data-emoji="🏅">Badges</button>
+                    <button data-tab="tabPasswords" data-emoji="🔐">Passwords</button>
+                    <button data-tab="tabTheme" data-emoji="🎨">Themes</button>
+                </div>
             </div>
             
             <!-- Users Tab -->
             <div id="tabUsers" class="adminTab">
                 <h3>👤 User Management</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem;">
+                <div class="admin-grid">
                     <div class="card">
                         <h4>Add New User</h4>
-                        <form onsubmit="event.preventDefault(); addNewUser();" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <form onsubmit="event.preventDefault(); addNewUser();" class="form-group">
                             <input id="newUsername" placeholder="Username" required type="text"/>
                             <input id="newPassword" placeholder="Password" required type="password"/>
                             <select id="newRole">
                                 <option value="student">🎓 Student</option>
                                 <option value="admin">👨‍💼 Admin</option>
                             </select>
-                            <button type="submit" class="btn-success">➕ Add User</button>
+                            <div class="btn-group">
+                                <button type="submit" class="btn-success">➕ Add User</button>
+                            </div>
                         </form>
                         <p id="userAddMessage" style="margin-top: 1rem;"></p>
                         <small id="hashPreview" style="color: var(--text-secondary);"></small>
@@ -129,7 +327,7 @@
             
             <!-- Word Lists Tab -->
             <div class="adminTab hidden" id="tabWords">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div class="admin-grid">
                     <div class="card">
                         <h4>Select User</h4>
                         <select class="word-user-dropdown" id="wordUserSelect" onchange="loadWordsForSelectedUser()" style="width: 100%;">
@@ -481,7 +679,7 @@
             <div class="card">
                 <div class="card-header">
                     <h2>🎓 Student Dashboard</h2>
-                    <p style="color: var(--text-secondary);">Choose an activity to start practicing</p>
+                    <p style="color: var(--text-secondary);">Your learning journey starts here</p>
                 </div>
                 
                 <!-- Streak & User Stats Section -->
@@ -490,29 +688,66 @@
                     <div id="userStatsContainer" class="card dashboard-card"></div>
                 </div>
                 
-                <!-- Theme Selection for Students -->
-                <div class="card" style="margin-bottom: 1.5rem;">
-                    <h4>🎨 Choose Your Theme</h4>
-                    <select id="studentThemeSelect" onchange="changeTheme(this.value)" style="width: 100%; max-width: 300px;">
-                        <option value="default">✨ Modern (Default)</option>
-                        <option value="playground">🎪 Playground</option>
-                        <option value="chalkboard">🎓 Chalkboard</option>
-                        <option value="galaxy">🌌 Galaxy</option>
-                        <option value="nature">🌿 Nature</option>
-                    </select>
+                <!-- Quick Start Section -->
+                <div class="quick-start-section">
+                    <h3>🚀 Quick Start</h3>
+                    <p>Jump right into your favorite activity:</p>
+                    <div class="quick-actions-grid">
+                        <button onclick="startGame()" class="quick-action-card">
+                            <span class="quick-icon">🎮</span>
+                            <span class="quick-title">Spelling Game</span>
+                        </button>
+                        <button onclick="startTypingPractice()" class="quick-action-card">
+                            <span class="quick-icon">⌨️</span>
+                            <span class="quick-title">Typing Practice</span>
+                        </button>
+                        <button onclick="startBibleTyping()" class="quick-action-card">
+                            <span class="quick-icon">📖</span>
+                            <span class="quick-title">Bible Typing</span>
+                        </button>
+                        <button onclick="startSpacedReview()" class="quick-action-card">
+                            <span class="quick-icon">🔄</span>
+                            <span class="quick-title">Spaced Review</span>
+                        </button>
+                    </div>
                 </div>
                 
-                <div class="student-controls">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; max-width: 900px; margin: 0 auto;">
-                        <button id="startGameBtn" onclick="startGame()" class="btn-success">
-                            🎮 Spelling Game
-                        </button>
-                        <button id="startTypingBtn" onclick="startTypingPractice()" class="btn-warning">
-                            ⌨️ Typing Practice
-                        </button>
-                        <button id="startBibleBtn" onclick="startBibleTyping()" class="btn-primary">
-                            📖 Bible Typing
-                        </button>
+                <!-- Menu Instructions for Students -->
+                <div class="menu-instructions student-instructions">
+                    <h3>📱 Explore More Features</h3>
+                    <p>Use the menu button (<strong>☰</strong>) to access:</p>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <span class="instruction-icon">🎯</span>
+                            <span><strong>Challenges</strong> - Track your goals</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="instruction-icon">🏆</span>
+                            <span><strong>Leaderboards</strong> - Compare progress</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="instruction-icon">🏅</span>
+                            <span><strong>Badges</strong> - View achievements</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="instruction-icon">🎨</span>
+                            <span><strong>Themes</strong> - Customize appearance</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hidden original content for backwards compatibility -->
+                <div style="display: none;">
+                    <!-- Theme Selection for Students -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <h4>🎨 Choose Your Theme</h4>
+                        <select id="studentThemeSelect" onchange="changeTheme(this.value)" style="width: 100%; max-width: 300px;">
+                            <option value="default">✨ Modern (Default)</option>
+                            <option value="playground">🎪 Playground</option>
+                            <option value="chalkboard">🎓 Chalkboard</option>
+                            <option value="galaxy">🌌 Galaxy</option>
+                            <option value="nature">🌿 Nature</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -569,16 +804,28 @@
                 </div>
                 <div class="word-box" id="wordBox"></div>
                 <div class="hidden" id="inputSection" style="text-align: center;">
-                    <input id="userInput" placeholder="Type the word you saw..." type="text" 
-                        style="max-width: 400px; 
-                        color: black !important; 
-                        background-color: white !important;
-                        border: 2px solid #333 !important;
-                        font-size: 18px !important;
-                        padding: 12px !important;
-                        visibility: visible !important;
-                        opacity: 1 !important;
-                        text-shadow: none !important;"/>
+                    <!-- Unified Write Mode Container -->
+                    <div id="unifiedWriteContainer"></div>
+                    
+                    <!-- Legacy input (hidden, for compatibility) -->
+                    <input id="userInput" type="hidden"/>
+                        
+                        <!-- Recognized Text Display -->
+                        <div id="recognizedText" class="recognized-text">Draw to see recognized text here</div>
+                        
+                        <!-- Handwriting Tips -->
+                        <div class="handwriting-hints">
+                            <h4>💡 Tips for better recognition:</h4>
+                            <ul>
+                                <li>Write clearly with consistent letter size</li>
+                                <li>Use print letters rather than cursive</li>
+                                <li>Write one word at a time</li>
+                                <li>Allow space between letters</li>
+                                <li>Press firmly but write smoothly</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
                     <button onclick="submitAnswer()" class="btn-primary">Submit Answer</button>
                     <div id="wordFeedback" style="margin-top: 10px; font-weight: bold; min-height: 24px;"></div>
                 </div>
@@ -628,8 +875,42 @@
                     </button>
                 </div>
                 <div id="typingPrompt">Get ready to type...</div>
+                
+                <!-- Input Mode Toggle for Typing Practice -->
+                <div class="input-mode-toggle">
+                    <button class="active" data-mode="typing" onclick="toggleInputMode('typing')">
+                        ⌨️ Type
+                    </button>
+                    <button data-mode="handwriting" onclick="toggleInputMode('handwriting')">
+                        ✏️ Write
+                    </button>
+                </div>
+                
                 <div style="text-align: center; margin: 2rem 0;">
+                    <!-- Typing Input -->
                     <input id="typingInput" type="text" style="max-width: 500px;"/>
+                    
+                    <!-- Handwriting Input for Typing Practice -->
+                    <div id="typingHandwritingContainer" class="handwriting-container" style="display: none;">
+                        <h4>✏️ Write your response:</h4>
+                        
+                        <!-- Canvas for handwriting in typing practice -->
+                        <canvas id="typingHandwritingCanvas" width="600" height="300" style="width: 100%; max-width: 600px; height: 250px; border: 3px solid var(--primary); border-radius: 12px; background: white; display: block; margin: 1rem auto;"></canvas>
+                        
+                        <!-- Canvas Controls for typing practice -->
+                        <div class="canvas-controls">
+                            <button onclick="clearTypingHandwriting()" class="clear-btn">🗑️ Clear</button>
+                            <button onclick="recognizeTypingHandwriting()" class="recognize-btn">🔍 Recognize</button>
+                            <button onclick="undoTypingHandwritingStroke()" class="undo-btn">↶ Undo</button>
+                        </div>
+                        
+                        <!-- Recognition Status for typing practice -->
+                        <div id="typingRecognitionStatus" class="recognition-status empty"></div>
+                        
+                        <!-- Recognized Text Display for typing practice -->
+                        <div id="typingRecognizedText" class="recognized-text">Draw to see recognized text here</div>
+                    </div>
+                    
                     <button onclick="submitTyping()" class="btn-primary">Submit</button>
                 </div>
                 <p id="typingFeedback" style="text-align: center; font-weight: 600;"></p>

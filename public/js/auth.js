@@ -72,6 +72,14 @@ async function verifyLogin() {
 function logoutUser() {
   localStorage.removeItem('loggedInUser');
 
+  // Clear current user
+  window.currentUser = null;
+
+  // Close tablet menu if open
+  if (window.tabletMenuManager && window.tabletMenuManager.isMenuOpen()) {
+    window.tabletMenuManager.forceCloseMenu();
+  }
+
   // Hide all panels
   document.getElementById('adminPanel')?.classList.add('hidden');
   document.getElementById('studentPanel')?.classList.add('hidden');

@@ -7,13 +7,49 @@ let typingWords = [];
 let isSpacedRepetitionMode = false;
 
 // 📝 Check user's answer and move to next word regardless of correctness
-window.submitAnswer = function() {
-    const input = document.getElementById('userInput').value.trim();
+window.submitAnswer = function(providedAnswer = null) {
+    // Get input from unified write mode or legacy inputs
+    let input = '';
+    
+    // First check if answer was provided directly (from unified write mode)
+    if (providedAnswer) {
+        input = providedAnswer.trim();
+    } else if (window.unifiedWriteMode) {
+        // Get from unified write mode
+        input = window.unifiedWriteMode.getText();
+        if (!input) {
+            alert('Please enter an answer first!');
+            return;
+        }
+    } else {
+        // Legacy fallback
+        const typingInput = document.getElementById('userInput');
+        const recognizedText = document.getElementById('recognizedText');
+        const handwritingContainer = document.getElementById('handwritingContainer');
+        
+        // Check which input mode is active
+        if (handwritingContainer && handwritingContainer.style.display !== 'none') {
+            // Handwriting mode - get recognized text
+            input = recognizedText ? recognizedText.textContent.trim() : '';
+            if (input === 'Draw to see recognized text here' || input === '') {
+                alert('Please write something or switch to typing mode');
+                return;
+            }
+        } else {
+            // Typing mode - get typed input
+            input = typingInput.value.trim();
+            if (input === '') {
+                alert('Please type something or switch to handwriting mode');
+                return;
+            }
+        }
+    }
     
     // Record the attempt
     results.push({
         word: currentWord,
-        attempt: input
+        attempt: input,
+        inputMode: handwritingContainer && handwritingContainer.style.display !== 'none' ? 'handwriting' : 'typing'
     });
 
     // Show feedback and move to next word regardless of correctness
@@ -21,7 +57,7 @@ window.submitAnswer = function() {
         // Correct answer - add visual feedback
         const inputEl = document.getElementById('userInput');
         inputEl.style.borderColor = 'var(--success)';
-        inputEl.style.backgroundColor = '#f0fdf4';
+        inputEl.style.backgroundColor = 'var(--bg-secondary)';
         
         // Add feedback text if element exists
         const feedbackEl = document.getElementById('wordFeedback');
@@ -34,7 +70,7 @@ window.submitAnswer = function() {
         // Incorrect answer - show correct spelling but continue
         const inputEl = document.getElementById('userInput');
         inputEl.style.borderColor = 'var(--error)';
-        inputEl.style.backgroundColor = '#fef2f2';
+        inputEl.style.backgroundColor = 'var(--bg-secondary)';
         
         // Add feedback text if element exists
         const feedbackEl = document.getElementById('wordFeedback');
@@ -59,6 +95,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameInput) {
         gameInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+                submitAnswer();
+            }
+        });
+    }
+    
+    // Add keyboard support for unified write mode
+    if (window.unifiedWriteMode) {
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && document.activeElement === window.unifiedWriteMode.canvas) {
                 submitAnswer();
             }
         });
@@ -205,23 +250,64 @@ function showWord() {
         inputSection.classList.remove('hidden');
         inputSection.style.display = 'block';
         
-        // Reset and focus the input field with enhanced visibility
-        const userInput = document.getElementById('userInput');
-        userInput.value = '';
-        
-        // Use the class-based approach instead of inline styles
-        userInput.classList.add('visible-input');
-        
-        // Focus with a slight delay to ensure UI is ready
-        setTimeout(() => {
-            userInput.focus();
-            // Try to insert a cursor by setting a selection range
-            try {
-                userInput.setSelectionRange(0, 0);
-            } catch (e) {
-                console.log('Could not set selection range:', e);
+        // Reset input (unified write mode or legacy)
+        if (window.unifiedWriteMode) {
+            window.unifiedWriteMode.clearText();
+        } else {
+            // Legacy input reset
+            const userInput = document.getElementById('userInput');
+            if (userInput) {
+                userInput.value = '';
+                userInput.classList.add('visible-input');
             }
-            console.log('🔍 Input focused, ready for typing');
+            
+            // Reset handwriting input
+            if (window.clearHandwriting) {
+                window.clearHandwriting();
+            }
+            
+            // Reset recognition status and text
+            const recognitionStatus = document.getElementById('recognitionStatus');
+            const recognizedText = document.getElementById('recognizedText');
+            if (recognitionStatus) {
+                recognitionStatus.className = 'recognition-status empty';
+                recognitionStatus.textContent = '';
+            }
+            if (recognizedText) {
+                recognizedText.textContent = 'Draw to see recognized text here';
+                recognizedText.className = 'recognized-text';
+            }
+        }
+        
+        // Focus appropriate input
+        setTimeout(() => {
+            if (window.unifiedWriteMode) {
+                // Focus unified write mode
+                window.unifiedWriteMode.focusCanvas();
+                console.log('🎯 Unified write mode focused, ready for input');
+            } else {
+                // Legacy focus logic
+                const userInput = document.getElementById('userInput');
+                const handwritingContainer = document.getElementById('handwritingContainer');
+                
+                if (handwritingContainer && handwritingContainer.style.display !== 'none') {
+                    // Handwriting mode - focus canvas
+                    const canvas = document.getElementById('handwritingCanvas');
+                    if (canvas) {
+                        canvas.focus();
+                        console.log('🎨 Canvas focused, ready for handwriting');
+                    }
+                } else if (userInput) {
+                    // Typing mode - focus input
+                    userInput.focus();
+                    try {
+                        userInput.setSelectionRange(0, 0);
+                    } catch (e) {
+                        console.log('Could not set selection range:', e);
+                    }
+                    console.log('🔍 Input focused, ready for typing');
+                }
+            }
         }, 50);
     }, 2000);
 }
