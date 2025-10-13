@@ -3,9 +3,9 @@
 /* Main grid layout for analytics dashboard */
 .analytics-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem;
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(250px, 100vw), 1fr));
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  margin-top: clamp(0.75rem, 2vw, 1.5rem);
   width: 100%;
 }
 

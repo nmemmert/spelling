@@ -24,11 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function fixInputVisibility() {
   const userInput = document.getElementById('userInput');
   if (!userInput) {
-    console.log('❌ User input element not found');
     return;
   }
-  
-  console.log('🔧 Fixing input visibility');
   
   // Create a style element for stronger CSS
   const styleEl = document.createElement('style');

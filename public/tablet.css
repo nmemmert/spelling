@@ -20,8 +20,8 @@
     }
     
     .container {
-        max-width: 900px;
-        padding: 0 var(--tablet-padding);
+        max-width: 98vw;
+        padding: 0 1rem;
     }
     
     /* Enhanced typography for tablet viewing */

@@ -1,12 +1,28 @@
 # 📝 Modern Spelling & Typing Practice App
 
-A comprehensive educational application featuring spelling practice, typing exercises, and Bible verse typing with mode## ⚙️ Features Overview
+A comprehensive educational application featuring spelling practice, typing exercises, and Bible verse typing with modern UI design. Built with **Node.js**, **Express**, and optimized for Docker deployment.
 
-### 🎓 St### 👨‍💼 Admin Panel Featuresde---
+## ⚙️ Features Overview
 
-## 🔧 Configuration
+### 🎓 Student Features
+- Interactive spelling practice with multiple word lists
+- Typing exercises for skill development
+- Bible verse typing practice
+- Gamification with points, badges, and challenges
+- Spaced repetition learning system
+- Progress tracking and analytics
+- Multiple input methods (keyboard, handwriting on tablets)
 
-## 🛡️ Security Features## Environment VariablestivitiesUI design. Built with **Node.js**, **Express**, and optimized for Docker deployment.
+### 👨‍💼 Admin Panel Features
+- User management and administration
+- Word list creation and editing
+- Progress monitoring and reporting
+- Analytics dashboard with detailed insights
+- System configuration options
+
+## 🔧 Configuration & Security
+
+The application includes comprehensive security features and environment variable configuration options for deployment flexibility.
 
 ---
 

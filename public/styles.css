@@ -34,7 +34,8 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
-  padding: 2rem 1rem;
+  padding: 0;
+  margin: 0;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: rgba(0,0,0,0);
   touch-action: manipulation;
@@ -42,17 +43,50 @@ body {
 
 /* Container and layout */
 .container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 100vw;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: clamp(0.5rem, 1vw, 1rem);
+}
+
+/* Responsive layout utilities */
+@media (max-width: 768px) {
+  .overview-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  
+  .stat-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem !important;
+    padding: 1.5rem !important;
+    aspect-ratio: auto !important;
+    min-height: 120px !important;
+  }
+  
+  .container {
+    padding: 1rem !important;
+  }
+  
+  .card {
+    margin: 1rem 0 !important;
+    padding: 1.5rem !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }
 
 /* Typography */
 h1 {
-  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-size: clamp(2rem, 6vw, 4rem);
   font-weight: 700;
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: clamp(2rem, 4vw, 3rem);
   background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -60,33 +94,33 @@ h1 {
 }
 
 h2 {
-  font-size: 1.875rem;
+  font-size: clamp(1.25rem, 4vw, 2rem);
   font-weight: 600;
-  margin-bottom: 1.5rem;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
   color: var(--text-primary);
 }
 
 h3 {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 3vw, 1.5rem);
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
   color: var(--text-primary);
 }
 
 /* Form elements */
 input, textarea, select {
   width: 100%;
-  max-width: 320px;
-  padding: 1rem 1.25rem;
-  margin: 0.75rem;
+  max-width: min(400px, 90vw);
+  padding: clamp(0.75rem, 2vw, 1.25rem) clamp(0.875rem, 2.5vw, 1.5rem);
+  margin: clamp(0.5rem, 1.5vw, 1rem);
   border: 2px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 1.125rem;
+  border-radius: clamp(6px, 1.5vw, 12px);
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
   font-family: inherit;
   background: var(--bg-primary);
   color: var(--text-primary);
   transition: var(--transition);
-  min-height: 48px; /* Tablet-friendly touch target */
+  min-height: clamp(44px, 8vw, 60px); /* Responsive touch target */
   touch-action: manipulation; /* Prevent zoom on focus */
 }
 
@@ -126,14 +160,14 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 1rem 2rem;
-  margin: 0.5rem;
+  gap: clamp(0.25rem, 1vw, 0.75rem);
+  padding: clamp(0.75rem, 2vw, 1.25rem) clamp(1rem, 3vw, 2.5rem);
+  margin: clamp(0.75rem, 2vw, 1.25rem);
   background: var(--primary);
   color: #ffffff !important;
   border: none;
-  border-radius: 12px;
-  font-size: 1.125rem;
+  border-radius: clamp(8px, 2vw, 16px);
+  font-size: clamp(0.875rem, 2.5vw, 1.25rem);
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
@@ -141,8 +175,8 @@ button {
   box-shadow: var(--shadow);
   text-decoration: none;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  min-height: 50px;
-  min-width: 120px;
+  min-height: clamp(44px, 8vw, 60px);
+  min-width: clamp(100px, 20vw, 150px);
   touch-action: manipulation;
   user-select: none;
 }
@@ -386,11 +420,23 @@ button:disabled {
   box-shadow: var(--shadow-lg);
 }
 
+/* Admin panel - Full width */
+#adminPanel {
+  width: 100%;
+  max-width: none;
+}
+
+#adminPanel .card {
+  width: 100%;
+  max-width: none;
+}
+
 #loginPanel form {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 2rem;
+  padding: 2rem;
 }
 
 /* Banner */
@@ -415,8 +461,8 @@ button:disabled {
 /* Navigation */
 #nav {
   text-align: center;
-  margin-bottom: 2rem;
-  padding: 1rem;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  padding: clamp(1rem, 2vw, 1.5rem);
   background: var(--bg-primary);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -426,9 +472,9 @@ button:disabled {
 #adminTabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  padding: 0.75rem;
+  gap: clamp(0.75rem, 2vw, 1rem);
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  padding: clamp(1rem, 2vw, 1.5rem);
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -460,7 +506,19 @@ button:disabled {
 .adminTab {
   background: var(--bg-primary);
   border-radius: var(--radius);
-  padding: 2rem;
+  padding: 2.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+/* Cards - Full width layout */
+.card {
+  width: 100%;
+  max-width: none;
+  margin: 2.5rem 0;
+  padding: 3rem;
+  background: var(--bg-primary);
+  border-radius: 12px;
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
 }
@@ -472,6 +530,17 @@ button:disabled {
 
 .adminTab.hidden {
   display: none !important;
+}
+
+/* Global section spacing for better breathing room */
+div[id*="Section"], 
+div[id*="Panel"], 
+div[id*="Tab"],
+#gameArea,
+#spellingGame,
+#results {
+  margin: 2.5rem 0;
+  padding: 1.5rem;
 }
 
 /* Game elements */

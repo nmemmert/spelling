@@ -55,6 +55,7 @@
     <script src="js/unified-write.js"></script>
     <script src="js/tablet-menu.js"></script>
     <script src="js/tablet-utils.js"></script>
+    <script src="js/draggable-cards.js"></script>
     <script src="js/main.js"></script>
     <!-- Initialization script - loads last -->
     <script src="js/chart-safety.js"></script>
@@ -203,8 +204,15 @@
             <!-- Admin Dashboard Overview -->
             <div class="card">
                 <div class="card-header">
-                    <h2>👨‍💼 Admin Dashboard</h2>
-                    <p style="color: var(--text-secondary);">System overview and quick access to admin functions</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h2>👨‍💼 Admin Dashboard</h2>
+                            <p style="color: var(--text-secondary); margin: 0;">System overview and quick access to admin functions</p>
+                        </div>
+                        <button id="refreshDashboardBtn" class="btn btn-secondary" onclick="loadAdminDashboardStats()" title="Refresh statistics">
+                            🔄 Refresh
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Quick Stats Overview -->
@@ -238,6 +246,11 @@
                                 <div class="stat-label">Badges Awarded</div>
                             </div>
                         </div>
+                    </div>
+                    
+                    <!-- Last Updated Timestamp -->
+                    <div style="text-align: center; margin-top: 1rem; opacity: 0.7;">
+                        <small id="lastUpdated">Last updated: Loading...</small>
                     </div>
                 </div>
                 
@@ -361,7 +374,10 @@
                         <h4>Current Word List</h4>
                         <ul id="wordListDisplay" style="max-height: 200px; overflow-y: auto;"></ul>
                     </div>
-                    
+                </div>
+                
+                <!-- View by Student - Separate section -->
+                <div class="admin-grid" style="margin-top: 2rem;">
                     <div class="card">
                         <h4>View by Student</h4>
                         <select class="word-user-dropdown" id="viewUserSelect" onchange="displayWordListForSelectedUser()" style="width: 100%;">

@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Main function to refresh analytics
 async function analyticsRefresh() {
   // This is the main implementation
-  console.log('📊 Refreshing analytics data...');
+
   try {
     // Update UI to show loading state
     updateLoadingState(true);
@@ -51,7 +51,7 @@ async function analyticsRefresh() {
     // Update UI to show data is loaded
     updateLoadingState(false);
     
-    console.log('📊 Analytics data loaded successfully');
+
   } catch (error) {
     console.error('Error refreshing analytics:', error);
     updateLoadingState(false);
@@ -92,19 +92,15 @@ function updateLoadingState(isLoading) {
 
 // Populate user dropdown with available users
 async function populateUserDropdown() {
-  console.log('🔄 Populating analytics user dropdown...');
   const userSelect = document.getElementById('analyticsUserSelect');
   if (!userSelect) {
-    console.error('⚠️ Analytics user select dropdown not found in the DOM!');
     return;
   }
   
   // Check if we can use the shared admin users data
   if (typeof window.adminUsers !== 'undefined' && Array.isArray(window.adminUsers) && window.adminUsers.length > 0) {
-    console.log('✅ Using shared admin users data:', window.adminUsers.map(u => u.username));
     
     // Clear existing options except the first one (All Users)
-    console.log('Clearing existing options...');
     while (userSelect.options.length > 1) {
       userSelect.remove(1);
     }
@@ -117,20 +113,15 @@ async function populateUserDropdown() {
       userSelect.appendChild(option);
     });
     
-    console.log(`✅ Added ${window.adminUsers.length} users to analytics dropdown`);
     return;
   }
   
   // If we can't use shared data, fetch from server
   try {
     // Clear existing options except the first one (All Users)
-    console.log('Clearing existing options...');
     while (userSelect.options.length > 1) {
       userSelect.remove(1);
     }
-    
-    // Always fetch fresh users from server
-    console.log("📥 Fetching users directly from server...");
     
     // Add a loading option
     const loadingOption = document.createElement('option');
@@ -140,7 +131,6 @@ async function populateUserDropdown() {
     userSelect.appendChild(loadingOption);
     
     const response = await fetch('/getUsers');
-    console.log("GET /getUsers response:", response.status, response.statusText);
     
     // Remove loading option
     if (userSelect.contains(loadingOption)) {
@@ -152,20 +142,15 @@ async function populateUserDropdown() {
     }
     
     const responseText = await response.text();
-    console.log("Raw server response:", responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
     
     let users = [];
     try {
       const allUsers = JSON.parse(responseText);
-      console.log("Parsed users data:", allUsers);
       
       if (Array.isArray(allUsers)) {
         users = allUsers.map(user => user.username);
-        console.log(`✅ Loaded ${users.length} users from server:`, users);
         
         if (users.length === 0) {
-          console.warn("⚠️ Server returned empty users array!");
-          
           // Add a warning option
           const warningOption = document.createElement('option');
           warningOption.value = "";
@@ -174,32 +159,27 @@ async function populateUserDropdown() {
           userSelect.appendChild(warningOption);
         }
       } else {
-        console.error("❌ Server returned non-array data:", allUsers);
         throw new Error("Invalid user data format");
       }
     } catch (jsonError) {
-      console.error("❌ Error parsing JSON response:", jsonError);
       throw jsonError;
     }
     
     // Add users to dropdown
-    console.log(`Adding ${users.length} users to dropdown`);
     users.forEach(username => {
       const option = document.createElement('option');
       option.value = username;
       option.textContent = username;
       userSelect.appendChild(option);
     });
-    console.log('✅ User dropdown populated successfully');
   } catch (error) {
-    console.error("❌ Error populating user dropdown:", error);
+    console.error("Error populating user dropdown:", error);
   }
 }
 
 // Render the entire analytics dashboard
 function renderAnalyticsDashboard() {
   if (!analyticsData) {
-    console.warn('No analytics data available to render');
     return;
   }
   
@@ -443,7 +423,6 @@ function renderProgressChart(data) {
     
     // Skip invalid coordinates
     if (isNaN(x) || isNaN(y)) {
-      console.warn('Invalid coordinate for progress chart:', { x, y, point, i });
       return '';
     }
     
@@ -473,10 +452,8 @@ function renderProgressChart(data) {
         chartGroup.appendChild(areaPath);
       }
     } catch (error) {
-      console.error('Error creating area path:', error);
+      // Silently handle area path creation errors
     }
-  } else {
-    console.warn('Unable to create valid path data for progress chart');
   }
   
   // Add data points
@@ -763,7 +740,7 @@ function renderProblemWordsList(data) {
     
     const word = document.createElement('div');
     word.className = 'problem-word';
-    word.textContent = wordItem.word || wordItem.word;
+    word.textContent = wordItem.word;
     
     const count = document.createElement('div');
     count.className = 'problem-count';

@@ -885,20 +885,110 @@ function showAdminDashboard() {
 }
 
 function loadAdminDashboardStats() {
-    // Update stats with real data
+    // Update stats with real data from server
     try {
-        // Total users
-        if (window.users && Array.isArray(window.users)) {
-            document.getElementById('totalUsers').textContent = window.users.length;
+        // Fetch and display total users
+        fetchDashboardStat('/getUsers', 'totalUsers', (data) => {
+            return Array.isArray(data) ? data.length : Object.keys(data).length;
+        });
+        
+        // Fetch and display total word lists
+        fetchDashboardStat('/getWordlistsRaw', 'totalWordLists', (data) => {
+            return Object.keys(data).length;
+        });
+        
+        // Fetch and display total badges awarded
+        fetchDashboardStat('/getBadges', 'totalBadges', (data) => {
+            let totalAwarded = 0;
+            if (data && typeof data === 'object') {
+                Object.values(data).forEach(userBadges => {
+                    if (Array.isArray(userBadges)) {
+                        totalAwarded += userBadges.length;
+                    }
+                });
+            }
+            return totalAwarded;
+        });
+        
+        // Calculate active sessions (users who have results in last 24 hours)
+        fetchDashboardStat('/getResults', 'totalSessions', (data) => {
+            const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+            let activeSessions = 0;
+            if (data && Array.isArray(data)) {
+                const recentUsers = new Set();
+                data.forEach(result => {
+                    if (result.timestamp && new Date(result.timestamp).getTime() > oneDayAgo) {
+                        recentUsers.add(result.username);
+                    }
+                });
+                activeSessions = recentUsers.size;
+            }
+            return activeSessions;
+        });
+        
+        // Update last updated timestamp
+        updateLastUpdatedTime();
+        
+        // Set up auto-refresh every 30 seconds
+        if (!window.dashboardStatsInterval) {
+            window.dashboardStatsInterval = setInterval(() => {
+                loadAdminDashboardStats();
+            }, 30000);
         }
         
-        // You can add more stats here as needed
-        document.getElementById('totalWordLists').textContent = '5+';
-        document.getElementById('totalSessions').textContent = '0';
-        document.getElementById('totalBadges').textContent = '8';
     } catch (error) {
         console.warn('Could not load dashboard stats:', error);
     }
+}
+
+// Update the last updated timestamp
+function updateLastUpdatedTime() {
+    const element = document.getElementById('lastUpdated');
+    if (element) {
+        const now = new Date();
+        element.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+    }
+}
+
+// Helper function to fetch and update dashboard statistics
+function fetchDashboardStat(endpoint, elementId, processor) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    // Show loading state
+    const originalText = element.textContent;
+    element.style.opacity = '0.6';
+    element.style.transform = 'scale(0.95)';
+    
+    fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            const value = processor(data);
+            setTimeout(() => {
+                element.textContent = value;
+                element.style.opacity = '1';
+                element.style.transform = 'scale(1.05)';
+                
+                // Add success pulse animation
+                setTimeout(() => {
+                    element.style.transform = 'scale(1)';
+                    element.style.color = 'var(--success)';
+                    setTimeout(() => {
+                        element.style.color = 'var(--text-primary)';
+                    }, 500);
+                }, 150);
+            }, 200);
+        })
+        .catch(error => {
+            console.warn(`Failed to fetch ${endpoint}:`, error);
+            element.textContent = originalText === '-' ? '!' : originalText;
+            element.style.opacity = '0.7';
+            element.style.transform = 'scale(1)';
+            element.style.color = 'var(--error)';
+            setTimeout(() => {
+                element.style.color = 'var(--text-primary)';
+            }, 1000);
+        });
 }
 
 // Export for use in other scripts
