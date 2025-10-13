@@ -26,7 +26,7 @@ async function initializeSpacedRepetition(username) {
   try {
     await fetchSpacedRepetitionData(username);
     updateSpacedRepetitionUI();
-    console.log('🔄 Spaced repetition system initialized');
+
   } catch (error) {
     console.error('Error initializing spaced repetition:', error);
   }
@@ -127,7 +127,7 @@ function updateSpacedRepetitionUI() {
   if (reviewButton) {
     if (todayCount > 0) {
       reviewButton.classList.remove('disabled');
-      reviewButton.innerHTML = `🔄 Start Review (${todayCount})`;
+      reviewButton.innerHTML = `Start Review (${todayCount})`;
     } else {
       reviewButton.classList.add('disabled');
       reviewButton.innerHTML = '✓ All Caught Up';
@@ -223,7 +223,7 @@ async function startSpacedReview() {
   document.getElementById('gameSection').classList.remove('hidden');
   
   // Update UI to indicate this is a spaced repetition session
-  document.querySelector('#gameSection h3').textContent = '🔄 Spaced Repetition Review';
+  document.querySelector('#gameSection h3').textContent = 'Spaced Repetition Review';
   
   // Prepare words for the session (take up to 10 words from the queue)
   currentWords = reviewQueue.slice(0, 10).map(item => item.word);

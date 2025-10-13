@@ -523,6 +523,70 @@ button:disabled {
   border: 1px solid var(--border);
 }
 
+/* Card header styles */
+.card-header-small {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-header-small h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+  font-style: italic;
+}
+
+/* Daily Challenge Preview */
+.daily-challenge-preview {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  color: white;
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.challenge-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.challenge-icon {
+  font-size: 1.25rem;
+}
+
+.challenge-text {
+  font-size: 0.95rem;
+}
+
+.challenge-progress-bar {
+  background: rgba(255, 255, 255, 0.2);
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: rgba(255, 255, 255, 0.9);
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
 /* Layout utilities */
 .hidden {
   display: none !important;

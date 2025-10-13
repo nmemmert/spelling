@@ -35,11 +35,25 @@ RUN mkdir -p /app/data && chown -R spelling:spelling /app/data
 # Switch to non-root user
 USER spelling
 
-# Set version label
-LABEL version="1.1.0" \
-      description="Spelling Practice Application" \
-      maintainer="nmemmert" \
-      org.opencontainers.image.source="https://github.com/nmemmert/spelling"
+# Create logs directory
+RUN mkdir -p /app/logs && chown -R spelling:spelling /app/logs
+
+# Set version and metadata labels
+LABEL version="3.0.0" \
+      description="Enhanced Spelling Practice Application - Production Ready" \
+      maintainer="NateEmmert" \
+      org.opencontainers.image.source="https://git.necloud.us/nmemmert/Spelling.git" \
+      org.opencontainers.image.title="Spelling Practice" \
+      org.opencontainers.image.description="Multi-user spelling practice with gamification and analytics"
+
+# Set environment variables
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOST=0.0.0.0
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 # Expose application port
 EXPOSE 3000

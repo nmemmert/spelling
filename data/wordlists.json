@@ -32,16 +32,24 @@
     ],
     "activeWeek": "2025-08-10"
   },
-  "testuser": [
-    "hello",
-    "world",
-    "test",
-    "sample",
-    "basic",
-    "learn",
-    "spell",
-    "word",
-    "study",
-    "practice"
-  ]
+  "testuser": {
+    "weeks": [
+      {
+        "date": "2025-10-13",
+        "words": [
+          "test",
+          "week",
+          "one"
+        ]
+      },
+      {
+        "date": "2025-10-20",
+        "words": [
+          "test",
+          "week",
+          "two"
+        ]
+      }
+    ]
+  }
 }

@@ -3,12 +3,12 @@ function renderSessionWords(session) {
   // Handle different data formats
   if (session.answers && Array.isArray(session.answers)) {
     return session.answers.map(a => 
-      `<li>${a.word} - ${a.correct ? '✅ Correct' : '❌ Incorrect'}</li>`
+      `<li>${a.word} - ${a.correct ? 'Correct' : 'Incorrect'}</li>`
     ).join('');
   } 
   else if (session.words && Array.isArray(session.words)) {
     return session.words.map(w => 
-      `<li>${w.word} - ${w.correct ? '✅ Correct' : '❌ Incorrect'}</li>`
+      `<li>${w.word} - ${w.correct ? 'Correct' : 'Incorrect'}</li>`
     ).join('');
   }
   return '<li>No word details available</li>';

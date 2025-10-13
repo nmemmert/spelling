@@ -6,6 +6,8 @@
  * - Points system
  */
 
+console.log('🎮 Gamification.js is loading...');
+
 // Global variables for gamification
 let userProgress = null;
 let challenges = null;
@@ -23,13 +25,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Main initialization function for gamification
 async function initGamification(username) {
+  console.log('🎮 initGamification() called for username:', username);
   try {
+    console.log('🎮 Fetching gamification data...');
     // Fetch all required data
     await Promise.all([
       fetchUserProgress(username),
       fetchChallenges(),
       fetchLeaderboards()
     ]);
+    
+    console.log('🎮 All data fetched, rendering components...');
     
     // Update streak (marks user as active today)
     await updateUserStreak(username);
@@ -64,26 +70,58 @@ async function fetchUserProgress(username) {
 // Fetch challenges data
 async function fetchChallenges() {
   try {
-    const response = await fetch('/getChallenges');
+    const currentUser = getCurrentUser();
+    if (!currentUser?.username) {
+      console.log('No current user found for challenges');
+      // Set default challenge structure
+      challenges = {
+        daily: { current: null, history: [] },
+        weekly: { current: null, history: [] },
+        achievements: []
+      };
+      return challenges;
+    }
+    
+    const response = await fetch(`/getChallenges?username=${encodeURIComponent(currentUser.username)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch challenges: ${response.status}`);
     }
     challenges = await response.json();
+    console.log('Fetched challenges for user:', currentUser.username, challenges);
+    
+    // If no challenges returned, create default structure
+    if (!challenges || (!challenges.daily && !challenges.weekly)) {
+      challenges = {
+        daily: { current: null, history: [] },
+        weekly: { current: null, history: [] },
+        achievements: []
+      };
+    }
+    
     return challenges;
   } catch (error) {
     console.error('Error fetching challenges:', error);
-    return null;
+    // Set default challenge structure on error
+    challenges = {
+      daily: { current: null, history: [] },
+      weekly: { current: null, history: [] },
+      achievements: []
+    };
+    return challenges;
   }
 }
 
 // Fetch leaderboards data
 async function fetchLeaderboards() {
+  console.log('🏆 fetchLeaderboards() called');
   try {
     const response = await fetch('/getLeaderboards');
+    console.log('🏆 Response status:', response.status);
     if (!response.ok) {
       throw new Error(`Failed to fetch leaderboards: ${response.status}`);
     }
     leaderboards = await response.json();
+    console.log('🏆 Leaderboards data received:', leaderboards);
     return leaderboards;
   } catch (error) {
     console.error('Error fetching leaderboards:', error);
@@ -164,15 +202,72 @@ async function completeChallenge(challengeId, challengeType) {
   }
 }
 
+// Update challenge progress (called when students complete activities)
+async function updateChallengeProgress(challengeType, progress) {
+  try {
+    const currentUser = getCurrentUser();
+    if (!currentUser?.username) {
+      return null;
+    }
+    
+    const response = await fetch('/updateChallengeProgress', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: currentUser.username,
+        challengeType,
+        progress
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to update challenge progress: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    // Always refresh challenges to update progress
+    await fetchChallenges();
+    renderChallenges();
+    
+    if (result.completedChallenges > 0) {
+      showToast('Challenge completed! 🎉', 'success');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error updating challenge progress:', error);
+    return null;
+  }
+}
+
+// Export functions for use in other modules
+window.updateChallengeProgress = updateChallengeProgress;
+window.updateDailyChallengePreview = updateDailyChallengePreview;
+window.initializeStudentContainers = initializeStudentContainers;
+window.renderChallenges = renderChallenges;
+
 // Render streak indicator in student panel
 function renderStreakIndicator() {
   const streakContainer = document.getElementById('streakContainer');
   if (!streakContainer) return;
   
-  // Clear previous content
+  // Clear previous content but keep the header
+  const header = streakContainer.querySelector('.card-header-small');
   streakContainer.innerHTML = '';
+  if (header) {
+    streakContainer.appendChild(header);
+  }
   
   const currentStreak = userProgress?.streaks?.current || 0;
+  
+  // Remove loading text from header
+  const loadingText = streakContainer.querySelector('.loading-text');
+  if (loadingText) {
+    loadingText.remove();
+  }
   
   // Create streak element
   const streakEl = document.createElement('div');
@@ -203,8 +298,18 @@ function renderUserStats() {
   const statsContainer = document.getElementById('userStatsContainer');
   if (!statsContainer) return;
   
-  // Clear previous content
+  // Clear previous content but keep the header
+  const header = statsContainer.querySelector('.card-header-small');
   statsContainer.innerHTML = '';
+  if (header) {
+    statsContainer.appendChild(header);
+  }
+  
+  // Remove loading text from header
+  const loadingText = statsContainer.querySelector('.loading-text');
+  if (loadingText) {
+    loadingText.remove();
+  }
   
   // Create stats container
   const statsEl = document.createElement('div');
@@ -235,23 +340,77 @@ function renderUserStats() {
 
 // Initialize containers with default content
 function initializeStudentContainers() {
+  console.log('🏗️ initializeStudentContainers() called');
+  
   // Initialize streak container immediately
   const streakContainer = document.getElementById('streakContainer');
   if (streakContainer && !streakContainer.innerHTML.trim()) {
+    console.log('📊 Initializing streak container');
     renderStreakIndicator();
   }
   
   // Initialize stats container immediately
   const statsContainer = document.getElementById('userStatsContainer');
   if (statsContainer && !statsContainer.innerHTML.trim()) {
+    console.log('📈 Initializing stats container');
     renderUserStats();
   }
+  
+  // Initialize challenge preview immediately
+  console.log('🎯 Initializing challenge preview...');
+  updateDailyChallengePreview();
+  
+  // Initialize challenges section
+  console.log('🎲 Initializing challenges section...');
+  renderChallenges();
 }
+
+// Also initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM loaded, initializing challenge preview...');
+  setTimeout(updateDailyChallengePreview, 100); // Small delay to ensure elements are ready
+});
+
+// Initialize on window load as well
+window.addEventListener('load', function() {
+  console.log('Window loaded, initializing challenge preview...');
+  updateDailyChallengePreview();
+});
 
 // Render challenges in student panel
 function renderChallenges() {
+  console.log('🎯 renderChallenges() called');
   const challengesContainer = document.getElementById('challengesContainer');
-  if (!challengesContainer || !challenges || !userProgress) return;
+  if (!challengesContainer) {
+    console.log('❌ challengesContainer not found!');
+    return;
+  }
+  console.log('✅ Found challengesContainer:', challengesContainer);
+  
+  // Initialize userProgress if it's null
+  if (!userProgress) {
+    userProgress = {
+      stats: {
+        points: 0,
+        accuracy: 0,
+        totalSessions: 0,
+        totalWords: 0,
+        correctWords: 0
+      },
+      streaks: {
+        current: 0,
+        longest: 0
+      },
+      challengesCompleted: {
+        daily: [],
+        weekly: [],
+        achievements: []
+      }
+    };
+  }
+  
+  // Update daily challenge preview
+  updateDailyChallengePreview();
   
   // Clear previous content
   challengesContainer.innerHTML = '';
@@ -260,34 +419,116 @@ function renderChallenges() {
   const challengesEl = document.createElement('div');
   challengesEl.className = 'challenges-container';
   
+  let hasAnyChallenge = false;
+  
   // Daily challenge
-  if (challenges.daily && challenges.daily.current) {
+  if (challenges && challenges.daily && challenges.daily.current) {
     const dailyChallenge = challenges.daily.current;
-    const isCompleted = userProgress.challengesCompleted.daily.includes(dailyChallenge.id);
+    const isCompleted = userProgress?.challengesCompleted?.daily?.includes(dailyChallenge.id) || false;
     
     challengesEl.appendChild(createChallengeCard(dailyChallenge, 'daily', isCompleted));
+    hasAnyChallenge = true;
   }
   
   // Weekly challenge
-  if (challenges.weekly && challenges.weekly.current) {
+  if (challenges && challenges.weekly && challenges.weekly.current) {
     const weeklyChallenge = challenges.weekly.current;
-    const isCompleted = userProgress.challengesCompleted.weekly.includes(weeklyChallenge.id);
+    const isCompleted = userProgress?.challengesCompleted?.weekly?.includes(weeklyChallenge.id) || false;
     
     challengesEl.appendChild(createChallengeCard(weeklyChallenge, 'weekly', isCompleted));
+    hasAnyChallenge = true;
   }
   
   // Achievement challenges (show only 3 unearned ones)
-  if (challenges.achievements && challenges.achievements.length > 0) {
+  if (challenges && challenges.achievements && challenges.achievements.length > 0) {
     const uncompletedAchievements = challenges.achievements
-      .filter(achievement => !userProgress.challengesCompleted.achievements.includes(achievement.id))
+      .filter(achievement => !userProgress?.challengesCompleted?.achievements?.includes(achievement.id))
       .slice(0, 3);
     
     uncompletedAchievements.forEach(achievement => {
       challengesEl.appendChild(createChallengeCard(achievement, 'achievement', false));
+      hasAnyChallenge = true;
     });
   }
   
+  // If no challenges available, show default challenge
+  if (!hasAnyChallenge) {
+    console.log('📝 No challenges found, creating default challenge card');
+    const defaultChallenge = {
+      id: 'default-daily',
+      title: 'Daily Practice',
+      description: 'Complete 5 spelling words today',
+      type: 'words',
+      target: 5,
+      date: new Date().toISOString(),
+      reward: {
+        points: 50,
+        badge: null
+      }
+    };
+    
+    console.log('🎯 Creating challenge card with:', defaultChallenge);
+    const challengeCard = createChallengeCard(defaultChallenge, 'daily', false);
+    console.log('📋 Challenge card created:', challengeCard);
+    challengesEl.appendChild(challengeCard);
+  }
+  
+  console.log('📦 Appending challenges container with', challengesEl.children.length, 'challenge(s)');
   challengesContainer.appendChild(challengesEl);
+  console.log('✅ Challenges container appended to DOM');
+}
+
+// Update the daily challenge preview in Quick Start section
+function updateDailyChallengePreview() {
+  console.log('🎯 updateDailyChallengePreview called');
+  const preview = document.getElementById('dailyChallengePreview');
+  if (!preview) {
+    console.log('❌ No dailyChallengePreview element found');
+    return;
+  }
+  
+  const challengeText = preview.querySelector('.challenge-text');
+  const progressFill = preview.querySelector('.progress-fill');
+  
+  if (!challengeText) {
+    console.log('❌ No challenge-text element found');
+    return;
+  }
+  
+  if (!progressFill) {
+    console.log('❌ No progress-fill element found');
+    return;
+  }
+  
+  console.log('✅ Found all elements, challenges object:', challenges);
+  
+  if (challenges && challenges.daily && challenges.daily.current) {
+    const challenge = challenges.daily.current;
+    const progress = challenge.current || 0;
+    const target = challenge.target || 1;
+    const percentage = Math.min((progress / target) * 100, 100);
+    
+    console.log('📊 Challenge data:', challenge, 'Progress:', progress, 'Target:', target);
+    
+    challengeText.textContent = `${challenge.name}: ${progress}/${target} ${challenge.description.includes('words') ? 'words' : 'points'}`;
+    progressFill.style.width = `${percentage}%`;
+    
+    // Change color when completed
+    if (percentage >= 100) {
+      preview.style.background = 'linear-gradient(135deg, var(--success) 0%, #059669 100%)';
+      challengeText.textContent = `✅ ${challenge.name} Complete!`;
+    } else {
+      preview.style.background = 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)';
+    }
+  } else {
+    console.log('📝 No daily challenge found, showing default challenge');
+    // Show a default challenge instead of "No active challenge"
+    challengeText.textContent = 'Daily Practice: Complete 5 words today (0/5)';
+    progressFill.style.width = '0%';
+    preview.style.background = 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)';
+  }
+  
+  console.log('🎯 Challenge preview updated to:', challengeText.textContent);
 }
 
 // Create a challenge card element
@@ -376,8 +617,14 @@ function createChallengeCard(challenge, type, isCompleted) {
 
 // Render leaderboards in student panel
 function renderLeaderboards() {
+  console.log('🏆 renderLeaderboards() called');
   const leaderboardsContainer = document.getElementById('leaderboardsContainer');
-  if (!leaderboardsContainer || !leaderboards) return;
+  console.log('🏆 leaderboardsContainer found:', !!leaderboardsContainer);
+  console.log('🏆 leaderboards data:', leaderboards);
+  if (!leaderboardsContainer || !leaderboards) {
+    console.log('🏆 Early return - missing container or data');
+    return;
+  }
   
   // Clear previous content
   leaderboardsContainer.innerHTML = '';
@@ -390,10 +637,10 @@ function renderLeaderboards() {
   const header = document.createElement('div');
   header.className = 'leaderboard-header';
   header.innerHTML = `
-    <h3>Leaderboards</h3>
+    <h3>🏆 Leaderboards</h3>
     <div class="leaderboard-tabs">
-      <div class="leaderboard-tab active" data-category="accuracy">Accuracy</div>
-      <div class="leaderboard-tab" data-category="totalWords">Words</div>
+      <div class="leaderboard-tab active" data-category="totalWords">Score</div>
+      <div class="leaderboard-tab" data-category="accuracy">Accuracy</div>
       <div class="leaderboard-tab" data-category="streakDays">Streaks</div>
     </div>
   `;
@@ -404,8 +651,8 @@ function renderLeaderboards() {
   const tableContainer = document.createElement('div');
   tableContainer.id = 'leaderboardTableContainer';
   
-  // Initially show accuracy leaderboard
-  tableContainer.appendChild(createLeaderboardTable('accuracy'));
+  // Initially show score leaderboard
+  tableContainer.appendChild(createLeaderboardTable('totalWords'));
   
   leaderboardEl.appendChild(tableContainer);
   leaderboardsContainer.appendChild(leaderboardEl);
@@ -430,6 +677,9 @@ function renderLeaderboards() {
 
 // Create a leaderboard table for a specific category
 function createLeaderboardTable(category) {
+  console.log('🏆 createLeaderboardTable called for category:', category);
+  console.log('🏆 leaderboards.allTime:', leaderboards.allTime);
+  
   const table = document.createElement('table');
   table.className = 'leaderboard-table';
   
@@ -441,9 +691,9 @@ function createLeaderboardTable(category) {
       <th>User</th>
       <th class="leaderboard-value">${
         category === 'accuracy' ? 'Accuracy'
-        : category === 'totalWords' ? 'Words'
-        : category === 'sessionsCompleted' ? 'Sessions'
-        : 'Streak Days'
+        : category === 'totalWords' ? 'Score'
+        : category === 'streakDays' ? 'Streak'
+        : 'Score'
       }</th>
     </tr>
   `;
@@ -452,23 +702,44 @@ function createLeaderboardTable(category) {
   // Create table body
   const tbody = document.createElement('tbody');
   
-  // Get leaderboard data
-  const data = leaderboards.allTime[category] || [];
+  // Get leaderboard data - our API returns array directly in allTime
+  const allTimeData = leaderboards.allTime || [];
+  console.log('🏆 allTimeData:', allTimeData);
+  
+  // Sort data by the selected category
+  let data = [...allTimeData];
+  if (category === 'accuracy') {
+    data.sort((a, b) => b.accuracy - a.accuracy);
+  } else if (category === 'totalWords') {
+    data.sort((a, b) => b.score - a.score);
+  } else if (category === 'streakDays') {
+    data.sort((a, b) => b.streak - a.streak);
+  }
   
   if (data.length === 0) {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="3" style="text-align: center;">No data available</td>';
+    tr.innerHTML = '<td colspan="3" style="text-align: center;">No students found</td>';
     tbody.appendChild(tr);
   } else {
     data.forEach((entry, index) => {
       const tr = document.createElement('tr');
+      
+      // Get the value based on category
+      let value;
+      if (category === 'accuracy') {
+        value = entry.accuracy.toFixed(1) + '%';
+      } else if (category === 'totalWords') {
+        value = entry.score;
+      } else if (category === 'streakDays') {
+        value = entry.streak + ' days';
+      } else {
+        value = entry.score;
+      }
+      
       tr.innerHTML = `
         <td class="leaderboard-rank">${index + 1}</td>
         <td>${entry.username}${entry.username === currentUser ? ' (You)' : ''}</td>
-        <td class="leaderboard-value">${
-          category === 'accuracy' ? entry.value.toFixed(1) + '%'
-          : entry.value
-        }</td>
+        <td class="leaderboard-value">${value}</td>
       `;
       
       // Highlight current user

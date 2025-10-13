@@ -22,7 +22,7 @@ class TabletOptimizations {
     }
     
     init() {
-        console.log('📱 Initializing tablet optimizations');
+
         
         this.addTabletClasses();
         this.optimizeButtons();
@@ -355,7 +355,7 @@ class TabletOptimizations {
             element.style.boxShadow = '';
         }, 200);
         
-        console.log('📋 Long press detected on activity option');
+
     }
     
     // Public methods
@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Make available globally
     window.tabletOptimizations = tabletOptimizations;
     
-    console.log(`📱 Tablet optimization ${tabletOptimizations.isTabletDevice() ? 'enabled' : 'not needed'}`);
+
 });
 
 // Export for module usage

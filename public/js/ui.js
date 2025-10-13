@@ -1,10 +1,14 @@
 // 🎭 Role-Based UI Setup
 function setupSession(user) {
+
+  
   // Safe element hiding/showing with null checks
   const loginPanel = document.getElementById('loginPanel');
   const adminPanel = document.getElementById('adminPanel');
   const studentPanel = document.getElementById('studentPanel');
   const nav = document.getElementById('nav');
+  
+
   
   if (loginPanel) loginPanel.classList.add('hidden');
   if (adminPanel) adminPanel.classList.add('hidden');
@@ -22,10 +26,12 @@ function setupSession(user) {
   // 🎨 Banner Setup
   const roleBanner = document.getElementById('roleBanner');
   if (roleBanner) {
-    roleBanner.classList.remove('hidden', 'admin', 'student');
+    roleBanner.classList.remove('hidden', 'admin', 'teacher', 'student');
     roleBanner.classList.add(user.role);
     roleBanner.textContent = user.role === "admin"
       ? "👨‍🏫 Admin Access Enabled"
+      : user.role === "teacher"
+      ? "👩‍🏫 Teacher Access Enabled"
       : "🎓 Student Mode Active";
   }
 
@@ -34,13 +40,27 @@ function setupSession(user) {
   const adminBtn = document.getElementById('adminBtn');
 
   if (user.role === "admin") {
+
     if (studentBtn) studentBtn.classList.remove('hidden');
     if (adminBtn) adminBtn.classList.remove('hidden');
+
     showAdmin();
+  } else if (user.role === "teacher") {
+    if (studentBtn) studentBtn.classList.remove('hidden');
+    if (adminBtn) adminBtn.classList.remove('hidden');
+    showAdmin(); // Teachers get admin panel access
   } else if (user.role === "student") {
+
     if (studentBtn) studentBtn.classList.add('hidden');
     if (adminBtn) adminBtn.classList.add('hidden');
+
     showStudent();
+    
+    // Initialize gamification for students
+    if (typeof initGamification === 'function') {
+
+      initGamification(user.username);
+    }
   } else {
     alert("Unknown role. Logging out for safety.");
     logoutUser();
@@ -70,11 +90,23 @@ function showToast(message, duration = 3000) {
   }, duration);
 }
 function showStudent() {
-  console.log("🎓 Showing student panel");
+
   
-  // Hide other panels
+  // Hide other panels and sections
   document.getElementById('adminPanel')?.classList.add('hidden');
   document.getElementById('loginPanel')?.classList.add('hidden');
+  document.getElementById('gameSection')?.classList.add('hidden');
+  document.getElementById('typingSection')?.classList.add('hidden');
+  document.getElementById('bibleSection')?.classList.add('hidden');
+  
+  // Also ensure they're hidden with style.display
+  const gameSection = document.getElementById('gameSection');
+  const typingSection = document.getElementById('typingSection');
+  const bibleSection = document.getElementById('bibleSection');
+  
+  if (gameSection) gameSection.style.display = 'none';
+  if (typingSection) typingSection.style.display = 'none';
+  if (bibleSection) bibleSection.style.display = 'none';
   
   // Show student panel
   const studentPanel = document.getElementById('studentPanel');
@@ -91,7 +123,7 @@ function showStudent() {
       gameBtn.classList.remove('hidden');
       typingBtn.classList.remove('hidden');
       bibleBtn.classList.remove('hidden');
-      console.log("✅ All student buttons are now visible");
+
     }
     
     // Update student theme selector to match current theme
@@ -108,6 +140,14 @@ function showStudent() {
       }, 100);
     }
     
+    // Ensure challenge preview is updated
+    if (typeof updateDailyChallengePreview === 'function') {
+      setTimeout(() => {
+        console.log('Calling updateDailyChallengePreview from showStudent');
+        updateDailyChallengePreview();
+      }, 200);
+    }
+    
     // Update help bubble visibility
     if (window.tabletMenuManager && typeof window.tabletMenuManager.updateHelpBubbleVisibility === 'function') {
       setTimeout(() => {
@@ -118,15 +158,25 @@ function showStudent() {
 }
 
 function showAdmin() {
-  console.log("👨‍💼 Showing admin panel");
+
 
   // Hide other panels
-  document.getElementById('studentPanel')?.classList.add('hidden');
-  document.getElementById('loginPanel')?.classList.add('hidden');
+  const studentPanel = document.getElementById('studentPanel');
+  const loginPanel = document.getElementById('loginPanel');
+  
+  if (studentPanel) {
+    studentPanel.classList.add('hidden');
+
+  }
+  if (loginPanel) {
+    loginPanel.classList.add('hidden');
+
+  }
   
   const adminPanel = document.getElementById("adminPanel");
   if (adminPanel) {
     adminPanel.classList.remove("hidden");
+
     
     // Show dashboard view by default
     if (typeof showAdminDashboard === 'function') {
@@ -143,7 +193,7 @@ function showAdmin() {
     // Load user data for dropdowns (for when tabs are accessed)
     if (typeof window.loadUsers === 'function') {
       window.loadUsers().then(() => {
-        console.log("✅ Users loaded from server");
+
         if (typeof window.displayUserDropdown === 'function') {
           window.displayUserDropdown();
         }
@@ -158,7 +208,7 @@ function showAdmin() {
     document.querySelectorAll('#adminTabs button').forEach(btn => btn.disabled = false);
     if (typeof window.switchTab === 'function') {
       window.switchTab("tabWords");
-      console.log("✅ Default tab set to tabWords");
+
     } else {
       console.error("switchTab function not available");
     }
@@ -169,7 +219,7 @@ function showAdmin() {
 
 // Tab switching functionality
 window.switchTab = function(tabId) {
-  console.log(`🔄 Switching to tab: ${tabId}`);
+
   
   // Hide all tabs
   document.querySelectorAll('.adminTab').forEach(tab => {
@@ -194,12 +244,12 @@ window.switchTab = function(tabId) {
     
     // Special handling for each tab type
     if (tabId === 'tabAnalytics' && typeof window.analyticsRefresh === 'function') {
-      console.log('📊 Loading analytics data...');
+
       window.analyticsRefresh().catch(e => {
         console.error('Error loading analytics:', e);
       });
     } else if (tabId === 'tabResults' && typeof window.loadStudentResults === 'function') {
-      console.log('📋 Loading results data...');
+
       window.loadStudentResults().catch(e => {
         console.error('Error loading results:', e);
       });

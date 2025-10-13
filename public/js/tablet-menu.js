@@ -26,7 +26,7 @@ class TabletMenuManager {
         this.createQuickActions();
         this.setupWritingAreaDetection();
         
-        console.log('📱 Universal Popup Menu Manager initialized');
+
     }
     
     isTabletDevice() {
@@ -611,8 +611,8 @@ class TabletMenuManager {
             }
             
             if (userBadge) {
-                userBadge.textContent = role === 'admin' ? '👨‍💼 Admin' : '🎓 Student';
-                userBadge.style.background = role === 'admin' ? 'var(--error)' : 'var(--primary)';
+                userBadge.textContent = role === 'admin' ? '👨‍💼 Admin' : role === 'teacher' ? '👩‍� Teacher' : '�🎓 Student';
+                userBadge.style.background = (role === 'admin' || role === 'teacher') ? 'var(--error)' : 'var(--primary)';
             }
             
             this.showRoleSpecificMenu(role);
@@ -623,7 +623,7 @@ class TabletMenuManager {
         const studentNav = document.getElementById('studentNavItems');
         const adminNav = document.getElementById('adminNavItems');
         
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'teacher') {
             if (studentNav) studentNav.classList.add('hidden');
             if (adminNav) adminNav.classList.remove('hidden');
         } else {
@@ -826,7 +826,7 @@ function updateNavigationFallback() {
         const studentNav = document.getElementById('studentNavItems');
         const adminNav = document.getElementById('adminNavItems');
         
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'teacher') {
             if (studentNav) studentNav.classList.add('hidden');
             if (adminNav) adminNav.classList.remove('hidden');
         } else {

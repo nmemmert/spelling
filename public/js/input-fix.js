@@ -3,7 +3,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('🔍 Input visibility fix script loaded');
+
   
   // No debug button in production
   // Just silently apply fixes
@@ -45,23 +45,7 @@ function fixInputVisibility() {
   `;
   document.head.appendChild(styleEl);
   
-  // Create a test notification
-  const notification = document.createElement('div');
-  notification.textContent = 'Input visibility fixed';
-  notification.style.position = 'fixed';
-  notification.style.top = '20px';
-  notification.style.left = '50%';
-  notification.style.transform = 'translateX(-50%)';
-  notification.style.backgroundColor = '#4CAF50';
-  notification.style.color = 'white';
-  notification.style.padding = '10px 20px';
-  notification.style.borderRadius = '4px';
-  notification.style.zIndex = '10000';
-  
-  document.body.appendChild(notification);
-  setTimeout(() => {
-    notification.remove();
-  }, 3000);
+
   
   // Add event listener to log key events (only once)
   if (!userInput.hasKeyLogger) {
@@ -71,5 +55,5 @@ function fixInputVisibility() {
     userInput.hasKeyLogger = true;
   }
   
-  console.log('✅ Input visibility fix applied');
+
 }

@@ -1,12 +1,12 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log('🚀 Application starting...');
+
   
   // Check if server is available
   try {
-    console.log('🔄 Testing server connection...');
+
     const serverTest = await fetch('/getUsers');
     if (serverTest.ok) {
-      console.log('✅ Server connection successful');
+
     } else {
       console.error(`❌ Server responded with error: ${serverTest.status}`);
     }
@@ -37,12 +37,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (savedUser) {
     try {
       const user = JSON.parse(savedUser);
-      console.log('👤 Restoring session for:', user.username);
+
       
-      // Load users for admin functionality only if user is admin
-      if (user.role === 'admin') {
+      // Load users for admin functionality only if user is admin or teacher
+      if (user.role === 'admin' || user.role === 'teacher') {
         try {
-          console.log('🔄 Loading admin data...');
+
           await loadUsers();
           displayUserDropdown();
           displayUserLists();
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       showLoginOnly();
     }
   } else {
-    console.log('👤 No saved session found');
+
     showLoginOnly();
   }
 });
@@ -94,7 +94,7 @@ function showLoginOnly() {
 
 // Function to return to student dashboard
 window.backToStudentDashboard = function() {
-    console.log('🔙 Returning to student dashboard');
+
     
     // Hide all sections
     document.getElementById('gameSection').classList.add('hidden');
@@ -127,30 +127,4 @@ window.backToStudentDashboard = function() {
     }
 }
 
-// Function to change theme (accessible to students)
-window.changeTheme = function(themeName) {
-    console.log('🎨 Changing theme to:', themeName);
-    
-    // Apply the theme
-    applyTheme(themeName);
-    
-    // Save the preference in both possible keys
-    localStorage.setItem('selectedTheme', themeName);
-    localStorage.setItem('theme', themeName);
-    
-    // Update both theme selects if they exist
-    const adminThemeSelect = document.getElementById('themeSelect');
-    const studentThemeSelect = document.getElementById('studentThemeSelect');
-    
-    if (adminThemeSelect) {
-        adminThemeSelect.value = themeName;
-    }
-    if (studentThemeSelect) {
-        studentThemeSelect.value = themeName;
-    }
-    
-    // Show toast notification
-    if (typeof showToast === 'function') {
-        showToast(`🎨 Theme changed to ${themeName}`);
-    }
-}
+// Theme change function is now in themes.js

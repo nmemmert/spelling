@@ -1,4 +1,4 @@
-// 🔐 Password hashing using jsSHA
+// Password hashing using jsSHA
 function hashPassword(password) {
   try {
     if (typeof jsSHA === 'undefined') {
@@ -24,43 +24,70 @@ function hashPassword(password) {
 // 🌐 Load users from server
 let users = [];
 
+// Debug function for browser console testing
+window.debugAuth = function() {
+
+  console.log('- localStorage user:', localStorage.getItem('loggedInUser'));
+  console.log('- Login panel element:', !!document.getElementById('loginPanel'));
+  console.log('- Admin panel element:', !!document.getElementById('adminPanel'));
+  console.log('- Student panel element:', !!document.getElementById('studentPanel'));
+};
+
+// 🧪 Test login function for debugging
+window.testLogin = function() {
+  console.log('🧪 Testing manual login...');
+  document.getElementById('username').value = 'admin';
+  document.getElementById('password').value = 'admin';
+  verifyLogin();
+};
+
 // 🔓 Verify user login
 async function verifyLogin() {
+  console.log('🚀 verifyLogin function called');
+  
   const uname = document.getElementById('username').value.trim();
   const pw = document.getElementById('password').value;
   const msg = document.getElementById('loginMessage');
 
+  console.log('📋 Form values:', { username: uname, passwordLength: pw?.length || 0 });
+
   if (!uname || !pw) {
+    console.log('❌ Missing username or password');
     msg.textContent = "Please enter both username and password.";
     msg.style.color = 'var(--error)';
     return;
   }
 
   try {
-    console.log('Attempting login for:', uname);
-    const hash = hashPassword(pw);
-    console.log('Generated hash:', hash);
 
-    const res = await fetch('/verifyUser', {
+
+    const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: uname, hash })
+      body: JSON.stringify({ username: uname, password: pw })
     });
 
     const responseText = await res.text();
-    console.log('Server response:', res.status, responseText);
+    console.log('📡 Server response:', res.status, responseText);
 
     if (!res.ok) {
+      console.log('❌ Login failed - server returned error');
       msg.textContent = "Invalid username or password.";
       msg.style.color = 'var(--error)';
       return;
     }
 
-    const user = JSON.parse(responseText);
-    console.log('Login successful for user:', user);
-    localStorage.setItem('loggedInUser', JSON.stringify(user));
+    const loginData = JSON.parse(responseText);
+
+    
+    // Store both user data and JWT token
+    localStorage.setItem('loggedInUser', JSON.stringify(loginData.user));
+    localStorage.setItem('authToken', loginData.token);
     msg.textContent = '';
-    setupSession(user);
+    
+    console.log('🚀 About to call setupSession with:', loginData.user);
+    setupSession(loginData.user);
+
   } catch (err) {
     console.error("Login error:", err);
     msg.textContent = "Login failed. Please try again.";

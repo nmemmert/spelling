@@ -1,0 +1,28 @@
+<!-- Simple SVG icon that can be converted to PNG -->
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#4f46e5" rx="80"/>
+  
+  <!-- Letter A shape (representing spelling) -->
+  <g fill="white">
+    <!-- Letter shape -->
+    <path d="M256 80L180 320h40l15-48h82l15 48h40L256 80zm-25 144l25-80 25 80h-50z"/>
+    
+    <!-- Underline to suggest writing -->
+    <rect x="160" y="350" width="192" height="8" rx="4"/>
+    
+    <!-- Small dots suggesting interactivity -->
+    <circle cx="140" cy="400" r="12"/>
+    <circle cx="256" cy="400" r="12"/>
+    <circle cx="372" cy="400" r="12"/>
+  </g>
+  
+  <!-- Subtle gradient overlay -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#4338ca;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#grad)" rx="80"/>
+</svg>

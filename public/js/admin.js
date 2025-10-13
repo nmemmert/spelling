@@ -39,7 +39,7 @@ window.setActiveWeek = async function() {
   const selectedUser = document.getElementById('wordUserSelect')?.value;
   const activeWeek = document.getElementById('activeWeekSelect')?.value;
   if (!selectedUser || !activeWeek) {
-    alert('⚠️ Please select a user and week.');
+    alert('Please select a user and week.');
     return;
   }
   await fetch('/setActiveWeek', {
@@ -47,7 +47,7 @@ window.setActiveWeek = async function() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: selectedUser, activeWeek })
   });
-  alert(`✅ Active week set for ${selectedUser}: ${activeWeek}`);
+  alert(`Active week set for ${selectedUser}: ${activeWeek}`);
 }
 window.addWeekInput = function() {
   const container = document.getElementById('weeksContainer');
@@ -66,7 +66,7 @@ window.addWeekInput = function() {
 window.saveWeeks = async function() {
   const selectedUser = document.getElementById('wordUserSelect')?.value;
   if (!selectedUser) {
-    alert('⚠️ Please select a user before saving.');
+    alert('Please select a user before saving.');
     return;
   }
   const weeks = [];
@@ -78,7 +78,7 @@ window.saveWeeks = async function() {
     }
   });
   if (!weeks.length) {
-    alert('⚠️ Please enter at least one week with a date and words.');
+    alert('Please enter at least one week with a date and words.');
     return;
   }
   await fetch('/saveWeeksWordList', {
@@ -86,7 +86,7 @@ window.saveWeeks = async function() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: selectedUser, weeks })
   });
-  alert(`✅ Weeks saved for ${selectedUser}`);
+  alert(`Weeks saved for ${selectedUser}`);
 }
 
 window.clearWeeks = function() {
@@ -98,7 +98,7 @@ window.adminUsers = [];
 
 // 🧭 Admin tab switcher (make it globally accessible)
 window.switchTab = function switchTab(targetId) {
-  console.log('🔄 Switching to tab:', targetId);
+
   
   // Hide all tabs
   document.querySelectorAll('.adminTab').forEach(tab => {
@@ -114,7 +114,7 @@ window.switchTab = function switchTab(targetId) {
   const targetTab = document.getElementById(targetId);
   if (targetTab) {
     targetTab.classList.remove('hidden');
-    console.log('✅ Showing tab:', targetId);
+
   } else {
     console.error('❌ Tab not found:', targetId);
   }
@@ -180,7 +180,7 @@ window.switchTab = function switchTab(targetId) {
 // Load users from server
 window.loadUsers = async function() {
   try {
-    console.log("📋 Loading users from server...");
+
     const res = await fetch('/getUsers');
     console.log("GET /getUsers response:", res.status, res.statusText);
     
@@ -189,7 +189,7 @@ window.loadUsers = async function() {
     }
     
     const data = await res.json();
-    console.log(`📋 Loaded ${data.length} users:`, data.map(u => u.username));
+
     window.adminUsers = data;
     
     // Populate all user dropdowns immediately
@@ -221,7 +221,7 @@ async function addNewUser() {
   let hash;
   try {
     hash = hashPassword(password);
-    console.log("✅ Password hashed successfully");
+
     if (hashPreview) hashPreview.textContent = hash;
   } catch (e) {
     console.error("❌ Error hashing password:", e);
@@ -246,7 +246,7 @@ async function addNewUser() {
     }
     
     const successText = await response.text();
-    console.log(`✅ Success: ${successText}`);
+
     msg.textContent = `✅ User "${username}" added to server.`;
 
     // Clear form
@@ -306,7 +306,7 @@ window.displayUserDropdown = function() {
         option.textContent = `${user.username} (${user.role})`;
         dropdown.appendChild(option);
       });
-      console.log(`✅ Added ${window.adminUsers.length} users to dropdown ${id}`);
+
       
       // Restore previously selected value if it exists in the new options
       if (currentValue && [...dropdown.options].some(opt => opt.value === currentValue)) {
@@ -565,7 +565,7 @@ async function loadUserDropdowns() {
       });
     });
     
-    console.log('✅ User dropdowns loaded');
+
   } catch (err) {
     console.error("⚠️ Failed to load user list:", err);
   }
@@ -1186,5 +1186,5 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
-  console.log('✅ Tab event listeners added to', tabButtons.length, 'buttons');
+
 });

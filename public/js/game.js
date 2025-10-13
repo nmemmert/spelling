@@ -112,34 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let currentSentence = '';
 
-function showStudent() {
-    console.log("🔊 Showing student panel");
-    
-    // Hide admin panel
-    document.getElementById('adminPanel')?.classList.add('hidden');
-    
-    // Show student panel and its components
-    const studentPanel = document.getElementById('studentPanel');
-    studentPanel?.classList.remove('hidden');
-    
-    // Get the buttons and explicitly set their properties
-    const gameBtn = document.getElementById('startGameBtn');
-    const typingBtn = document.getElementById('startTypingBtn');
-    
-    if (gameBtn && typingBtn) {
-        console.log("Found buttons, making visible");
-        // Remove all possible hiding classes/styles
-        gameBtn.classList.remove('hidden');
-        typingBtn.classList.remove('hidden');
-        
-        // Explicitly set display style
-        gameBtn.style.cssText = 'display: inline-block !important; visibility: visible !important;';
-        typingBtn.style.cssText = 'display: inline-block !important; visibility: visible !important;';
-    } else {
-        console.error("Could not find game buttons");
-    }
-}
-
 // 🚀 Begin game session
 window.startGame = async function(customWords = null, isSpacedRepetition = false) {
     console.log('🎮 Starting spelling game');
@@ -396,6 +368,12 @@ async function saveResults(resultData, accuracy) {
         if (response.ok) {
             console.log('Results saved successfully');
             checkForBadges(accuracy, resultData.length);
+            
+            // Update challenge progress
+            if (window.updateChallengeProgress) {
+                // Update daily challenge progress with words completed
+                await window.updateChallengeProgress('daily', resultData.length);
+            }
         }
     } catch (error) {
         console.error('Error saving results:', error);
@@ -477,13 +455,30 @@ async function checkDailyCompletion() {
 
 // Return to student panel
 window.returnToStudentPanel = function() {
-    // Hide game and typing sections
-    document.getElementById('gameSection').style.display = 'none';
-    document.getElementById('typingSection').style.display = 'none';
-    document.getElementById('bibleSection').style.display = 'none';
+    // Hide game and typing sections using both style and classes
+    const gameSection = document.getElementById('gameSection');
+    const typingSection = document.getElementById('typingSection');
+    const bibleSection = document.getElementById('bibleSection');
+    const studentPanel = document.getElementById('studentPanel');
+    
+    if (gameSection) {
+        gameSection.style.display = 'none';
+        gameSection.classList.add('hidden');
+    }
+    if (typingSection) {
+        typingSection.style.display = 'none';
+        typingSection.classList.add('hidden');
+    }
+    if (bibleSection) {
+        bibleSection.style.display = 'none';
+        bibleSection.classList.add('hidden');
+    }
     
     // Show student panel
-    document.getElementById('studentPanel').style.display = 'block';
+    if (studentPanel) {
+        studentPanel.style.display = 'block';
+        studentPanel.classList.remove('hidden');
+    }
     
     // Force panel to be visible
     showStudent();

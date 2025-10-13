@@ -5,7 +5,7 @@
 
 class UnifiedWriteMode {
     constructor() {
-        this.currentMode = 'keyboard'; // 'keyboard' or 'handwriting'
+        this.currentMode = 'keyboard'; // Only keyboard mode supported
         this.canvas = null;
         this.ctx = null;
         this.textArea = null;
@@ -25,7 +25,7 @@ class UnifiedWriteMode {
     }
 
     init() {
-        console.log('🔄 Initializing Unified Write Mode...');
+
         this.createInterface();
         this.setupEventListeners();
         this.initializeHandwritingRecognition();
@@ -50,14 +50,10 @@ class UnifiedWriteMode {
         }
 
         this.container.innerHTML = `
-            <div class="input-mode-selector">
+            <div class="input-mode-selector" style="display: none;">
                 <button class="mode-button active" data-mode="keyboard">
                     <span class="icon">⌨️</span>
                     <span>Keyboard</span>
-                </button>
-                <button class="mode-button" data-mode="handwriting">
-                    <span class="icon">✏️</span>
-                    <span>Handwriting</span>
                 </button>
             </div>
 
@@ -102,7 +98,7 @@ class UnifiedWriteMode {
         // Setup canvas
         this.setupCanvas();
         
-        console.log('✅ Interface created successfully');
+
     }
 
     setupCanvas() {
@@ -202,7 +198,7 @@ class UnifiedWriteMode {
             
             if (this.currentStroke.length > 0) {
                 this.strokes.push([...this.currentStroke]);
-                console.log(`✏️ Stroke completed. Total strokes: ${this.strokes.length}`);
+
                 
                 // Auto-recognize after a delay
                 this.scheduleAutoRecognition();
@@ -253,7 +249,13 @@ class UnifiedWriteMode {
     }
 
     switchMode(mode) {
-        console.log(`🔄 Switching to ${mode} mode`);
+
+        
+        // Force keyboard mode only - handwriting disabled
+        if (mode === 'handwriting') {
+
+            mode = 'keyboard';
+        }
         
         this.currentMode = mode;
         
@@ -289,15 +291,15 @@ class UnifiedWriteMode {
             // Use existing handwriting recognition if available
             if (window.handwritingRecognition) {
                 this.handwritingRecognizer = window.handwritingRecognition;
-                console.log('✅ Using existing handwriting recognition');
+
             } else if (window.HandwritingRecognition) {
                 this.handwritingRecognizer = new window.HandwritingRecognition();
-                console.log('✅ Created new handwriting recognition instance');
+
             } else {
-                console.log('⚠️ No handwriting recognition available');
+
             }
         } catch (error) {
-            console.error('❌ Failed to initialize handwriting recognition:', error);
+
         }
     }
 
@@ -322,7 +324,7 @@ class UnifiedWriteMode {
         }
 
         if (this.isRecognizing) {
-            console.log('⚠️ Recognition already in progress');
+
             return;
         }
 
@@ -355,14 +357,14 @@ class UnifiedWriteMode {
                 this.recognizedText = recognizedText;
                 this.textArea.value = recognizedText;
                 this.showFeedback('success', `Recognized: "${recognizedText}"`);
-                console.log('✅ Handwriting recognition successful:', recognizedText);
+
             } else {
                 this.showFeedback('error', 'Could not recognize handwriting. Please try writing more clearly.');
-                console.log('❌ Handwriting recognition failed');
+
             }
             
         } catch (error) {
-            console.error('❌ Recognition error:', error);
+
             this.showFeedback('error', 'Recognition failed. Please try again.');
         } finally {
             this.isRecognizing = false;
@@ -373,7 +375,7 @@ class UnifiedWriteMode {
         // Simple fallback based on stroke patterns
         const strokeCount = this.strokes.length;
         
-        console.log(`🔍 Simple pattern recognition: ${strokeCount} strokes`);
+
         
         if (strokeCount === 1) {
             return 'O';
@@ -423,7 +425,7 @@ class UnifiedWriteMode {
             return;
         }
         
-        console.log('📝 Submitting answer:', answer);
+
         
         // Use existing game submission logic if available
         if (window.submitAnswer) {
@@ -512,7 +514,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.unifiedWriteMode.setupGameIntegration) {
             window.unifiedWriteMode.setupGameIntegration();
         }
-        console.log('✅ Unified Write Mode initialized and integrated');
+
     }, 500);
 });
 

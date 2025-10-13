@@ -6,8 +6,31 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="format-detection" content="telephone=no">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="background-color" content="#ffffff">
+    <meta name="description" content="A modern, interactive spelling practice application with gamification, analytics, and offline support">
+    <meta name="keywords" content="spelling, education, practice, games, learning, offline">
+    <meta name="author" content="NateEmmert">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- iOS PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-title" content="SpellingPro">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png">
+    <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png">
+    
+    <!-- Standard Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    
     <title>✨ Modern Spelling Practice</title>
     <link href="styles.css" rel="stylesheet"/>
+    <link href="pwa.css" rel="stylesheet"/>
     <link href="mobile.css" rel="stylesheet"/>
     <link href="tablet.css" rel="stylesheet"/>
     <link href="tablet-menu.css" rel="stylesheet"/>
@@ -36,6 +59,7 @@
         }
       });
     </script>
+    <script src="js/pwa.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/themes.js"></script>
@@ -320,6 +344,7 @@
                             <input id="newPassword" placeholder="Password" required type="password"/>
                             <select id="newRole">
                                 <option value="student">🎓 Student</option>
+                                <option value="teacher">👩‍🏫 Teacher</option>
                                 <option value="admin">👨‍💼 Admin</option>
                             </select>
                             <div class="btn-group">
@@ -616,6 +641,9 @@
                         <option value="chalkboard">🎓 Chalkboard</option>
                         <option value="galaxy">🌌 Galaxy</option>
                         <option value="nature">🌿 Nature</option>
+                        <option value="ocean">🌊 Ocean</option>
+                        <option value="sunset">🌅 Sunset</option>
+                        <option value="dark">🌙 Dark Mode</option>
                     </select>
                 </div>
             </div>
@@ -698,16 +726,22 @@
                     <p style="color: var(--text-secondary);">Your learning journey starts here</p>
                 </div>
                 
-                <!-- Streak & User Stats Section -->
-                <div class="dashboard-section">
-                    <div id="streakContainer" class="card dashboard-card"></div>
-                    <div id="userStatsContainer" class="card dashboard-card"></div>
-                </div>
-                
                 <!-- Quick Start Section -->
                 <div class="quick-start-section">
                     <h3>🚀 Quick Start</h3>
                     <p>Jump right into your favorite activity:</p>
+                    
+                    <!-- Daily Challenge Preview -->
+                    <div id="dailyChallengePreview" class="daily-challenge-preview">
+                        <div class="challenge-preview-header">
+                            <span class="challenge-icon">🎯</span>
+                            <span class="challenge-text">Loading today's challenge...</span>
+                        </div>
+                        <div class="challenge-progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
                     <div class="quick-actions-grid">
                         <button onclick="startGame()" class="quick-action-card">
                             <span class="quick-icon">🎮</span>
@@ -725,6 +759,37 @@
                             <span class="quick-icon">🔄</span>
                             <span class="quick-title">Spaced Review</span>
                         </button>
+                    </div>
+                </div>
+                
+                <!-- Theme Selection for Students -->
+                <div class="card dashboard-section" style="margin: 1.5rem 0;">
+                    <h4>🎨 Choose Your Theme</h4>
+                    <select id="studentThemeSelect" onchange="changeTheme(this.value)" style="width: 100%; max-width: 300px; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
+                        <option value="default">✨ Modern (Default)</option>
+                        <option value="playground">🎪 Playground</option>
+                        <option value="chalkboard">🎓 Chalkboard</option>
+                        <option value="galaxy">🌌 Galaxy</option>
+                        <option value="nature">🌿 Nature</option>
+                        <option value="ocean">🌊 Ocean</option>
+                        <option value="sunset">🌅 Sunset</option>
+                        <option value="dark">🌙 Dark Mode</option>
+                    </select>
+                </div>
+                
+                <!-- Streak & User Stats Section -->
+                <div class="dashboard-section">
+                    <div id="streakContainer" class="card dashboard-card">
+                        <div class="card-header-small">
+                            <h4>🔥 Learning Streak</h4>
+                            <p class="loading-text">Loading your streak...</p>
+                        </div>
+                    </div>
+                    <div id="userStatsContainer" class="card dashboard-card">
+                        <div class="card-header-small">
+                            <h4>📊 Your Progress</h4>
+                            <p class="loading-text">Loading your stats...</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -754,17 +819,6 @@
                 
                 <!-- Hidden original content for backwards compatibility -->
                 <div style="display: none;">
-                    <!-- Theme Selection for Students -->
-                    <div class="card" style="margin-bottom: 1.5rem;">
-                        <h4>🎨 Choose Your Theme</h4>
-                        <select id="studentThemeSelect" onchange="changeTheme(this.value)" style="width: 100%; max-width: 300px;">
-                            <option value="default">✨ Modern (Default)</option>
-                            <option value="playground">🎪 Playground</option>
-                            <option value="chalkboard">🎓 Chalkboard</option>
-                            <option value="galaxy">🌌 Galaxy</option>
-                            <option value="nature">🌿 Nature</option>
-                        </select>
-                    </div>
                 </div>
                 
                 <!-- Challenges Section -->
@@ -825,21 +879,6 @@
                     
                     <!-- Legacy input (hidden, for compatibility) -->
                     <input id="userInput" type="hidden"/>
-                        
-                        <!-- Recognized Text Display -->
-                        <div id="recognizedText" class="recognized-text">Draw to see recognized text here</div>
-                        
-                        <!-- Handwriting Tips -->
-                        <div class="handwriting-hints">
-                            <h4>💡 Tips for better recognition:</h4>
-                            <ul>
-                                <li>Write clearly with consistent letter size</li>
-                                <li>Use print letters rather than cursive</li>
-                                <li>Write one word at a time</li>
-                                <li>Allow space between letters</li>
-                                <li>Press firmly but write smoothly</li>
-                            </ul>
-                        </div>
                     </div>
                     
                     <button onclick="submitAnswer()" class="btn-primary">Submit Answer</button>
@@ -892,13 +931,10 @@
                 </div>
                 <div id="typingPrompt">Get ready to type...</div>
                 
-                <!-- Input Mode Toggle for Typing Practice -->
-                <div class="input-mode-toggle">
+                <!-- Input Mode Toggle for Typing Practice - Handwriting removed -->
+                <div class="input-mode-toggle" style="display: none;">
                     <button class="active" data-mode="typing" onclick="toggleInputMode('typing')">
                         ⌨️ Type
-                    </button>
-                    <button data-mode="handwriting" onclick="toggleInputMode('handwriting')">
-                        ✏️ Write
                     </button>
                 </div>
                 
@@ -950,6 +986,18 @@
                         <option value="">-- Choose a verse --</option>
                     </select>
                     <button onclick="getRandomVerse()" class="btn-secondary" style="margin-left: 1rem;">🎲 Random Verse</button>
+                    
+                    <!-- T&T Section Quick Buttons -->
+                    <div style="margin-top: 1.5rem;">
+                        <h5 style="margin-bottom: 0.5rem; color: var(--text-secondary);">📚 Quick T&T Sections:</h5>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            <button onclick="getRandomVerseFromSection('T&T Agents of Grace - Section A: God\'s Character')" class="btn-secondary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Section A: God's Character</button>
+                            <button onclick="getRandomVerseFromSection('T&T Agents of Grace - Section B: Man\'s Need')" class="btn-secondary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Section B: Man's Need</button>
+                            <button onclick="getRandomVerseFromSection('T&T Agents of Grace - Section C: Christ\'s Provision')" class="btn-secondary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Section C: Christ's Provision</button>
+                            <button onclick="getRandomVerseFromSection('T&T Agents of Grace - Section D: Man\'s Response')" class="btn-secondary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Section D: Man's Response</button>
+                            <button onclick="getRandomVerseFromSection('T&T Agents of Grace - Section E: Assurance')" class="btn-secondary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Section E: Assurance</button>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Verse Display -->

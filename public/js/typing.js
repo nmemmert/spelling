@@ -106,6 +106,11 @@ async function saveTypingPracticeResults() {
       body: JSON.stringify({ username: user.username, result })
     });
     console.log('Typing practice results saved');
+    
+    // Update challenge progress
+    if (window.updateChallengeProgress) {
+      await window.updateChallengeProgress('daily', typingState.answers.length);
+    }
   } catch (e) {
     console.error('Failed to save typing results', e);
   }
@@ -121,7 +126,7 @@ window.submitTyping = function() {
     typingState.answers.push({ word: typingState.currentWord, input, correct });
 
     if (correct) {
-        feedback.textContent = '✅ Correct!';
+        feedback.textContent = 'Correct!';
         feedback.style.color = 'green';
         typingState.words.shift();
         setTimeout(showNextWord, 1500);

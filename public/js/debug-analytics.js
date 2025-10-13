@@ -19,7 +19,7 @@
     selectors.forEach(id => {
       const dropdown = document.getElementById(id);
       if (dropdown) {
-        console.log(`✅ Found dropdown: ${id}`);
+
         console.log(`  - Options: ${dropdown.options.length}`);
         console.log(`  - Values: ${Array.from(dropdown.options).map(o => o.value).join(', ')}`);
       } else {
@@ -52,7 +52,7 @@
         return response.json();
       })
       .then(users => {
-        console.log(`✅ Fetched ${users.length} users:`, users.map(u => u.username));
+
         
         // Add users to dropdown
         users.forEach(user => {
@@ -62,7 +62,7 @@
           analyticsDropdown.appendChild(option);
         });
         
-        console.log(`✅ Added ${users.length} users to analytics dropdown`);
+
       })
       .catch(error => {
         console.error('❌ Error fetching users:', error);

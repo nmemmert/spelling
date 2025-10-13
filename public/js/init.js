@@ -56,9 +56,9 @@ async function initializeApp() {
     return;
   }
   
-  // Step 2: Load user data (if admin)
+  // Step 2: Load user data (if admin or teacher)
   const currentUser = getCurrentUser();
-  if (currentUser && currentUser.role === 'admin') {
+  if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher')) {
     try {
       updateStatus('Loading user data...');
       
