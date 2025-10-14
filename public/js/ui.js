@@ -183,6 +183,13 @@ function showAdmin() {
       showAdminDashboard();
     }
     
+    // Load users for admin dropdowns
+    if (typeof window.loadUsers === 'function') {
+      window.loadUsers().catch(err => {
+        console.error('Error loading users on admin init:', err);
+      });
+    }
+    
     // Update help bubble visibility for admin
     if (window.tabletMenuManager && typeof window.tabletMenuManager.updateHelpBubbleVisibility === 'function') {
       setTimeout(() => {

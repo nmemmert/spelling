@@ -159,7 +159,12 @@ window.switchTab = function switchTab(targetId) {
       }
       break;
     case 'tabWords':
-      loadUserDropdowns();
+      loadUsers().then(() => {
+        loadUserDropdowns(); // Also call the legacy function for compatibility
+      }).catch(err => {
+        console.error('Error loading users:', err);
+        loadUserDropdowns(); // Fallback
+      });
       break;
   }
   // Attach admin tab event listeners after switchTab is defined

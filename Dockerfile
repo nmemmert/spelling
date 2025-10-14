@@ -29,14 +29,11 @@ COPY --from=deps /app/package*.json /app/
 # Copy application code
 COPY . .
 
-# Create and set permissions for data directory
-RUN mkdir -p /app/data && chown -R spelling:spelling /app/data
+# Create and set permissions for data and logs directories
+RUN mkdir -p /app/data /app/logs && chown -R spelling:spelling /app/data /app/logs
 
 # Switch to non-root user
 USER spelling
-
-# Create logs directory
-RUN mkdir -p /app/logs && chown -R spelling:spelling /app/logs
 
 # Set version and metadata labels
 LABEL version="3.0.0" \

@@ -32,9 +32,12 @@ Dockerfile
 docker-compose.yml
 .dockerignore
 
-# Local data (should be mounted as volume)
+# Local data (should be mounted as volume)  
 data/*
 !data/.gitkeep
+!data/wordlists.json
+# Include seed directory for bootstrap data
+!seed/
 
 # Debug scripts
 debug-*.js

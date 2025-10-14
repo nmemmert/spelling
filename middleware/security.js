@@ -20,10 +20,10 @@ const createRateLimit = (windowMs, max, message) => {
 // Specific rate limiters - development vs production settings
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-// Much more lenient general limiter for development
+// No rate limiting for development, minimal for production
 const generalLimiter = createRateLimit(
   isDevelopment ? 1 * 60 * 1000 : 15 * 60 * 1000, // 1 min dev, 15 min prod
-  isDevelopment ? 1000 : 100, // 1000 dev, 100 prod
+  isDevelopment ? 999999 : 100, // Essentially unlimited for dev, 100 prod
   {
     error: isDevelopment 
       ? 'Rate limit reached. Please wait a moment before making more requests.'
@@ -34,7 +34,7 @@ const generalLimiter = createRateLimit(
 
 const authLimiter = createRateLimit(
   isDevelopment ? 5 * 60 * 1000 : 15 * 60 * 1000, // 5 min dev, 15 min prod
-  isDevelopment ? 50 : (parseInt(process.env.RATE_LIMIT_MAX_LOGIN_ATTEMPTS) || 5), // 50 dev, 5 prod
+  isDevelopment ? 999999 : (parseInt(process.env.RATE_LIMIT_MAX_LOGIN_ATTEMPTS) || 5), // Unlimited dev, 5 prod
   {
     error: isDevelopment 
       ? 'Too many login attempts, please wait a moment before trying again.'
@@ -45,7 +45,7 @@ const authLimiter = createRateLimit(
 
 const apiLimiter = createRateLimit(
   60 * 1000, // 1 minute
-  isDevelopment ? 200 : 50, // 200 dev, 50 prod
+  isDevelopment ? 999999 : 50, // Unlimited dev, 50 prod
   {
     error: 'Too many API requests, please slow down.',
     retryAfter: 60
