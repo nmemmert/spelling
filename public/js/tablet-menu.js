@@ -584,16 +584,15 @@ class TabletMenuManager {
     }
     
     handleResize() {
+        // Keep hamburger menu visible on all devices for better navigation
+        // Only close expanded menu if switching away from tablet
         if (!this.isTabletDevice() && this.isMenuExpanded) {
             this.closeMenu();
         }
         
-        // Re-evaluate tablet status
-        if (this.isTabletDevice() && !this.menuToggle) {
+        // Ensure menu toggle exists on all devices
+        if (!this.menuToggle) {
             this.createMenuToggle();
-        } else if (!this.isTabletDevice() && this.menuToggle) {
-            this.menuToggle.remove();
-            this.menuToggle = null;
         }
     }
     
@@ -960,7 +959,7 @@ function fetchDashboardStat(endpoint, elementId, processor) {
     element.style.opacity = '0.6';
     element.style.transform = 'scale(0.95)';
     
-    fetch(endpoint)
+    authenticatedFetch(endpoint)
         .then(response => response.json())
         .then(data => {
             const value = processor(data);

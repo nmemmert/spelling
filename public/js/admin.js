@@ -42,12 +42,23 @@ window.setActiveWeek = async function() {
     alert('Please select a user and week.');
     return;
   }
-  await fetch('/setActiveWeek', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: selectedUser, activeWeek })
-  });
-  alert(`Active week set for ${selectedUser}: ${activeWeek}`);
+  try {
+    const response = await authenticatedFetch('/setActiveWeek', {
+      method: 'POST',
+      body: JSON.stringify({ username: selectedUser, activeWeek })
+    });
+    if (response.ok) {
+      alert(`Active week set for ${selectedUser}: ${activeWeek}`);
+      // Refresh the user's word list to show the active week
+      loadWordsForSelectedUser();
+    } else {
+      const error = await response.json();
+      alert(`Error: ${error.error}`);
+    }
+  } catch (error) {
+    console.error('Error setting active week:', error);
+    alert('Failed to set active week. Please try again.');
+  }
 }
 window.addWeekInput = function() {
   const container = document.getElementById('weeksContainer');
@@ -186,7 +197,7 @@ window.switchTab = function switchTab(targetId) {
 window.loadUsers = async function() {
   try {
 
-    const res = await fetch('/getUsers');
+    const res = await authenticatedFetch('/getUsers');
     console.log("GET /getUsers response:", res.status, res.statusText);
     
     if (!res.ok) {
@@ -381,9 +392,8 @@ async function saveWords() {
   const text = document.getElementById('wordInput').value.trim();
   allWords = text.split('\n').map(w => w.trim()).filter(Boolean);
 
-  await fetch('/saveWordList', {
+  await authenticatedFetch('/saveWordList', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: selectedUser, words: allWords })
   });
 
@@ -396,9 +406,8 @@ async function clearWords() {
   if (!selectedUser) return;
 
   allWords = [];
-  await fetch('/saveWordList', {
+  await authenticatedFetch('/saveWordList', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: selectedUser, words: [] })
   });
 
@@ -412,11 +421,11 @@ async function loadWordsForSelectedUser() {
   if (!selectedUser) return;
 
   // Fetch the user's word list object (could be array or {weeks, activeWeek})
-  const res = await fetch(`/getWordList?username=${encodeURIComponent(selectedUser)}`);
+  const res = await authenticatedFetch(`/getWordList?username=${encodeURIComponent(selectedUser)}`);
   const data = await res.json();
   allWords = data.words || [];
   // Now also fetch the raw wordlists object to get weeks/activeWeek
-  const wordlistsRes = await fetch('/getWordlistsRaw');
+  const wordlistsRes = await authenticatedFetch('/getWordlistsRaw');
   const wordlists = await wordlistsRes.json();
   const userList = wordlists[selectedUser];
   // If userList is an object with weeks, populate week cards and dropdown
@@ -549,7 +558,7 @@ window.loadStudentResults = async function() {
 
 async function loadUserDropdowns() {
   try {
-    const res = await fetch('/getUsers');
+    const res = await authenticatedFetch('/getUsers');
     const users = await res.json();
 
     const dropdowns = [

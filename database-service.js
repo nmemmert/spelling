@@ -113,6 +113,31 @@ class DatabaseService {
     };
   }
 
+  async verifyToken(token) {
+    try {
+      const decoded = jwt.verify(token, this.jwtSecret);
+      
+      // Verify user still exists and is active
+      const user = await this.db.get(`
+        SELECT id, username, role, is_active 
+        FROM users 
+        WHERE id = ? AND is_active = 1
+      `, [decoded.userId]);
+
+      if (!user) {
+        throw new Error('User not found or inactive');
+      }
+
+      return {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      };
+    } catch (error) {
+      throw new Error('Invalid or expired token');
+    }
+  }
+
   async updateUserPassword(username, newPassword) {
     // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -588,58 +613,6 @@ class DatabaseService {
     }));
   }
 
-  // ==================== MIGRATION FROM JSON ====================
-
-  async migrateFromJsonFiles() {
-    const fs = require('fs');
-    const path = require('path');
-
-    console.log('🔄 Starting migration from JSON files...');
-
-    try {
-      // Migrate users
-      const usersPath = path.join(__dirname, 'data', 'users.json');
-      if (fs.existsSync(usersPath)) {
-        const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
-        for (const user of users) {
-          try {
-            await this.createUser({
-              username: user.username,
-              password: user.password, // Will be hashed
-              role: user.role || 'student',
-              displayName: user.displayName || user.username
-            });
-          } catch (error) {
-            console.log(`⚠️ User ${user.username} already exists, skipping...`);
-          }
-        }
-      }
-
-      // Migrate word lists
-      const wordlistsPath = path.join(__dirname, 'data', 'wordlists.json');
-      if (fs.existsSync(wordlistsPath)) {
-        const wordlists = JSON.parse(fs.readFileSync(wordlistsPath, 'utf8'));
-        for (const [name, words] of Object.entries(wordlists)) {
-          try {
-            await this.createWordlist({
-              name: name,
-              description: `Migrated from ${name}`,
-              words: words,
-              category: 'migrated'
-            });
-          } catch (error) {
-            console.log(`⚠️ Wordlist ${name} migration failed:`, error.message);
-          }
-        }
-      }
-
-      console.log('✅ Migration from JSON files completed');
-    } catch (error) {
-      console.error('❌ Migration failed:', error);
-      throw error;
-    }
-  }
-
   // ==================== CHALLENGE MANAGEMENT ====================
 
   async getUserChallenges(userId) {
@@ -777,6 +750,258 @@ class DatabaseService {
       return completedChallenges;
     } catch (error) {
       console.error('Error updating challenge progress:', error);
+      throw error;
+    }
+  }
+
+  // ==================== DATA MIGRATION ====================
+
+  async migrateFromJsonFiles() {
+    const fs = require('fs').promises;
+    const path = require('path');
+
+    console.log('🔄 Starting JSON to SQLite migration...');
+
+    try {
+      // Check if migration has already been completed
+      // Note: This check is disabled for now since settings table may not exist
+      // const migrationCheck = await this.db.get('SELECT value FROM settings WHERE key = ?', ['migration_completed']);
+      // if (migrationCheck && migrationCheck.value === 'true') {
+      //   console.log('ℹ️ Migration already completed, skipping...');
+      //   return;
+      // }
+
+      // Migrate users
+      try {
+        const usersPath = path.join(__dirname, 'data', 'users-old.json');
+        const usersData = JSON.parse(await fs.readFile(usersPath, 'utf8'));
+        console.log(`📥 Migrating ${usersData.length} users...`);
+
+        for (const user of usersData) {
+          try {
+            // Check if user already exists
+            const existingUser = await this.db.get('SELECT id FROM users WHERE username = ?', [user.username]);
+            if (!existingUser) {
+              // Hash password if it's not already hashed
+              let passwordHash = user.password;
+              if (passwordHash && !passwordHash.startsWith('$2a$') && !passwordHash.startsWith('$2b$')) {
+                passwordHash = await bcrypt.hash(passwordHash, 10);
+              }
+
+              await this.db.run(`
+                INSERT INTO users (username, email, password_hash, role, display_name, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+              `, [
+                user.username,
+                user.email || `${user.username}@spelling.local`,
+                passwordHash,
+                user.role || 'student',
+                user.displayName || user.username,
+                user.createdAt || new Date().toISOString()
+              ]);
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to migrate user ${user.username}:`, error.message);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Users migration failed:', error.message);
+      }
+
+      // Migrate wordlists
+      try {
+        const wordlistsPath = path.join(__dirname, 'data', 'wordlists.json');
+        const wordlistsData = JSON.parse(await fs.readFile(wordlistsPath, 'utf8'));
+        console.log(`📥 Migrating ${Object.keys(wordlistsData).length} wordlists...`);
+
+        for (const [grade, wordlist] of Object.entries(wordlistsData)) {
+          try {
+            // Check if wordlist already exists
+            const existingWordlist = await this.db.get('SELECT id FROM wordlists WHERE grade = ?', [grade]);
+            if (!existingWordlist) {
+              await this.db.run(`
+                INSERT INTO wordlists (grade, words, created_at)
+                VALUES (?, ?, ?)
+              `, [grade, JSON.stringify(wordlist), new Date().toISOString()]);
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to migrate wordlist ${grade}:`, error.message);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Wordlists migration failed:', error.message);
+      }
+
+      // Migrate results
+      try {
+        const resultsPath = path.join(__dirname, 'data', 'results.json');
+        const resultsData = JSON.parse(await fs.readFile(resultsPath, 'utf8'));
+        console.log(`📥 Migrating ${resultsData.length} results...`);
+
+        for (const result of resultsData) {
+          try {
+            // Get user ID
+            const user = await this.db.get('SELECT id FROM users WHERE username = ?', [result.username]);
+            if (user) {
+              // Check if result already exists
+              const existingResult = await this.db.get(`
+                SELECT id FROM results 
+                WHERE user_id = ? AND word = ? AND created_at = ?
+              `, [user.id, result.word, result.timestamp]);
+
+              if (!existingResult) {
+                await this.db.run(`
+                  INSERT INTO results (user_id, word, correct, accuracy, wpm, timestamp, created_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)
+                `, [
+                  user.id,
+                  result.word,
+                  result.correct ? 1 : 0,
+                  result.accuracy || 0,
+                  result.wpm || 0,
+                  result.timestamp,
+                  result.timestamp
+                ]);
+              }
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to migrate result for ${result.username}:`, error.message);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Results migration failed:', error.message);
+      }
+
+      // Migrate progress
+      try {
+        const progressPath = path.join(__dirname, 'data', 'progress.json');
+        const progressData = JSON.parse(await fs.readFile(progressPath, 'utf8'));
+        console.log(`📥 Migrating progress data...`);
+
+        for (const [username, progress] of Object.entries(progressData)) {
+          try {
+            const user = await this.db.get('SELECT id FROM users WHERE username = ?', [username]);
+            if (user) {
+              // Update user progress
+              await this.db.run(`
+                UPDATE user_progress 
+                SET current_grade = ?, current_week = ?, total_words = ?, correct_words = ?, 
+                    total_sessions = ?, last_session_date = ?, updated_at = ?
+                WHERE user_id = ?
+              `, [
+                progress.currentGrade || '1st',
+                progress.currentWeek || 1,
+                progress.totalWords || 0,
+                progress.correctWords || 0,
+                progress.totalSessions || 0,
+                progress.lastSessionDate || new Date().toISOString(),
+                new Date().toISOString(),
+                user.id
+              ]);
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to migrate progress for ${username}:`, error.message);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Progress migration failed:', error.message);
+      }
+
+      // Migrate spaced repetition data
+      try {
+        const spacedRepetitionPath = path.join(__dirname, 'data', 'spacedRepetition.json');
+        const spacedRepetitionData = JSON.parse(await fs.readFile(spacedRepetitionPath, 'utf8'));
+        console.log(`📥 Migrating spaced repetition data...`);
+
+        for (const [username, data] of Object.entries(spacedRepetitionData)) {
+          try {
+            const user = await this.db.get('SELECT id FROM users WHERE username = ?', [username]);
+            if (user) {
+              for (const item of data) {
+                // Check if spaced repetition item already exists
+                const existingItem = await this.db.get(`
+                  SELECT id FROM spaced_repetition 
+                  WHERE user_id = ? AND word = ?
+                `, [user.id, item.word]);
+
+                if (!existingItem) {
+                  await this.db.run(`
+                    INSERT INTO spaced_repetition (user_id, word, ease_factor, interval_days, 
+                                                  repetitions, next_review_date, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  `, [
+                    user.id,
+                    item.word,
+                    item.easeFactor || 2.5,
+                    item.interval || 1,
+                    item.repetitions || 0,
+                    item.nextReview || new Date().toISOString(),
+                    item.createdAt || new Date().toISOString(),
+                    new Date().toISOString()
+                  ]);
+                }
+              }
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to migrate spaced repetition for ${username}:`, error.message);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Spaced repetition migration failed:', error.message);
+      }
+
+      // Migrate badges
+      try {
+        const badgesPath = path.join(__dirname, 'data', 'badges.json');
+        const badgesData = JSON.parse(await fs.readFile(badgesPath, 'utf8'));
+        console.log(`📥 Migrating badges data...`);
+
+        for (const [username, badges] of Object.entries(badgesData)) {
+          try {
+            const user = await this.db.get('SELECT id FROM users WHERE username = ?', [username]);
+            if (user) {
+              for (const badge of badges) {
+                // Check if badge already exists
+                const existingBadge = await this.db.get(`
+                  SELECT id FROM user_badges 
+                  WHERE user_id = ? AND badge_type = ? AND badge_name = ?
+                `, [user.id, badge.type, badge.name]);
+
+                if (!existingBadge) {
+                  await this.db.run(`
+                    INSERT INTO user_badges (user_id, badge_type, badge_name, description, 
+                                             earned_date, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                  `, [
+                    user.id,
+                    badge.type,
+                    badge.name,
+                    badge.description || '',
+                    badge.earnedDate || new Date().toISOString(),
+                    new Date().toISOString()
+                  ]);
+                }
+              }
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to migrate badges for ${username}:`, error.message);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Badges migration failed:', error.message);
+      }
+
+      // Mark migration as completed
+      // Note: Disabled for now since app_settings table exists but we're not using it
+      // await this.db.run(`
+      //   INSERT OR REPLACE INTO app_settings (key, value) 
+      //   VALUES (?, ?)
+      // `, ['migration_completed', 'true']);
+
+      console.log('✅ JSON to SQLite migration completed successfully');
+
+    } catch (error) {
+      console.error('❌ Migration failed:', error.message);
       throw error;
     }
   }

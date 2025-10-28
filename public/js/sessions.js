@@ -8,7 +8,7 @@ window.loadUserSessions = async function(username) {
   }
   
   try {
-    const res = await fetch('/getResults');
+    const res = await authenticatedFetch('/getResults');
     const results = await res.json();
     
     const userSessions = results[username];

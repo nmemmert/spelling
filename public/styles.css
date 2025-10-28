@@ -607,6 +607,12 @@ div[id*="Tab"],
   padding: 1.5rem;
 }
 
+/* Ensure game section uses flex for proper ordering */
+#gameSection .card {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Game elements */
 #wordBox, .word-box, #typingPrompt {
   font-size: clamp(2.5rem, 8vw, 4rem);
@@ -626,6 +632,16 @@ div[id*="Tab"],
   justify-content: center;
   letter-spacing: 2px;
   word-break: break-word;
+  order: 1;
+  position: relative;
+}
+
+/* Ensure input section appears below word box */
+#inputSection {
+  order: 2;
+  position: relative;
+  margin-top: 2rem !important;
+  display: block;
 }
 
 /* Word feedback styles */

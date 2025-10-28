@@ -162,11 +162,6 @@ class TabletOptimizations {
             orientationTimeout = setTimeout(() => {
                 this.adjustForOrientation();
                 
-                // Trigger canvas resize if handwriting is active
-                if (window.handwritingRecognition && window.handwritingRecognition.resizeCanvas) {
-                    window.handwritingRecognition.resizeCanvas();
-                }
-                
                 // Re-focus current input if any
                 const activeElement = document.activeElement;
                 if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {

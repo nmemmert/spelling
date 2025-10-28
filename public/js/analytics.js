@@ -35,7 +35,7 @@ async function analyticsRefresh() {
     updateLoadingState(true);
     
     // Fetch analytics data from server
-    const response = await fetch('/getAnalytics');
+    const response = await authenticatedFetch('/getAnalytics');
     if (!response.ok) {
       throw new Error(`Failed to fetch analytics data: ${response.status}`);
     }
@@ -130,7 +130,7 @@ async function populateUserDropdown() {
     loadingOption.disabled = true;
     userSelect.appendChild(loadingOption);
     
-    const response = await fetch('/getUsers');
+    const response = await authenticatedFetch('/getUsers');
     
     // Remove loading option
     if (userSelect.contains(loadingOption)) {

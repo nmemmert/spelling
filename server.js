@@ -3,6 +3,8 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+console.log('🔥 Server.js starting...');
+
 const DatabaseService = require('./database-service');
 const security = require('./middleware/security');
 const { logger, requestLogger, securityLogger } = require('./middleware/logging');
@@ -19,13 +21,8 @@ const dbService = new DatabaseService();
 app.use(security.helmet);
 app.use(security.compression);
 
-// Apply general rate limiting only in production, or very lenient in development
-if (process.env.NODE_ENV === 'production') {
-  app.use(security.generalLimiter);
-} else {
-  // Very lenient rate limiting for development
-  logger.info('Development mode: Rate y lenient for testing');
-}
+// Rate limiting completely disabled
+logger.info('Rate limiting disabled for all environments');
 
 // Logging middleware
 app.use(requestLogger);
@@ -76,78 +73,36 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Development-only route to reset rate limits
-if (process.env.NODE_ENV === 'development') {
-  app.post('/dev/reset-rate-limits', (req, res) => {
-    try {
-      // Note: This would need to be implemented based on your rate limiter's reset method
-      // For now, just return a message
-      logger.info('Rate limits reset requested (dev mode)');
-      res.json({
-        success: true,
-        message: 'Rate limits reset (restart server for full reset)',
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      logger.error('Error resetting rate limits', { error: error.message });
-      res.status(500).json({ error: 'Failed to reset rate limits' });
+// Authentication middleware
+const authenticateToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+      return res.status(401).json({ error: 'Access token required' });
     }
-  });
-}
 
-// Development-only debug endpoint for password testing
-if (process.env.NODE_ENV === 'development') {
-  app.post('/dev/test-password', async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      
-      const user = await dbService.db.get(`
-        SELECT id, username, password_hash, role
-        FROM users 
-        WHERE username = ? AND is_active = 1
-      `, [username]);
+    const user = await dbService.verifyToken(token);
+    req.user = user;
+    next();
+  } catch (error) {
+    logger.warn('Token authentication failed', { error: error.message });
+    res.status(403).json({ error: 'Invalid or expired token' });
+  }
+};
 
-      if (!user) {
-        return res.json({ error: 'User not found' });
-      }
-
-      console.log('🧪 Password test for user:', username);
-      console.log('🔑 Provided password:', password);
-
-      
-      if (user.password_hash) {
-        const bcrypt = require('bcryptjs');
-        const crypto = require('crypto');
-        
-        // Test direct bcrypt comparison
-        const directMatch = await bcrypt.compare(password, user.password_hash);
-
-        
-        // Test SHA-256 + bcrypt comparison
-        const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
-        const sha256Match = await bcrypt.compare(sha256Hash, user.password_hash);
-
-        
-        res.json({
-          username,
-          hasStoredHash: !!user.password_hash,
-          directMatch,
-          sha256Match,
-          sha256Hash
-        });
-      } else {
-        res.json({ username, hasStoredHash: false, message: 'No password set' });
-      }
-    } catch (error) {
-      res.json({ error: error.message });
-    }
-  });
-}
+const requireAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
 
 // ==================== USER AUTHENTICATION ====================
 
 // Get all users (for admin)
-app.get('/getUsers', async (req, res) => {
+app.get('/getUsers', authenticateToken, async (req, res) => {
   try {
     const users = await dbService.getUsers();
     res.json(users);
@@ -157,8 +112,8 @@ app.get('/getUsers', async (req, res) => {
   }
 });
 
-// User login/authentication with rate limiting
-app.post('/api/auth/login', security.authLimiter, async (req, res) => {
+// User login/authentication (rate limiting removed)
+app.post('/api/auth/login', async (req, res) => {
   const clientIP = req.ip || req.connection.remoteAddress;
   
   try {
@@ -194,7 +149,7 @@ app.post('/api/auth/login', security.authLimiter, async (req, res) => {
 });
 
 // Create new user
-app.post('/api/users', async (req, res) => {
+app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const userData = req.body;
     const user = await dbService.createUser(userData);
@@ -206,7 +161,7 @@ app.post('/api/users', async (req, res) => {
 });
 
 // Change user password
-app.post('/changePassword', async (req, res) => {
+app.post('/changePassword', authenticateToken, async (req, res) => {
   try {
     const { username, newPasswordHash } = req.body;
     
@@ -230,7 +185,7 @@ app.post('/changePassword', async (req, res) => {
 });
 
 // Add user (legacy endpoint for frontend compatibility)
-app.post('/addUser', async (req, res) => {
+app.post('/addUser', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { username, hash, role } = req.body;
     
@@ -262,7 +217,7 @@ app.post('/addUser', async (req, res) => {
 });
 
 // Clear all users (admin only)
-app.post('/clearUsers', async (req, res) => {
+app.post('/clearUsers', authenticateToken, requireAdmin, async (req, res) => {
   try {
     await dbService.clearAllUsers();
     res.status(200).send('All users cleared successfully');
@@ -273,7 +228,7 @@ app.post('/clearUsers', async (req, res) => {
 });
 
 // Delete a specific user (admin only)
-app.post('/deleteUser', async (req, res) => {
+app.post('/deleteUser', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { username } = req.body;
     if (!username) {
@@ -293,7 +248,7 @@ app.post('/deleteUser', async (req, res) => {
 });
 
 // Save weeks-based wordlist for a user
-app.post('/saveWeeksWordList', async (req, res) => {
+app.post('/saveWeeksWordList', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { username, weeks } = req.body;
     
@@ -329,6 +284,101 @@ app.post('/saveWeeksWordList', async (req, res) => {
   }
 });
 
+// Save a simple word list for a user (legacy endpoint for admin interface)
+app.post('/saveWordList', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { username, words } = req.body;
+    
+    if (!username || !Array.isArray(words)) {
+      return res.status(400).json({ error: 'Username and words array are required' });
+    }
+
+    // Validate words array
+    if (words.length > 100 || words.some(w => typeof w !== 'string')) {
+      return res.status(400).json({ error: 'Invalid word list - must be array of strings, max 100 words' });
+    }
+
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    // Read current wordlists data
+    const wordlistsPath = path.join(__dirname, 'data', 'wordlists.json');
+    let wordlistsData = {};
+    
+    try {
+      const fileContent = await fs.readFile(wordlistsPath, 'utf8');
+      wordlistsData = JSON.parse(fileContent);
+    } catch (error) {
+      // File doesn't exist or is invalid, start with empty object
+      console.log('Creating new wordlists.json file');
+    }
+    
+    // Update the user's wordlist with simple array format
+    wordlistsData[username] = words;
+    
+    // Save back to file
+    await fs.writeFile(wordlistsPath, JSON.stringify(wordlistsData, null, 2));
+    
+    res.status(200).json({ message: `Word list saved for ${username}`, wordCount: words.length });
+  } catch (error) {
+    console.error('Error saving word list:', error);
+    res.status(500).json({ error: 'Failed to save word list' });
+  }
+});
+
+// Set active week for a user
+app.post('/setActiveWeek', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { username, activeWeek } = req.body;
+    
+    if (!username || !activeWeek) {
+      return res.status(400).json({ error: 'Username and activeWeek are required' });
+    }
+
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    // Read current wordlists data
+    const wordlistsPath = path.join(__dirname, 'data', 'wordlists.json');
+    let wordlistsData = {};
+    
+    try {
+      const fileContent = await fs.readFile(wordlistsPath, 'utf8');
+      wordlistsData = JSON.parse(fileContent);
+    } catch (error) {
+      return res.status(404).json({ error: 'Wordlists file not found' });
+    }
+    
+    // Check if user exists in wordlists
+    if (!wordlistsData[username]) {
+      return res.status(404).json({ error: `No wordlist found for user ${username}` });
+    }
+    
+    // Check if user has weeks format
+    if (!wordlistsData[username].weeks || !Array.isArray(wordlistsData[username].weeks)) {
+      return res.status(400).json({ error: `User ${username} does not have weeks-based wordlist` });
+    }
+    
+    // Check if the activeWeek exists in the user's weeks
+    const weekExists = wordlistsData[username].weeks.some(week => week.date === activeWeek);
+    if (!weekExists) {
+      return res.status(400).json({ error: `Week ${activeWeek} not found for user ${username}` });
+    }
+    
+    // Set the active week
+    wordlistsData[username].activeWeek = activeWeek;
+    
+    // Save back to file
+    await fs.writeFile(wordlistsPath, JSON.stringify(wordlistsData, null, 2));
+    
+    console.log(`✅ Set active week for ${username}: ${activeWeek}`);
+    res.status(200).json({ message: `Active week set for ${username}: ${activeWeek}` });
+  } catch (error) {
+    console.error('Error setting active week:', error);
+    res.status(500).json({ error: 'Failed to set active week' });
+  }
+});
+
 // ==================== WORDLIST MANAGEMENT ====================
 
 // Get all word lists
@@ -361,7 +411,7 @@ app.get('/api/wordlists', async (req, res) => {
 });
 
 // Get word list for specific user (legacy compatibility)
-app.get('/getWordList', async (req, res) => {
+app.get('/getWordList', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const username = req.query.username;
     if (!username) {
@@ -384,12 +434,25 @@ app.get('/getWordList', async (req, res) => {
     // Handle both old format (array) and new format (object with weeks)
     let words = [];
     if (Array.isArray(userWordlist)) {
+      // Old format: direct array of words
       words = userWordlist;
+    } else if (userWordlist.weeks && Array.isArray(userWordlist.weeks) && userWordlist.activeWeek) {
+      // New format: get words from active week only
+      const activeWeek = userWordlist.weeks.find(week => week.date === userWordlist.activeWeek);
+      if (activeWeek && Array.isArray(activeWeek.words)) {
+        words = activeWeek.words;
+      } else {
+        // If no active week found, use the latest week
+        const latestWeek = userWordlist.weeks[userWordlist.weeks.length - 1];
+        words = latestWeek?.words || [];
+      }
     } else if (userWordlist.weeks && Array.isArray(userWordlist.weeks)) {
-      // Flatten all words from all weeks
-      words = userWordlist.weeks.flatMap(week => week.words || []);
+      // Weeks exist but no activeWeek set - use the latest week
+      const latestWeek = userWordlist.weeks[userWordlist.weeks.length - 1];
+      words = latestWeek?.words || [];
     }
     
+    console.log(`📚 Returning words for ${username}: ${words.length} words from ${userWordlist.activeWeek || 'array format'}`);
     res.json({ words });
   } catch (error) {
     console.error('Error getting word list for user:', req.query.username, error);
@@ -398,7 +461,7 @@ app.get('/getWordList', async (req, res) => {
 });
 
 // Get raw wordlists data (for admin interface)
-app.get('/getWordlistsRaw', async (req, res) => {
+app.get('/getWordlistsRaw', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const fs = require('fs').promises;
     const path = require('path');
@@ -415,7 +478,7 @@ app.get('/getWordlistsRaw', async (req, res) => {
 });
 
 // Create new word list
-app.post('/api/wordlists', async (req, res) => {
+app.post('/api/wordlists', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const wordlistData = req.body;
     const wordlist = await dbService.createWordlist(wordlistData);
@@ -427,7 +490,7 @@ app.post('/api/wordlists', async (req, res) => {
 });
 
 // Update word list
-app.put('/api/wordlists/:id', async (req, res) => {
+app.put('/api/wordlists/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const wordlistData = req.body;
@@ -442,7 +505,7 @@ app.put('/api/wordlists/:id', async (req, res) => {
 // ==================== SESSION MANAGEMENT ====================
 
 // Save spelling session results
-app.post('/saveResults', async (req, res) => {
+app.post('/saveResults', authenticateToken, async (req, res) => {
   try {
     const sessionData = req.body;
     
@@ -498,7 +561,7 @@ app.post('/saveResults', async (req, res) => {
 });
 
 // Get user results/sessions
-app.get('/getResults', async (req, res) => {
+app.get('/getResults', authenticateToken, async (req, res) => {
   try {
     const { username } = req.query;
     
@@ -555,7 +618,7 @@ app.get('/getResults', async (req, res) => {
 // ==================== PROGRESS TRACKING ====================
 
 // Get user progress
-app.get('/api/progress/:username', async (req, res) => {
+app.get('/api/progress/:username', authenticateToken, async (req, res) => {
   try {
     const { username } = req.params;
     
@@ -575,7 +638,7 @@ app.get('/api/progress/:username', async (req, res) => {
 });
 
 // Get legacy progress format
-app.get('/getProgress', async (req, res) => {
+app.get('/getProgress', authenticateToken, async (req, res) => {
   try {
     const users = await dbService.getUsers();
     const allProgress = {};
@@ -882,6 +945,146 @@ app.post('/api/badges/award', async (req, res) => {
   }
 });
 
+// Get all badges
+app.get('/getBadges', authenticateToken, async (req, res) => {
+  try {
+    const username = req.query.username;
+    if (username) {
+      // Get badges for specific user
+      const users = await dbService.getUsers();
+      const user = users.find(u => u.username === username);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const badges = await dbService.getUserBadges(user.id);
+      res.json(badges || []);
+    } else {
+      // Get all badges (admin only)
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const allBadges = await dbService.getAllBadges();
+      res.json(allBadges || {});
+    }
+  } catch (error) {
+    console.error('Error getting badges:', error);
+    res.status(500).json({ error: 'Failed to get badges' });
+  }
+});
+
+// Get spaced repetition data for user
+app.get('/getSpacedRepetitionData', authenticateToken, async (req, res) => {
+  try {
+    const username = req.query.username;
+    if (!username) {
+      return res.status(400).json({ error: 'Username required' });
+    }
+
+    const users = await dbService.getUsers();
+    const user = users.find(u => u.username === username);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const spacedRepetitionData = await dbService.getSpacedRepetitionData(user.id);
+    res.json(spacedRepetitionData || []);
+  } catch (error) {
+    console.error('Error getting spaced repetition data:', error);
+    res.status(500).json({ error: 'Failed to get spaced repetition data' });
+  }
+});
+
+// Get wordlists for user (spaced repetition)
+app.get('/getWordlistsForUser', authenticateToken, async (req, res) => {
+  try {
+    const username = req.query.username;
+    if (!username) {
+      return res.status(400).json({ error: 'Username required' });
+    }
+
+    const users = await dbService.getUsers();
+    const user = users.find(u => u.username === username);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const wordlists = await dbService.getWordlistsForUser(user.id);
+    res.json(wordlists || []);
+  } catch (error) {
+    console.error('Error getting wordlists for user:', error);
+    res.status(500).json({ error: 'Failed to get wordlists for user' });
+  }
+});
+
+// Get user progress (gamification)
+app.get('/getUserProgress', authenticateToken, async (req, res) => {
+  try {
+    const username = req.query.username;
+    if (!username) {
+      return res.status(400).json({ error: 'Username required' });
+    }
+
+    const users = await dbService.getUsers();
+    const user = users.find(u => u.username === username);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const progress = await dbService.getUserProgress(user.id);
+    res.json(progress || {});
+  } catch (error) {
+    console.error('Error getting user progress:', error);
+    res.status(500).json({ error: 'Failed to get user progress' });
+  }
+});
+
+// Check badges for user
+app.get('/checkBadges', authenticateToken, async (req, res) => {
+  try {
+    const username = req.query.username;
+    const accuracy = parseFloat(req.query.accuracy);
+    const wordCount = parseInt(req.query.wordCount);
+
+    if (!username || isNaN(accuracy) || isNaN(wordCount)) {
+      return res.status(400).json({ error: 'Username, accuracy, and wordCount required' });
+    }
+
+    const users = await dbService.getUsers();
+    const user = users.find(u => u.username === username);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const newBadges = await dbService.checkAndAwardBadges(user.id, accuracy, wordCount);
+    res.json({ newBadges: newBadges || [] });
+  } catch (error) {
+    console.error('Error checking badges:', error);
+    res.status(500).json({ error: 'Failed to check badges' });
+  }
+});
+
+// Check daily completion
+app.get('/checkDailyCompletion', authenticateToken, async (req, res) => {
+  try {
+    const username = req.query.username;
+    if (!username) {
+      return res.status(400).json({ error: 'Username required' });
+    }
+
+    const users = await dbService.getUsers();
+    const user = users.find(u => u.username === username);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const completed = await dbService.checkDailyCompletion(user.id);
+    res.json({ completed: !!completed });
+  } catch (error) {
+    console.error('Error checking daily completion:', error);
+    res.status(500).json({ error: 'Failed to check daily completion' });
+  }
+});
+
 // Get analytics (alternative endpoint)
 app.get('/getAnalytics', async (req, res) => {
   try {
@@ -938,10 +1141,24 @@ function processAnalyticsData(events) {
 // ==================== SERVER INITIALIZATION ====================
 
 async function startServer() {
+  logger.info('🚀 startServer function called');
   try {
+    logger.info('🔄 Initializing database...');
     // Initialize database
     await dbService.init();
+    logger.info('✅ Database initialized successfully');
 
+    // Run automatic migration from JSON files to SQLite
+    logger.info('🔄 Checking for data migration...');
+    try {
+      logger.info('🔄 Calling dbService.migrateFromJsonFiles()...');
+      await dbService.migrateFromJsonFiles();
+      logger.info('✅ Data migration completed successfully');
+    } catch (migrationError) {
+      logger.error('❌ Data migration failed:', { error: migrationError.message, stack: migrationError.stack });
+      // Don't exit - continue with server startup even if migration fails
+      // This allows the server to start with existing data
+    }
 
     // Start server
     const server = app.listen(PORT, HOST, () => {
@@ -960,7 +1177,7 @@ async function startServer() {
       console.log(`🗜️ Compression: Enabled for performance`);
       console.log('=============================================');
       console.log('\n✨ Production Features:');
-      console.log('• �️ Security headers and rate limiting');
+      console.log('• �️ Security headers (rate limiting disabled)');
       console.log('• 📝 Structured logging and monitoring'); 
       console.log('• 🏆 Complete gamification system');
       console.log('• 🎨 Enhanced theme system (8 themes)');
@@ -976,8 +1193,7 @@ async function startServer() {
   }
 }
 
-// Add rate limiting to API routes
-app.use('/api/', security.apiLimiter);
+// Rate limiting removed from API routes
 
 // Error handling middleware (must be last)
 app.use(security.errorHandler);
@@ -1020,6 +1236,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start the server
+logger.info('🎯 About to call startServer()');
 startServer();
 
 module.exports = app;

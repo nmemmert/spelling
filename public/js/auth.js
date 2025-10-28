@@ -164,3 +164,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// 🔐 Utility function for authenticated API requests
+window.authenticatedFetch = function(url, options = {}) {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    // If no token, redirect to login or throw error
+    console.warn('No auth token found, redirecting to login');
+    showLoginPanel();
+    throw new Error('Authentication required');
+  }
+
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+
+  return fetch(url, {
+    ...options,
+    headers
+  });
+};

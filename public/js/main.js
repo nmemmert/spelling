@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Check if server is available
   try {
 
-    const serverTest = await fetch('/getUsers');
+    const serverTest = await fetch('/health');
     if (serverTest.ok) {
 
     } else {

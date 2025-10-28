@@ -35,7 +35,7 @@ async function initializeSpacedRepetition(username) {
 // Fetch spaced repetition data for the current user
 async function fetchSpacedRepetitionData(username) {
   try {
-    const response = await fetch(`/getSpacedRepetitionData?username=${encodeURIComponent(username)}`);
+    const response = await authenticatedFetch(`/getSpacedRepetitionData?username=${encodeURIComponent(username)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch spaced repetition data: ${response.status}`);
     }
@@ -307,7 +307,7 @@ async function saveSpacedRepetitionData() {
   if (!srCurrentUser || !spacedRepetitionData) return;
   
   try {
-    const response = await fetch('/updateSpacedRepetitionData', {
+    const response = await authenticatedFetch('/updateSpacedRepetitionData', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -335,7 +335,7 @@ async function importWordsToSR() {
   
   try {
     // Get user's word lists
-    const response = await fetch(`/getWordlistsForUser?username=${encodeURIComponent(srCurrentUser)}`);
+    const response = await authenticatedFetch(`/getWordlistsForUser?username=${encodeURIComponent(srCurrentUser)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch wordlists: ${response.status}`);
     }

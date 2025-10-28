@@ -42,7 +42,7 @@ async function initializeApp() {
   // Step 1: Check server connectivity
   try {
     updateStatus('Checking server connection...');
-    const serverCheck = await fetch('/getUsers');
+    const serverCheck = await fetch('/health');
     if (serverCheck.ok) {
       updateStatus('Server connection: OK');
     } else {
@@ -67,7 +67,7 @@ async function initializeApp() {
         await window.loadUsers();
       } else {
         // Fallback if loadUsers isn't available
-        const response = await fetch('/getUsers');
+        const response = await authenticatedFetch('/getUsers');
         if (!response.ok) throw new Error(`Server returned ${response.status}`);
         window.adminUsers = await response.json();
       }

@@ -55,7 +55,7 @@ async function initGamification(username) {
 // Fetch user progress data
 async function fetchUserProgress(username) {
   try {
-    const response = await fetch(`/getUserProgress?username=${encodeURIComponent(username)}`);
+    const response = await authenticatedFetch(`/getUserProgress?username=${encodeURIComponent(username)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch user progress: ${response.status}`);
     }
@@ -82,7 +82,7 @@ async function fetchChallenges() {
       return challenges;
     }
     
-    const response = await fetch(`/getChallenges?username=${encodeURIComponent(currentUser.username)}`);
+    const response = await authenticatedFetch(`/getChallenges?username=${encodeURIComponent(currentUser.username)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch challenges: ${response.status}`);
     }
@@ -115,7 +115,7 @@ async function fetchChallenges() {
 async function fetchLeaderboards() {
   console.log('🏆 fetchLeaderboards() called');
   try {
-    const response = await fetch('/getLeaderboards');
+    const response = await authenticatedFetch('/getLeaderboards');
     console.log('🏆 Response status:', response.status);
     if (!response.ok) {
       throw new Error(`Failed to fetch leaderboards: ${response.status}`);
@@ -132,7 +132,7 @@ async function fetchLeaderboards() {
 // Update user streak
 async function updateUserStreak(username) {
   try {
-    const response = await fetch('/updateStreak', {
+    const response = await authenticatedFetch('/updateStreak', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -166,7 +166,7 @@ async function completeChallenge(challengeId, challengeType) {
   }
   
   try {
-    const response = await fetch('/completeChallenge', {
+    const response = await authenticatedFetch('/completeChallenge', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

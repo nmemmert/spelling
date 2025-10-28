@@ -34,7 +34,6 @@
     <link href="mobile.css" rel="stylesheet"/>
     <link href="tablet.css" rel="stylesheet"/>
     <link href="tablet-menu.css" rel="stylesheet"/>
-    <link href="handwriting.css" rel="stylesheet"/>
     <link href="native-recognition.css" rel="stylesheet"/>
     <link href="unified-write.css" rel="stylesheet"/>
     <link href="tab-contrast.css" rel="stylesheet"/>
@@ -44,8 +43,6 @@
     <link href="spaced-repetition.css" rel="stylesheet"/>
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.3.1/sha.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <!-- TensorFlow.js for better handwriting recognition -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
     <!-- Fallback for jsSHA library if CDN fails -->
     <script>
       window.addEventListener('DOMContentLoaded', function() {
@@ -74,8 +71,6 @@
     <script src="js/analytics.js"></script>
     <script src="js/gamification.js"></script>
     <script src="js/spaced-repetition.js"></script>
-    <script src="js/native-handwriting.js"></script>
-    <script src="js/handwriting.js"></script>
     <script src="js/unified-write.js"></script>
     <script src="js/tablet-menu.js"></script>
     <script src="js/tablet-utils.js"></script>
@@ -873,16 +868,18 @@
                     </button>
                 </div>
                 <div class="word-box" id="wordBox"></div>
-                <div class="hidden" id="inputSection" style="text-align: center;">
-                    <!-- Unified Write Mode Container -->
+                <div class="hidden" id="inputSection" style="text-align: center; margin-top: 2rem; clear: both;">
+                    <!-- Word feedback shown first -->
+                    <div id="wordFeedback" style="margin-bottom: 1rem; font-weight: bold; min-height: 24px;"></div>
+                    
+                    <!-- Unified Write Mode Container (includes textarea and buttons) -->
                     <div id="unifiedWriteContainer"></div>
                     
                     <!-- Legacy input (hidden, for compatibility) -->
                     <input id="userInput" type="hidden"/>
-                    </div>
                     
-                    <button onclick="submitAnswer()" class="btn-primary">Submit Answer</button>
-                    <div id="wordFeedback" style="margin-top: 10px; font-weight: bold; min-height: 24px;"></div>
+                    <!-- Legacy submit button (hidden, unified write mode has its own) -->
+                    <button onclick="submitAnswer()" class="btn-primary" style="display: none;">Submit Answer</button>
                 </div>
                 <!-- Game Summary -->
                 <div id="summary" class="card hidden">
@@ -931,37 +928,9 @@
                 </div>
                 <div id="typingPrompt">Get ready to type...</div>
                 
-                <!-- Input Mode Toggle for Typing Practice - Handwriting removed -->
-                <div class="input-mode-toggle" style="display: none;">
-                    <button class="active" data-mode="typing" onclick="toggleInputMode('typing')">
-                        ⌨️ Type
-                    </button>
-                </div>
-                
                 <div style="text-align: center; margin: 2rem 0;">
                     <!-- Typing Input -->
                     <input id="typingInput" type="text" style="max-width: 500px;"/>
-                    
-                    <!-- Handwriting Input for Typing Practice -->
-                    <div id="typingHandwritingContainer" class="handwriting-container" style="display: none;">
-                        <h4>✏️ Write your response:</h4>
-                        
-                        <!-- Canvas for handwriting in typing practice -->
-                        <canvas id="typingHandwritingCanvas" width="600" height="300" style="width: 100%; max-width: 600px; height: 250px; border: 3px solid var(--primary); border-radius: 12px; background: white; display: block; margin: 1rem auto;"></canvas>
-                        
-                        <!-- Canvas Controls for typing practice -->
-                        <div class="canvas-controls">
-                            <button onclick="clearTypingHandwriting()" class="clear-btn">🗑️ Clear</button>
-                            <button onclick="recognizeTypingHandwriting()" class="recognize-btn">🔍 Recognize</button>
-                            <button onclick="undoTypingHandwritingStroke()" class="undo-btn">↶ Undo</button>
-                        </div>
-                        
-                        <!-- Recognition Status for typing practice -->
-                        <div id="typingRecognitionStatus" class="recognition-status empty"></div>
-                        
-                        <!-- Recognized Text Display for typing practice -->
-                        <div id="typingRecognizedText" class="recognized-text">Draw to see recognized text here</div>
-                    </div>
                     
                     <button onclick="submitTyping()" class="btn-primary">Submit</button>
                 </div>

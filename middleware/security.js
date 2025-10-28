@@ -1,8 +1,10 @@
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+// Rate limiting completely disabled
+// const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 
-// Rate limiting configuration
+// Rate limiting disabled - no longer creating rate limiters
+/*
 const createRateLimit = (windowMs, max, message) => {
   const window = windowMs || parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
   return rateLimit({
@@ -16,10 +18,12 @@ const createRateLimit = (windowMs, max, message) => {
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   });
 };
+*/
 
-// Specific rate limiters - development vs production settings
+// Specific rate limiters - DISABLED
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
+/*
 // No rate limiting for development, minimal for production
 const generalLimiter = createRateLimit(
   isDevelopment ? 1 * 60 * 1000 : 15 * 60 * 1000, // 1 min dev, 15 min prod
@@ -51,6 +55,7 @@ const apiLimiter = createRateLimit(
     retryAfter: 60
   }
 );
+*/
 
 // Security headers configuration
 const helmetConfig = {
@@ -122,9 +127,10 @@ const errorHandler = (err, req, res, next) => {
 module.exports = {
   helmet: helmet(helmetConfig),
   compression: compression(compressionConfig),
-  generalLimiter,
-  authLimiter,
-  apiLimiter,
+  // Rate limiters removed but kept for backward compatibility
+  generalLimiter: (req, res, next) => next(), // No-op middleware
+  authLimiter: (req, res, next) => next(), // No-op middleware
+  apiLimiter: (req, res, next) => next(), // No-op middleware
   validateInput,
   errorHandler
 };

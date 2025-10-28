@@ -44,7 +44,7 @@
     }
     
     // Fetch users directly
-    fetch('/getUsers')
+    authenticatedFetch('/getUsers')
       .then(response => {
         if (!response.ok) {
           throw new Error(`Server returned ${response.status}`);

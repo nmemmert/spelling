@@ -11,14 +11,19 @@ window.submitAnswer = function(providedAnswer = null) {
     // Get input from unified write mode or legacy inputs
     let input = '';
     
+    console.log('📝 submitAnswer called, providedAnswer:', providedAnswer);
+    console.log('📝 window.unifiedWriteMode exists:', !!window.unifiedWriteMode);
+    
     // First check if answer was provided directly (from unified write mode)
     if (providedAnswer) {
         input = providedAnswer.trim();
     } else if (window.unifiedWriteMode) {
         // Get from unified write mode
         input = window.unifiedWriteMode.getText();
+        console.log('📝 Got text from unified write mode:', input);
         if (!input) {
-            alert('Please enter an answer first!');
+            console.warn('⚠️ No input detected from unified write mode');
+            alert('Please enter an answer first! Type your answer in the text area.');
             return;
         }
     } else {
@@ -45,11 +50,17 @@ window.submitAnswer = function(providedAnswer = null) {
         }
     }
     
+    // Determine input mode
+    let inputMode = 'keyboard';
+    if (window.unifiedWriteMode) {
+        inputMode = window.unifiedWriteMode.currentMode || 'keyboard';
+    }
+    
     // Record the attempt
     results.push({
         word: currentWord,
         attempt: input,
-        inputMode: handwritingContainer && handwritingContainer.style.display !== 'none' ? 'handwriting' : 'typing'
+        inputMode: inputMode
     });
 
     // Show feedback and move to next word regardless of correctness
@@ -231,11 +242,6 @@ function showWord() {
             if (userInput) {
                 userInput.value = '';
                 userInput.classList.add('visible-input');
-            }
-            
-            // Reset handwriting input
-            if (window.clearHandwriting) {
-                window.clearHandwriting();
             }
             
             // Reset recognition status and text
