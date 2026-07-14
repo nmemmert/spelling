@@ -1,0 +1,19 @@
+{
+  "name": "spelling-v2",
+  "version": "1.0.0",
+  "description": "Homeschool spelling practice — dictation, spaced repetition, and weekly tests",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "author": "NateEmmert",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

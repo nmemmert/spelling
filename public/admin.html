@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parent Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <section id="pin-gate" class="view parent">
+    <h1>👩‍🏫 Parent Dashboard</h1>
+    <form id="pin-form">
+      <input id="pin-input" type="password" inputmode="numeric" placeholder="Enter PIN" aria-label="Parent PIN">
+      <button type="submit">Unlock</button>
+    </form>
+    <p id="pin-error" class="error" hidden>Wrong PIN, try again.</p>
+    <p class="hint">Default PIN is 1234 — change it in Settings after unlocking.</p>
+    <p><a class="link-btn" href="index.html">← Back to kid picker</a></p>
+  </section>
+
+  <div id="console" hidden>
+    <header class="admin-header">
+      <a href="index.html" class="admin-logo">🎓 Homeschool</a>
+      <nav class="admin-nav">
+        <button class="nav-pill active" data-panel="kids">🧒 Kids</button>
+        <button class="nav-pill" data-panel="courses">📚 Courses</button>
+        <button class="nav-pill" data-panel="planner">🗓️ Planner</button>
+        <button class="nav-pill" data-panel="grading">✅ Grading</button>
+        <button class="nav-pill" data-panel="gradebook">📊 Gradebook</button>
+        <button class="nav-pill" data-panel="spelling">✏️ Spelling</button>
+        <button class="nav-pill" data-panel="decks">🗂️ Flashcards</button>
+        <button class="nav-pill" data-panel="settings">⚙️ Settings</button>
+      </nav>
+    </header>
+
+    <main class="admin-main">
+
+      <!-- Kids -->
+      <section id="panel-kids" class="panel">
+        <h1>Kids</h1>
+        <div id="student-rows"></div>
+        <form id="add-student-form" class="inline-form">
+          <input id="new-student-name" placeholder="Name" aria-label="New kid name">
+          <select id="new-student-emoji" aria-label="Avatar">
+            <option>🦊</option><option>🐸</option><option>🦄</option><option>🐯</option>
+            <option>🐼</option><option>🦖</option><option>🐙</option><option>🦉</option>
+          </select>
+          <button type="submit">Add kid</button>
+        </form>
+      </section>
+
+      <!-- Courses list -->
+      <section id="panel-courses" class="panel">
+        <h1>Courses</h1>
+        <div id="course-rows"></div>
+        <form id="add-course-form" class="inline-form">
+          <input id="new-course-name" placeholder="Course name (e.g. Science 3)" aria-label="Course name">
+          <input id="new-course-subject" placeholder="Subject" aria-label="Subject">
+          <input id="new-course-color" type="color" value="#4f86f7" aria-label="Color">
+          <button type="submit">Add course</button>
+        </form>
+      </section>
+
+      <!-- Course detail (units + items + roster) -->
+      <section id="panel-course-detail" class="panel" hidden>
+        <button class="back-btn" data-nav="courses">← All courses</button>
+        <h1 id="cd-name"></h1>
+
+        <div class="admin-card">
+          <h2>Course info</h2>
+          <form id="course-meta-form" class="inline-form">
+            <input id="cd-name-input" placeholder="Course name">
+            <input id="cd-subject-input" placeholder="Subject">
+            <input id="cd-color-input" type="color">
+            <label class="checkbox-label"><input type="checkbox" id="cd-archived"> Archived</label>
+            <button type="submit">Save</button>
+            <button type="button" id="cd-delete" class="danger">Delete course</button>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h2>Roster</h2>
+          <div id="cd-roster"></div>
+        </div>
+
+        <div class="admin-card">
+          <h2>Units &amp; content</h2>
+          <div id="cd-units"></div>
+          <form id="add-unit-form" class="inline-form">
+            <input id="new-unit-name" placeholder="Unit name (e.g. Week 1: Weather)" aria-label="Unit name">
+            <button type="submit">Add unit</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Item editor (lesson / assignment / quiz / spelling / flashcards) -->
+      <section id="panel-item-editor" class="panel" hidden>
+        <button class="back-btn" data-nav="course-detail">← Back to course</button>
+        <h1 id="ie-heading">New item</h1>
+        <form id="item-form" class="admin-card">
+          <input type="hidden" id="ie-id">
+          <input type="hidden" id="ie-unit-id">
+
+          <label>Type
+            <select id="ie-type">
+              <option value="lesson">📖 Lesson</option>
+              <option value="assignment">📝 Assignment</option>
+              <option value="quiz">❓ Quiz</option>
+              <option value="spelling_practice">✏️ Spelling Practice</option>
+              <option value="spelling_test">⭐ Spelling Test</option>
+              <option value="flashcards">🗂️ Flashcards</option>
+            </select>
+          </label>
+          <label>Title <input id="ie-title" placeholder="Item title"></label>
+
+          <!-- Scan a page: visible for lesson + quiz types -->
+          <div id="ie-scan-section" class="scan-card" hidden>
+            <strong>📷 Scan a book page</strong>
+            <input type="file" id="scan-file-input" accept="image/*" capture="environment" hidden>
+            <div class="scan-controls">
+              <button type="button" id="scan-pick-btn" class="secondary">Choose photo</button>
+              <button type="button" id="scan-go-btn" disabled>🔍 Scan this page</button>
+            </div>
+            <img id="scan-preview" alt="Selected page photo" hidden>
+            <p id="scan-status" class="hint"></p>
+          </div>
+
+          <div id="ie-field-lesson" class="ie-field">
+            <label>Lesson content (text, or paste HTML — images/YouTube embeds allowed)
+              <textarea id="ie-body-lesson" rows="8" placeholder="Weather is what the sky and air are doing right now.&#10;&#10;&lt;iframe src=&quot;https://www.youtube.com/embed/VIDEO_ID&quot;&gt;&lt;/iframe&gt;"></textarea>
+            </label>
+          </div>
+
+          <div id="ie-field-assignment" class="ie-field">
+            <label>Instructions <textarea id="ie-body-assignment" rows="5" placeholder="Draw today's weather and write one sentence."></textarea></label>
+            <label>Points possible <input id="ie-points" type="number" min="0" value="10"></label>
+          </div>
+
+          <div id="ie-field-quiz" class="ie-field">
+            <div id="ie-questions"></div>
+            <button type="button" id="ie-add-question" class="secondary">+ Add question</button>
+          </div>
+
+          <div id="ie-field-spelling" class="ie-field">
+            <label>Word list <select id="ie-list"></select></label>
+          </div>
+
+          <div id="ie-field-flashcards" class="ie-field">
+            <label>Deck <select id="ie-deck"></select></label>
+          </div>
+
+          <div class="row-actions">
+            <button type="submit">Save item</button>
+            <button type="button" id="ie-delete" class="danger" hidden>Delete item</button>
+          </div>
+          <p id="ie-error" class="error" hidden></p>
+        </form>
+      </section>
+
+      <!-- Planner -->
+      <section id="panel-planner" class="panel">
+        <h1>Weekly Planner</h1>
+        <div class="inline-form">
+          <label>Kid <select id="planner-student"></select></label>
+          <button id="planner-prev" class="secondary">← Prev week</button>
+          <span id="planner-week-label" class="week-label"></span>
+          <button id="planner-next" class="secondary">Next week →</button>
+          <button id="planner-copy" class="secondary">Copy last week here</button>
+          <button id="planner-print">🖨 Print week report</button>
+        </div>
+        <div id="planner-grid" class="planner-grid"></div>
+      </section>
+
+      <!-- Grading queue -->
+      <section id="panel-grading" class="panel">
+        <h1>Grading Queue</h1>
+        <div id="grading-rows"></div>
+        <p id="grading-empty" class="hint" hidden>Nothing waiting to be graded 🎉</p>
+      </section>
+
+      <!-- Gradebook -->
+      <section id="panel-gradebook" class="panel">
+        <h1>Gradebook</h1>
+        <label>Course <select id="gradebook-course"></select></label>
+        <div id="gradebook-table"></div>
+      </section>
+
+      <!-- Spelling (legacy word lists + weekly assignment) -->
+      <section id="panel-spelling" class="panel">
+        <h1>Spelling</h1>
+        <h2>This week's list per kid</h2>
+        <div id="assign-rows"></div>
+
+        <h2>Word lists</h2>
+        <div id="list-rows"></div>
+        <details id="list-editor-details">
+          <summary id="list-editor-title">New list</summary>
+          <form id="list-form" class="admin-card">
+            <input type="hidden" id="list-id">
+            <input id="list-name" placeholder="List name (e.g. Week of July 6)" aria-label="List name">
+            <textarea id="list-words" rows="8"
+              placeholder="One word per line. Add an example sentence with | like:&#10;receive | Did you receive my letter?"></textarea>
+            <div class="row-actions">
+              <button type="submit">Save list</button>
+              <button type="button" id="list-cancel" class="secondary">Clear</button>
+            </div>
+          </form>
+        </details>
+
+        <h2>Test results</h2>
+        <div id="results-area"></div>
+      </section>
+
+      <!-- Flashcard decks -->
+      <section id="panel-decks" class="panel">
+        <h1>Flashcard Decks</h1>
+        <div id="deck-rows"></div>
+        <details id="deck-editor-details">
+          <summary id="deck-editor-title">New deck</summary>
+          <form id="deck-form" class="admin-card">
+            <input type="hidden" id="deck-id">
+            <input id="deck-name" placeholder="Deck name (e.g. State Capitals)" aria-label="Deck name">
+            <textarea id="deck-cards" rows="8"
+              placeholder="One card per line: front | back&#10;What is the capital of Ohio? | Columbus"></textarea>
+            <div class="row-actions">
+              <button type="submit">Save deck</button>
+              <button type="button" id="deck-cancel" class="secondary">Clear</button>
+            </div>
+          </form>
+        </details>
+      </section>
+
+      <!-- Settings -->
+      <section id="panel-settings" class="panel">
+        <h1>Settings</h1>
+        <form id="pin-change-form" class="inline-form">
+          <input id="new-pin" type="password" inputmode="numeric" placeholder="New PIN (4+ digits)" aria-label="New PIN">
+          <button type="submit">Change PIN</button>
+        </form>
+
+        <h2>Page scanning (AI vision)</h2>
+        <p class="hint">Used by "Scan a page" in the lesson/quiz editor. Configure one or both providers — the primary is tried first and the other is used as automatic fallback.</p>
+        <form id="scan-config-form">
+          <fieldset class="scan-provider-box">
+            <legend>Primary provider</legend>
+            <label class="radio-label">
+              <input type="radio" name="scan_primary" value="local"> Local (Ollama) — runs on your machine, completely free &amp; private
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="scan_primary" value="ollama_cloud"> Ollama Cloud — free hosted tier, requires API key
+            </label>
+          </fieldset>
+
+          <fieldset class="scan-provider-box">
+            <legend>Local — Ollama</legend>
+            <div class="inline-form">
+              <input id="ollama-host" placeholder="http://localhost:11434" aria-label="Ollama host">
+              <input id="ollama-model" placeholder="llava" aria-label="Vision model">
+              <button type="button" id="ollama-test-btn" class="secondary">Test</button>
+            </div>
+            <p id="ollama-test-result" class="hint"></p>
+            <p class="hint">Install a vision model: <code>ollama pull llava</code> or <code>ollama pull llava-llama3</code></p>
+          </fieldset>
+
+          <fieldset class="scan-provider-box">
+            <legend>Ollama Cloud (free tier)</legend>
+            <div class="inline-form">
+              <input id="ollama-cloud-model" placeholder="gemma4" aria-label="Ollama Cloud model">
+              <input id="ollama-cloud-api-key" type="password" placeholder="Ollama Cloud API key" aria-label="Ollama Cloud API key">
+              <span id="ollama-cloud-key-status" class="hint"></span>
+            </div>
+            <p class="hint">Runs through your local Ollama but offloads compute to Ollama's cloud. Get a free API key at <strong>ollama.com</strong> → Account → API Keys, then pull the model: <code>ollama pull gemma4:cloud</code>. Enter the base name only (e.g. <code>gemma4</code>) — <code>:cloud</code> is added automatically.</p>
+          </fieldset>
+
+          <button type="submit">Save scan settings</button>
+        </form>
+      </section>
+
+      <p id="admin-msg" class="hint"></p>
+    </main>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

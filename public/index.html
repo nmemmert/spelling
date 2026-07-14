@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homeschool</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Kid picker -->
+  <section id="view-home" class="view">
+    <h1 class="app-title">🎓 Homeschool</h1>
+    <p class="subtitle">Who's learning today?</p>
+    <div id="kid-cards" class="kid-cards"></div>
+    <p id="no-kids" class="hint" hidden>No kids yet — a parent needs to add them.</p>
+    <a class="link-btn" href="admin.html">Parent dashboard</a>
+  </section>
+
+  <!-- Kid home: Today's work + nav -->
+  <section id="view-kid" class="view" hidden>
+    <button class="back-btn" data-nav="home">← Switch</button>
+    <h1 id="kid-greeting"></h1>
+
+    <div class="kid-nav">
+      <button class="nav-pill active" data-tab="today">📋 Today</button>
+      <button class="nav-pill" data-tab="courses">📚 My Courses</button>
+      <button class="nav-pill" data-tab="spelling">✏️ Spelling</button>
+    </div>
+
+    <div id="tab-today" class="tab-panel">
+      <div id="today-list" class="today-list"></div>
+      <p id="today-empty" class="hint" hidden>Nothing scheduled for today — check My Courses for anything else to work on!</p>
+    </div>
+
+    <div id="tab-courses" class="tab-panel" hidden>
+      <div id="course-cards" class="course-cards"></div>
+      <p id="courses-empty" class="hint" hidden>Not enrolled in any courses yet.</p>
+    </div>
+
+    <div id="tab-spelling" class="tab-panel" hidden>
+      <div id="kid-week" class="week-card"></div>
+      <div class="big-actions">
+        <button id="btn-practice" class="big-btn practice">✏️ Practice</button>
+        <button id="btn-test" class="big-btn test">⭐ Friday Test</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Course detail: units + items -->
+  <section id="view-course" class="view" hidden>
+    <button class="back-btn" data-back="course">← Back</button>
+    <h1 id="course-title"></h1>
+    <div id="course-units"></div>
+  </section>
+
+  <!-- Lesson viewer -->
+  <section id="view-lesson" class="view" hidden>
+    <button class="back-btn" data-back="lesson">← Back</button>
+    <div class="item-card">
+      <p class="item-kicker" id="lesson-kicker"></p>
+      <h1 id="lesson-title"></h1>
+      <div id="lesson-body" class="lesson-body"></div>
+      <button id="lesson-done-btn" class="check-btn">Done reading ✓</button>
+    </div>
+  </section>
+
+  <!-- Assignment viewer -->
+  <section id="view-assignment" class="view" hidden>
+    <button class="back-btn" data-back="assignment">← Back</button>
+    <div class="item-card">
+      <p class="item-kicker" id="assignment-kicker"></p>
+      <h1 id="assignment-title"></h1>
+      <p id="assignment-points" class="points-label"></p>
+      <div id="assignment-body" class="lesson-body"></div>
+      <button id="assignment-done-btn" class="check-btn">Mark as done ✓</button>
+      <div id="assignment-status" class="status-banner" hidden></div>
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="view-quiz" class="view" hidden>
+    <button class="back-btn" data-back="quiz">← Back</button>
+    <div class="item-card">
+      <p class="item-kicker" id="quiz-kicker"></p>
+      <h1 id="quiz-title"></h1>
+      <form id="quiz-form"></form>
+      <div id="quiz-result" class="status-banner" hidden></div>
+    </div>
+  </section>
+
+  <!-- Flashcards -->
+  <section id="view-flashcards" class="view" hidden>
+    <button class="back-btn" data-back="flashcards">← Stop</button>
+    <p id="flash-progress" class="progress-label"></p>
+    <div class="progress-track"><div id="flash-bar" class="progress-fill"></div></div>
+
+    <div id="flash-card" class="word-card flip-card">
+      <p class="prompt" id="flash-deck-name"></p>
+      <div class="flash-face" id="flash-front"></div>
+      <div class="flash-face" id="flash-back" hidden></div>
+      <button id="flash-reveal" class="check-btn">Show answer</button>
+      <div id="flash-grade-buttons" class="flash-grade-row" hidden>
+        <button id="flash-again" class="grade-btn again">🔁 Study more</button>
+        <button id="flash-got-it" class="grade-btn got-it">✅ Got it!</button>
+      </div>
+    </div>
+    <div id="flash-done" class="done-card" hidden></div>
+  </section>
+
+  <!-- Practice (spelling) -->
+  <section id="view-practice" class="view" hidden>
+    <button class="back-btn" data-back="practice">← Stop</button>
+    <p id="practice-progress" class="progress-label"></p>
+    <div class="progress-track"><div id="practice-bar" class="progress-fill"></div></div>
+
+    <div id="practice-card" class="word-card">
+      <button id="btn-speak" class="speak-btn" title="Hear the word again">🔊 Say it again</button>
+      <p id="practice-prompt" class="prompt">Listen, then type the word:</p>
+      <div id="feedback" class="feedback"></div>
+      <form id="practice-form" autocomplete="off">
+        <input id="practice-input" class="spell-input" type="text" autocomplete="off"
+               autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type the word">
+        <button type="submit" class="check-btn">Check ✓</button>
+      </form>
+    </div>
+
+    <div id="practice-done" class="done-card" hidden></div>
+  </section>
+
+  <!-- Friday test (spelling) -->
+  <section id="view-test" class="view" hidden>
+    <button class="back-btn" data-back="test">← Cancel</button>
+    <p id="test-progress" class="progress-label"></p>
+    <div class="progress-track"><div id="test-bar" class="progress-fill test-fill"></div></div>
+
+    <div id="test-card" class="word-card">
+      <button id="btn-test-speak" class="speak-btn">🔊 Say it again</button>
+      <p class="prompt">Spell the word. No hints — you've got this!</p>
+      <form id="test-form" autocomplete="off">
+        <input id="test-input" class="spell-input" type="text" autocomplete="off"
+               autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Spell the word">
+        <button type="submit" class="check-btn">Next →</button>
+      </form>
+    </div>
+
+    <div id="test-done" class="done-card" hidden></div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+services:
+  spelling:
+    image: ghcr.io/nmemmert/spelling:latest
+    container_name: spelling-v2
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

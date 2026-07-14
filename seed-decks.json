@@ -1,0 +1,34 @@
+[
+  {
+    "name": "U.S. State Capitals (sample)",
+    "cards": [
+      {"front": "What is the capital of Ohio?", "back": "Columbus"},
+      {"front": "What is the capital of Texas?", "back": "Austin"},
+      {"front": "What is the capital of California?", "back": "Sacramento"},
+      {"front": "What is the capital of Florida?", "back": "Tallahassee"},
+      {"front": "What is the capital of New York?", "back": "Albany"},
+      {"front": "What is the capital of Pennsylvania?", "back": "Harrisburg"},
+      {"front": "What is the capital of Illinois?", "back": "Springfield"},
+      {"front": "What is the capital of Georgia?", "back": "Atlanta"},
+      {"front": "What is the capital of Michigan?", "back": "Lansing"},
+      {"front": "What is the capital of Washington?", "back": "Olympia"},
+      {"front": "What is the capital of Colorado?", "back": "Denver"},
+      {"front": "What is the capital of Tennessee?", "back": "Nashville"}
+    ]
+  },
+  {
+    "name": "World Geography Basics",
+    "cards": [
+      {"front": "What is the largest ocean?", "back": "The Pacific Ocean"},
+      {"front": "What is the largest continent?", "back": "Asia"},
+      {"front": "What is the longest river in the world?", "back": "The Nile River"},
+      {"front": "What is the tallest mountain on Earth?", "back": "Mount Everest"},
+      {"front": "How many continents are there?", "back": "Seven"},
+      {"front": "What is the largest desert in the world?", "back": "The Sahara (largest hot desert)"},
+      {"front": "Which continent is Egypt in?", "back": "Africa"},
+      {"front": "What imaginary line divides Earth into Northern and Southern halves?", "back": "The Equator"},
+      {"front": "What is the smallest continent?", "back": "Australia"},
+      {"front": "Which ocean is between America and Europe?", "back": "The Atlantic Ocean"}
+    ]
+  }
+]
