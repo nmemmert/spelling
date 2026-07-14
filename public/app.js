@@ -233,10 +233,18 @@ async function openCourse(courseId) {
         <h2>${esc(u.name)}</h2>
         ${u.items
           .map((it) => {
+            if (it.locked) {
+              return `<div class="today-row locked">
+                <span class="row-check">🔒</span>
+                <span class="row-title">${esc(it.title)}<small>${TYPE_LABEL[it.type]}</small></span>
+                <span class="row-badge hint">Complete previous item first</span>
+              </div>`;
+            }
             const badge = statusBadge(it.type, it.status, it.score, it.points_possible, it.status !== 'not_started');
+            const due = it.due_date ? `<small class="due-date">Due ${it.due_date}</small>` : '';
             return `<button class="today-row" data-item-id="${it.id}" data-item-type="${it.type}">
               <span class="row-check">${it.status === 'not_started' ? TYPE_ICON[it.type] : '✅'}</span>
-              <span class="row-title">${esc(it.title)}<small>${TYPE_LABEL[it.type]}</small></span>
+              <span class="row-title">${esc(it.title)}${due}<small>${TYPE_LABEL[it.type]}</small></span>
               <span class="row-badge">${badge}</span>
             </button>`;
           })
@@ -244,7 +252,7 @@ async function openCourse(courseId) {
       </div>`
     )
     .join('');
-  document.querySelectorAll('#course-units .today-row').forEach((row) =>
+  document.querySelectorAll('#course-units .today-row:not(.locked)').forEach((row) =>
     row.addEventListener('click', () => {
       backTarget = () => openCourse(courseId);
       openItem(Number(row.dataset.itemId), row.dataset.itemType);
@@ -258,10 +266,10 @@ async function openCourse(courseId) {
 async function openItem(itemId, type) {
   if (type === 'lesson') return openLesson(itemId);
   if (type === 'assignment') return openAssignment(itemId);
-  if (type === 'quiz') return openQuiz(itemId);
+  if (type === 'quiz') return openQuiz(itemId, false);
   const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
   if (type === 'spelling_practice') return startPractice({ listId: item.list.id, itemId });
-  if (type === 'spelling_test') return startTest({ listId: item.list.id, itemId });
+  if (type === 'spelling_test') return startTest({ listId: item.list.id, itemId, allowRetakes: item.allow_retakes });
   if (type === 'flashcards') return startFlashcards({ deckId: item.deck.id, deckName: item.deck.name, itemId });
 }
 
@@ -294,10 +302,19 @@ async function openAssignment(itemId) {
   const btn = $('#assignment-done-btn');
   const status = $('#assignment-status');
   if (item.submission && item.submission.status === 'graded') {
-    btn.hidden = true;
     status.hidden = false;
     status.className = 'status-banner good';
     status.textContent = `🌟 Graded: ${item.submission.score} / ${item.submission.points_possible}`;
+    if (item.allow_retakes) {
+      btn.hidden = false;
+      btn.textContent = '🔁 Retake';
+      btn.onclick = async () => {
+        await api(`/api/items/${itemId}/complete`, { method: 'POST', body: { studentId: currentStudent.id, date: todayStr() } });
+        openAssignment(itemId);
+      };
+    } else {
+      btn.hidden = true;
+    }
   } else if (item.submission && item.submission.status === 'done') {
     btn.hidden = true;
     status.hidden = false;
@@ -305,6 +322,7 @@ async function openAssignment(itemId) {
     status.textContent = `⏳ Turned in — waiting for a parent to grade it.`;
   } else {
     btn.hidden = false;
+    btn.textContent = 'Mark as done ✓';
     status.hidden = true;
     btn.onclick = async () => {
       await api(`/api/items/${itemId}/complete`, { method: 'POST', body: { studentId: currentStudent.id, date: todayStr() } });
@@ -316,18 +334,34 @@ async function openAssignment(itemId) {
 
 // ---------- quiz ----------
 
-async function openQuiz(itemId) {
+async function openQuiz(itemId, forceRetake = false) {
   const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
   $('#quiz-kicker').textContent = `${item.course_name} · ${item.unit_name}`;
   $('#quiz-title').textContent = item.title;
-  const graded = item.submission && item.submission.status === 'graded';
+  const graded = !forceRetake && item.submission && item.submission.status === 'graded';
   const result = $('#quiz-result');
 
   if (graded) {
     result.hidden = false;
     result.className = 'status-banner good';
-    result.textContent = `🌟 Score: ${item.submission.score} / ${item.submission.points_possible}`;
-    $('#quiz-form').innerHTML = item.questions
+    const pct = item.submission.points_possible ? Math.round((item.submission.score / item.submission.points_possible) * 100) : 0;
+    result.innerHTML = `🌟 Score: ${item.submission.score} / ${item.submission.points_possible} (${pct}%)`;
+
+    // Attempt history
+    const { history } = await api(`/api/items/${itemId}/history?studentId=${currentStudent.id}`);
+    let historyHtml = '';
+    if (history.length > 1) {
+      const histRows = history.map((h) => {
+        const hp = h.points_possible ? Math.round((h.score / h.points_possible) * 100) : 0;
+        return `<tr><td>${new Date(h.completed_at + 'Z').toLocaleString()}</td><td>${h.score}/${h.points_possible} (${hp}%)</td></tr>`;
+      }).join('');
+      historyHtml = `<details class="attempt-history"><summary>All attempts (${history.length})</summary><table>${histRows}</table></details>`;
+    }
+
+    let retakeBtn = '';
+    if (item.allow_retakes) retakeBtn = `<button id="quiz-retake-btn" class="check-btn secondary">🔁 Retake Quiz</button>`;
+
+    $('#quiz-form').innerHTML = historyHtml + retakeBtn + item.questions
       .map((q) => {
         const correct = normalizeAnswer(q.given) === normalizeAnswer(q.correct_answer);
         return `<div class="quiz-question review">
@@ -337,6 +371,10 @@ async function openQuiz(itemId) {
         </div>`;
       })
       .join('');
+
+    if (item.allow_retakes) {
+      $('#quiz-retake-btn').addEventListener('click', () => openQuiz(itemId, true));
+    }
   } else {
     result.hidden = true;
     $('#quiz-form').innerHTML =
@@ -380,7 +418,7 @@ async function openQuiz(itemId) {
         method: 'POST',
         body: { studentId: currentStudent.id, answers, date: todayStr() },
       });
-      openQuiz(itemId);
+      openQuiz(itemId, false);
     };
   }
   show('quiz');
@@ -567,12 +605,12 @@ async function nextPracticeWord() {
 
 // ---------- spelling: test ----------
 
-const test = { list: null, words: [], i: 0, answers: [], itemId: null };
+const test = { list: null, words: [], i: 0, answers: [], itemId: null, allowRetakes: false };
 
-async function startTest({ listId, itemId } = {}) {
+async function startTest({ listId, itemId, allowRetakes = false } = {}) {
   const url = listId ? `/api/test/${currentStudent.id}?listId=${listId}` : `/api/test/${currentStudent.id}`;
   const data = await api(url);
-  Object.assign(test, { list: data.list, words: data.words, i: 0, answers: [], itemId: itemId || null });
+  Object.assign(test, { list: data.list, words: data.words, i: 0, answers: [], itemId: itemId || null, allowRetakes: !!allowRetakes });
   $('#test-card').hidden = false;
   $('#test-done').hidden = true;
   show('test');
@@ -617,13 +655,23 @@ async function finishTest() {
         : `<li>❌ ${esc(g.word)} <small>(you wrote "${esc(g.typed)}")</small></li>`
     )
     .join('');
+
+  let retakeBtn = '';
+  if (test.itemId && test.allowRetakes) retakeBtn = `<button id="test-retake-btn" class="check-btn secondary">🔁 Retake Test</button>`;
+
   $('#test-done').innerHTML = `
     <div>⭐ Test complete!</div>
     <div class="big-score">${result.score} / ${result.total}</div>
     <ul>${rows}</ul>
+    ${retakeBtn}
     <button id="test-home">Back</button>`;
   $('#test-done').hidden = false;
   $('#test-home').addEventListener('click', () => backTarget());
+  if (test.itemId && test.allowRetakes) {
+    $('#test-retake-btn').addEventListener('click', () => {
+      openItem(test.itemId, 'spelling_test');
+    });
+  }
 }
 
 $('#btn-practice').addEventListener('click', () => {

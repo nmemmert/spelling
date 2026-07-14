@@ -263,11 +263,30 @@ $('#add-unit-form').addEventListener('submit', async (e) => {
 // ============================================================
 
 let questionCount = 0;
+let cachedQuizTemplates = [];
 
 async function openItemEditor(unitId, itemId) {
-  [cachedLists, cachedDecks] = await Promise.all([api('/api/lists'), api('/api/decks')]);
+  let courseDetail;
+  [cachedLists, cachedDecks, cachedQuizTemplates, courseDetail] = await Promise.all([
+    api('/api/lists'),
+    api('/api/decks'),
+    api('/api/quiz-templates'),
+    api(`/api/admin/courses/${currentCourseId}`),
+  ]);
   $('#ie-list').innerHTML = cachedLists.map((l) => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
   $('#ie-deck').innerHTML = cachedDecks.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
+
+  // Populate template select
+  $('#ie-template-select').innerHTML = `<option value="">— load from template —</option>` +
+    cachedQuizTemplates.map((t) => `<option value="${t.id}">${esc(t.name)} (${t.questionCount}q)</option>`).join('');
+
+  // Populate prereq select (all items in course except this one)
+  const allCourseItems = courseDetail.units.flatMap((u) => u.items);
+  $('#ie-prereq').innerHTML = `<option value="">None</option>` +
+    allCourseItems
+      .filter((it) => it.id !== Number(itemId))
+      .map((it) => `<option value="${it.id}">${esc(it.title)}</option>`)
+      .join('');
 
   $('#ie-id').value = itemId || '';
   $('#ie-unit-id').value = unitId;
@@ -283,6 +302,9 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-body-lesson').value = item.body;
     $('#ie-body-assignment').value = item.body;
     $('#ie-points').value = item.points || 10;
+    $('#ie-due-date').value = item.due_date || '';
+    $('#ie-allow-retakes').checked = !!item.allow_retakes;
+    $('#ie-prereq').value = item.prereq_item_id || '';
     if (item.type === 'spelling_practice' || item.type === 'spelling_test') $('#ie-list').value = item.ref_id;
     if (item.type === 'flashcards') $('#ie-deck').value = item.ref_id;
     if (item.type === 'quiz') (item.questions || []).forEach(addQuestionRow);
@@ -299,6 +321,9 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-body-lesson').value = '';
     $('#ie-body-assignment').value = '';
     $('#ie-points').value = 10;
+    $('#ie-due-date').value = '';
+    $('#ie-allow-retakes').checked = false;
+    $('#ie-prereq').value = '';
     $('#ie-delete').hidden = true;
   }
   updateItemFieldVisibility();
@@ -423,10 +448,35 @@ function addQuestionRow(q = {}) {
 }
 $('#ie-add-question').addEventListener('click', () => addQuestionRow());
 
+$('#ie-load-template').addEventListener('click', async () => {
+  const tid = $('#ie-template-select').value;
+  if (!tid) return msg('Pick a template first.');
+  const t = await api(`/api/quiz-templates/${tid}`);
+  $('#ie-questions').innerHTML = '';
+  questionCount = 0;
+  t.questions.forEach((q) => addQuestionRow({ ...q, correct_answer: q.correct_answer }));
+  msg(`Loaded "${t.name}" — ${t.questions.length} question(s).`);
+});
+
+$('#ie-save-template').addEventListener('click', async () => {
+  const itemId = $('#ie-id').value;
+  if (!itemId) return msg('Save the item first, then save as template.');
+  const name = prompt('Template name:');
+  if (!name) return;
+  try {
+    await api('/api/quiz-templates', { method: 'POST', body: { name, itemId: Number(itemId) } });
+    msg(`Template "${name}" saved.`);
+    cachedQuizTemplates = await api('/api/quiz-templates');
+    $('#ie-template-select').innerHTML = `<option value="">— load from template —</option>` +
+      cachedQuizTemplates.map((t) => `<option value="${t.id}">${esc(t.name)} (${t.questionCount}q)</option>`).join('');
+  } catch (err) { msg(err.message); }
+});
+
 $('#item-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const type = $('#ie-type').value;
   const title = $('#ie-title').value.trim();
+  const prereqVal = $('#ie-prereq').value;
   const body = {
     unitId: Number($('#ie-unit-id').value),
     type,
@@ -435,6 +485,9 @@ $('#item-form').addEventListener('submit', async (e) => {
     points: type === 'assignment' ? Number($('#ie-points').value) || 0 : 0,
     refId: type === 'spelling_practice' || type === 'spelling_test' ? Number($('#ie-list').value)
          : type === 'flashcards' ? Number($('#ie-deck').value) : null,
+    dueDate: $('#ie-due-date').value || null,
+    allowRetakes: $('#ie-allow-retakes').checked,
+    prereqItemId: prereqVal ? Number(prereqVal) : null,
   };
   if (type === 'quiz') {
     body.questions = Array.from(document.querySelectorAll('.quiz-q-row')).map((row) => ({
@@ -660,29 +713,58 @@ async function loadGrading() {
 // Gradebook
 // ============================================================
 
+let gradebookCourseId = null;
+
 async function loadGradebookPanel() {
   const courses = await api('/api/admin/courses');
   $('#gradebook-course').innerHTML = courses.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   if (courses.length) renderGradebook(courses[0].id);
 }
 $('#gradebook-course').addEventListener('change', () => renderGradebook($('#gradebook-course').value));
+$('#gradebook-csv-btn').addEventListener('click', () => {
+  if (!gradebookCourseId) return;
+  window.location.href = `/api/gradebook/${gradebookCourseId}/csv`;
+});
+$('#history-modal-close').addEventListener('click', () => { $('#history-modal').hidden = true; });
+
+async function showHistory(studentId, itemId, label) {
+  const { history } = await api(`/api/items/${itemId}/history?studentId=${studentId}`);
+  $('#history-modal-title').textContent = `Attempts: ${label}`;
+  if (!history.length) {
+    $('#history-modal-body').innerHTML = `<p class="hint">No recorded attempts yet.</p>`;
+  } else {
+    const rows = history.map((h) => {
+      const pct = h.points_possible ? Math.round((h.score / h.points_possible) * 100) : null;
+      const cls = pct !== null ? (pct >= 80 ? 'score-good' : 'score-bad') : '';
+      return `<tr><td>${new Date(h.completed_at + 'Z').toLocaleString()}</td><td class="${cls}">${h.score}/${h.points_possible}${pct !== null ? ` (${pct}%)` : ''}</td></tr>`;
+    }).join('');
+    $('#history-modal-body').innerHTML = `<table class="results"><tr><th>Date</th><th>Score</th></tr>${rows}</table>`;
+  }
+  $('#history-modal').hidden = false;
+}
 
 async function renderGradebook(courseId) {
+  gradebookCourseId = courseId || null;
   if (!courseId) return ($('#gradebook-table').innerHTML = '');
   const gb = await api(`/api/gradebook/${courseId}`);
   if (gb.gradableItems.length === 0 || gb.students.length === 0) {
     $('#gradebook-table').innerHTML = `<p class="hint">Need at least one enrolled kid and one graded item (assignment, quiz, or spelling test) to show a gradebook.</p>`;
     return;
   }
-  const header = gb.gradableItems.map((it) => `<th>${esc(it.title)}<br><small>${it.points} pts</small></th>`).join('');
+  const header = gb.gradableItems.map((it) => {
+    const due = it.due_date ? `<br><small class="hint">due ${it.due_date}</small>` : '';
+    return `<th>${esc(it.title)}<br><small>${it.points} pts</small>${due}</th>`;
+  }).join('');
   const rows = gb.students
     .map((s) => {
       const cells = gb.gradableItems
         .map((it) => {
           const sc = s.scores[it.id];
-          if (!sc) return `<td class="hint">—</td>`;
-          if (sc.status !== 'graded') return `<td class="hint">⏳</td>`;
-          return `<td>${sc.score}/${sc.points_possible}</td>`;
+          const overdueClass = sc?.overdue ? ' overdue' : '';
+          if (!sc || (!sc.status && !sc.overdue)) return `<td class="hint">—</td>`;
+          if (sc.overdue && !sc.status) return `<td class="hint overdue" title="Overdue">⚠️</td>`;
+          if (sc.status !== 'graded') return `<td class="hint${overdueClass}">${sc.overdue ? '⚠️ ' : ''}⏳</td>`;
+          return `<td class="${sc.score / sc.points_possible >= 0.8 ? 'score-good' : 'score-bad'}${overdueClass}" style="cursor:pointer" data-history-student="${s.id}" data-history-item="${it.id}" data-history-label="${esc(it.title)} — ${esc(s.name)}">${sc.score}/${sc.points_possible}</td>`;
         })
         .join('');
       const pctClass = s.percent === null ? '' : s.percent >= 80 ? 'score-good' : 'score-bad';
@@ -690,6 +772,10 @@ async function renderGradebook(courseId) {
     })
     .join('');
   $('#gradebook-table').innerHTML = `<table class="results"><tr><th>Kid</th>${header}<th>Overall</th></tr>${rows}</table>`;
+
+  document.querySelectorAll('[data-history-student]').forEach((td) =>
+    td.addEventListener('click', () => showHistory(td.dataset.historyStudent, td.dataset.historyItem, td.dataset.historyLabel))
+  );
 }
 
 // ============================================================

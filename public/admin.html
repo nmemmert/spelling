@@ -113,6 +113,13 @@
             </select>
           </label>
           <label>Title <input id="ie-title" placeholder="Item title"></label>
+          <div class="inline-form">
+            <label>Due date <input type="date" id="ie-due-date"></label>
+            <label class="checkbox-label"><input type="checkbox" id="ie-allow-retakes"> Allow retakes</label>
+          </div>
+          <label>Prerequisite item (must be done first)
+            <select id="ie-prereq"><option value="">None</option></select>
+          </label>
 
           <!-- Scan a page: visible for lesson + quiz types -->
           <div id="ie-scan-section" class="scan-card" hidden>
@@ -138,6 +145,11 @@
           </div>
 
           <div id="ie-field-quiz" class="ie-field">
+            <div class="inline-form" style="margin-bottom:.5rem">
+              <select id="ie-template-select"><option value="">— load from template —</option></select>
+              <button type="button" id="ie-load-template" class="secondary">Load</button>
+              <button type="button" id="ie-save-template" class="secondary">Save as template</button>
+            </div>
             <div id="ie-questions"></div>
             <button type="button" id="ie-add-question" class="secondary">+ Add question</button>
           </div>
@@ -182,8 +194,18 @@
       <!-- Gradebook -->
       <section id="panel-gradebook" class="panel">
         <h1>Gradebook</h1>
-        <label>Course <select id="gradebook-course"></select></label>
+        <div class="inline-form">
+          <label>Course <select id="gradebook-course"></select></label>
+          <button id="gradebook-csv-btn" class="secondary">⬇ Export CSV</button>
+        </div>
         <div id="gradebook-table"></div>
+        <div id="history-modal" class="modal" hidden>
+          <div class="modal-box">
+            <h3 id="history-modal-title">Attempt History</h3>
+            <div id="history-modal-body"></div>
+            <button id="history-modal-close" class="secondary">Close</button>
+          </div>
+        </div>
       </section>
 
       <!-- Spelling (legacy word lists + weekly assignment) -->

@@ -204,6 +204,8 @@ app.post('/api/test/:studentId', (req, res) => {
         status = 'graded', score = excluded.score, points_possible = excluded.points_possible,
         completed_at = datetime('now'), graded_at = datetime('now')
     `).run(studentId, itemId, score, graded.length);
+    db.prepare(`INSERT INTO submission_history (student_id, item_id, score, points_possible) VALUES (?, ?, ?, ?)`)
+      .run(studentId, itemId, score, graded.length);
     markScheduleDone.run(studentId, itemId, isDateStr(date) ? date : today());
   }
 
@@ -453,14 +455,14 @@ app.get('/api/admin/courses/:id', requirePin, (req, res) => {
   const course = db.prepare(`SELECT id, name, subject, color, archived FROM courses WHERE id = ?`).get(req.params.id);
   if (!course) return res.status(404).json({ error: 'No such course' });
   const units = db.prepare(`SELECT id, name, sort FROM units WHERE course_id = ? ORDER BY sort, id`).all(req.params.id);
-  const itemStmt = db.prepare(`SELECT id, type, title, points, ref_id, sort FROM items WHERE unit_id = ? ORDER BY sort, id`);
+  const itemStmt = db.prepare(`SELECT id, type, title, points, ref_id, sort, due_date, allow_retakes, prereq_item_id FROM items WHERE unit_id = ? ORDER BY sort, id`);
   for (const u of units) u.items = itemStmt.all(u.id);
   res.json({ ...course, units });
 });
 
 // Full item detail for the admin item editor (quiz correct answers always included)
 app.get('/api/admin/items/:id', requirePin, (req, res) => {
-  const item = db.prepare(`SELECT id, unit_id, type, title, body, points, ref_id FROM items WHERE id = ?`).get(req.params.id);
+  const item = db.prepare(`SELECT id, unit_id, type, title, body, points, ref_id, due_date, allow_retakes, prereq_item_id FROM items WHERE id = ?`).get(req.params.id);
   if (!item) return res.status(404).json({ error: 'No such item' });
   if (item.type === 'quiz') {
     item.questions = db.prepare(`
@@ -541,13 +543,14 @@ function saveQuizQuestions(itemId, questions) {
 app.post('/api/items', requirePin, (req, res) => {
   const err = validateItemBody(req.body);
   if (err) return res.status(400).json({ error: err });
-  const { unitId, type, title, body, points, refId } = req.body;
+  const { unitId, type, title, body, points, refId, dueDate, allowRetakes, prereqItemId } = req.body;
   const sort = db.prepare(`SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM items WHERE unit_id = ?`).get(unitId).n;
   const id = db.prepare(`
-    INSERT INTO items (unit_id, type, title, body, points, ref_id, sort) VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO items (unit_id, type, title, body, points, ref_id, sort, due_date, allow_retakes, prereq_item_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(unitId, type, String(title).trim(), String(body || ''), Number(points) || 0,
          (type === 'flashcards' || type === 'spelling_practice' || type === 'spelling_test') ? refId : null,
-         sort).lastInsertRowid;
+         sort, dueDate || null, allowRetakes ? 1 : 0, prereqItemId || null).lastInsertRowid;
   if (type === 'quiz') {
     saveQuizQuestions(id, req.body.questions);
     const totalPoints = req.body.questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0);
@@ -562,14 +565,14 @@ app.put('/api/items/:id', requirePin, (req, res) => {
   if (!db.prepare(`SELECT id FROM items WHERE id = ?`).get(req.params.id)) {
     return res.status(404).json({ error: 'No such item' });
   }
-  const { type, title, body, points, refId } = req.body;
+  const { type, title, body, points, refId, dueDate, allowRetakes, prereqItemId } = req.body;
   const finalPoints = type === 'quiz'
     ? req.body.questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0)
     : (Number(points) || 0);
-  db.prepare(`UPDATE items SET type = ?, title = ?, body = ?, points = ?, ref_id = ? WHERE id = ?`)
+  db.prepare(`UPDATE items SET type = ?, title = ?, body = ?, points = ?, ref_id = ?, due_date = ?, allow_retakes = ?, prereq_item_id = ? WHERE id = ?`)
     .run(type, String(title).trim(), String(body || ''), finalPoints,
          (type === 'flashcards' || type === 'spelling_practice' || type === 'spelling_test') ? refId : null,
-         req.params.id);
+         dueDate || null, allowRetakes ? 1 : 0, prereqItemId || null, req.params.id);
   if (type === 'quiz') saveQuizQuestions(req.params.id, req.body.questions);
   res.json({ ok: true });
 });
@@ -613,7 +616,7 @@ app.get('/api/courses/:id/detail', (req, res) => {
 
   const units = db.prepare(`SELECT id, name, sort FROM units WHERE course_id = ? ORDER BY sort, id`).all(req.params.id);
   const itemStmt = db.prepare(`
-    SELECT i.id, i.type, i.title, i.points, i.sort,
+    SELECT i.id, i.type, i.title, i.points, i.sort, i.due_date, i.allow_retakes, i.prereq_item_id,
            s.status, s.score, s.points_possible
     FROM items i
     LEFT JOIN submissions s ON s.item_id = i.id AND s.student_id = ?
@@ -622,6 +625,14 @@ app.get('/api/courses/:id/detail', (req, res) => {
   for (const u of units) {
     u.items = itemStmt.all(studentId, u.id).map((it) => ({ ...it, status: it.status || 'not_started' }));
   }
+  // Build submission map for prereq locking
+  const subMap = {};
+  for (const u of units) for (const it of u.items) subMap[it.id] = it.status;
+  for (const u of units) {
+    for (const it of u.items) {
+      it.locked = it.prereq_item_id ? (subMap[it.prereq_item_id] === 'not_started' || !subMap[it.prereq_item_id]) : false;
+    }
+  }
   res.json({ ...course, units });
 });
 
@@ -629,11 +640,19 @@ app.get('/api/courses/:id/detail', (req, res) => {
 app.get('/api/items/:id', (req, res) => {
   const studentId = req.query.studentId;
   const item = db.prepare(`
-    SELECT i.id, i.type, i.title, i.body, i.points, i.ref_id, u.name AS unit_name, u.course_id, c.name AS course_name
+    SELECT i.id, i.type, i.title, i.body, i.points, i.ref_id, i.due_date, i.allow_retakes, i.prereq_item_id,
+           u.name AS unit_name, u.course_id, c.name AS course_name
     FROM items i JOIN units u ON u.id = i.unit_id JOIN courses c ON c.id = u.course_id
     WHERE i.id = ?
   `).get(req.params.id);
   if (!item) return res.status(404).json({ error: 'No such item' });
+
+  if (item.prereq_item_id && studentId) {
+    const prereqSub = db.prepare(`SELECT status FROM submissions WHERE student_id = ? AND item_id = ?`).get(studentId, item.prereq_item_id);
+    item.locked = !prereqSub;
+  } else {
+    item.locked = false;
+  }
 
   item.submission = db.prepare(`
     SELECT status, score, points_possible, answers, completed_at, graded_at
@@ -660,18 +679,28 @@ app.get('/api/items/:id', (req, res) => {
 });
 
 // Mark a lesson viewed, an assignment done, or a practice/flashcards session finished.
-// Never downgrades an already-graded submission (quizzes, spelling tests).
+// Never downgrades an already-graded submission unless allow_retakes is set.
 app.post('/api/items/:id/complete', (req, res) => {
   const { studentId, date } = req.body;
-  const item = db.prepare(`SELECT id, points FROM items WHERE id = ?`).get(req.params.id);
+  const item = db.prepare(`SELECT id, points, allow_retakes FROM items WHERE id = ?`).get(req.params.id);
   if (!item) return res.status(404).json({ error: 'No such item' });
 
-  db.prepare(`
-    INSERT INTO submissions (student_id, item_id, status, points_possible, completed_at)
-    VALUES (?, ?, 'done', ?, datetime('now'))
-    ON CONFLICT (student_id, item_id) DO UPDATE SET completed_at = datetime('now')
-    WHERE submissions.status != 'graded'
-  `).run(studentId, req.params.id, item.points || null);
+  if (item.allow_retakes) {
+    db.prepare(`
+      INSERT INTO submissions (student_id, item_id, status, points_possible, completed_at)
+      VALUES (?, ?, 'done', ?, datetime('now'))
+      ON CONFLICT (student_id, item_id) DO UPDATE SET
+        status = 'done', points_possible = excluded.points_possible,
+        completed_at = datetime('now'), score = NULL, graded_at = NULL
+    `).run(studentId, req.params.id, item.points || null);
+  } else {
+    db.prepare(`
+      INSERT INTO submissions (student_id, item_id, status, points_possible, completed_at)
+      VALUES (?, ?, 'done', ?, datetime('now'))
+      ON CONFLICT (student_id, item_id) DO UPDATE SET completed_at = datetime('now')
+      WHERE submissions.status != 'graded'
+    `).run(studentId, req.params.id, item.points || null);
+  }
 
   markScheduleDone.run(studentId, req.params.id, isDateStr(date) ? date : today());
   res.json({ ok: true });
@@ -700,6 +729,9 @@ app.post('/api/items/:id/quiz-submit', (req, res) => {
       status = 'graded', score = excluded.score, points_possible = excluded.points_possible,
       answers = excluded.answers, completed_at = datetime('now'), graded_at = datetime('now')
   `).run(studentId, req.params.id, earned, possible, JSON.stringify(record));
+
+  db.prepare(`INSERT INTO submission_history (student_id, item_id, score, points_possible, answers) VALUES (?, ?, ?, ?, ?)`)
+    .run(studentId, req.params.id, earned, possible, JSON.stringify(record));
 
   markScheduleDone.run(studentId, req.params.id, isDateStr(date) ? date : today());
   res.json({ score: earned, total: possible });
@@ -738,7 +770,7 @@ app.get('/api/gradebook/:courseId', requirePin, (req, res) => {
   if (!course) return res.status(404).json({ error: 'No such course' });
 
   const gradableItems = db.prepare(`
-    SELECT i.id, i.title, i.type, i.points
+    SELECT i.id, i.title, i.type, i.points, i.due_date
     FROM items i JOIN units u ON u.id = i.unit_id
     WHERE u.course_id = ? AND i.type IN (${GRADABLE_TYPES.map(() => '?').join(',')})
     ORDER BY u.sort, i.sort, i.id
@@ -750,12 +782,14 @@ app.get('/api/gradebook/:courseId', requirePin, (req, res) => {
   `).all(req.params.courseId);
 
   const scoreStmt = db.prepare(`SELECT score, points_possible, status FROM submissions WHERE student_id = ? AND item_id = ?`);
+  const now = today();
   for (const s of students) {
     s.scores = {};
     let earned = 0, possible = 0;
     for (const item of gradableItems) {
       const row = scoreStmt.get(s.id, item.id);
-      s.scores[item.id] = row || null;
+      const overdue = !!(item.due_date && item.due_date < now && (!row || row.status !== 'graded'));
+      s.scores[item.id] = row ? { ...row, overdue } : (overdue ? { overdue: true } : null);
       if (row && row.status === 'graded' && row.points_possible) {
         earned += row.score;
         possible += row.points_possible;
@@ -765,6 +799,96 @@ app.get('/api/gradebook/:courseId', requirePin, (req, res) => {
   }
 
   res.json({ course, gradableItems, students });
+});
+
+// CSV export for the gradebook
+app.get('/api/gradebook/:courseId/csv', requirePin, (req, res) => {
+  const course = db.prepare(`SELECT id, name FROM courses WHERE id = ?`).get(req.params.courseId);
+  if (!course) return res.status(404).json({ error: 'No such course' });
+
+  const gradableItems = db.prepare(`
+    SELECT i.id, i.title, i.type, i.points
+    FROM items i JOIN units u ON u.id = i.unit_id
+    WHERE u.course_id = ? AND i.type IN (${GRADABLE_TYPES.map(() => '?').join(',')})
+    ORDER BY u.sort, i.sort, i.id
+  `).all(req.params.courseId, ...GRADABLE_TYPES);
+
+  const students = db.prepare(`
+    SELECT s.id, s.name FROM students s
+    JOIN enrollments e ON e.student_id = s.id WHERE e.course_id = ? ORDER BY s.name
+  `).all(req.params.courseId);
+
+  const scoreStmt = db.prepare(`SELECT score, points_possible, status FROM submissions WHERE student_id = ? AND item_id = ?`);
+  const csvEsc = (s) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+  const header = ['Student', ...gradableItems.map((i) => csvEsc(`${i.title} (${i.points}pts)`)), 'Overall %'];
+  const rows = students.map((s) => {
+    let earned = 0, possible = 0;
+    const cells = gradableItems.map((item) => {
+      const row = scoreStmt.get(s.id, item.id);
+      if (!row || row.status !== 'graded') return '—';
+      if (row.points_possible) { earned += row.score; possible += row.points_possible; }
+      return `${row.score}/${row.points_possible}`;
+    });
+    const pct = possible > 0 ? Math.round((earned / possible) * 100) + '%' : '—';
+    return [csvEsc(s.name), ...cells, pct];
+  });
+
+  const filename = `gradebook-${course.name.replace(/[^a-z0-9]/gi, '-')}.csv`;
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send([header, ...rows].map((r) => r.join(',')).join('\n'));
+});
+
+// Score history for a student on one item
+app.get('/api/items/:id/history', (req, res) => {
+  const { studentId } = req.query;
+  const history = db.prepare(`
+    SELECT score, points_possible, completed_at FROM submission_history
+    WHERE student_id = ? AND item_id = ? ORDER BY completed_at DESC
+  `).all(studentId, req.params.id);
+  res.json({ history });
+});
+
+// ---------- quiz templates ----------
+
+app.get('/api/quiz-templates', requirePin, (req, res) => {
+  const templates = db.prepare(`
+    SELECT t.id, t.name, COUNT(q.id) AS questionCount
+    FROM quiz_templates t LEFT JOIN quiz_template_questions q ON q.template_id = t.id
+    GROUP BY t.id ORDER BY t.name
+  `).all();
+  res.json(templates);
+});
+
+app.get('/api/quiz-templates/:id', requirePin, (req, res) => {
+  const t = db.prepare(`SELECT id, name FROM quiz_templates WHERE id = ?`).get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'No such template' });
+  t.questions = db.prepare(`
+    SELECT type, prompt, choices, correct_answer, points FROM quiz_template_questions
+    WHERE template_id = ? ORDER BY sort, id
+  `).all(req.params.id).map((q) => ({ ...q, choices: JSON.parse(q.choices) }));
+  res.json(t);
+});
+
+app.post('/api/quiz-templates', requirePin, (req, res) => {
+  const { name, itemId } = req.body;
+  if (!String(name || '').trim()) return res.status(400).json({ error: 'Name required' });
+  let qs = req.body.questions;
+  if (itemId) {
+    qs = db.prepare(`SELECT type, prompt, choices, correct_answer, points, sort FROM quiz_questions WHERE item_id = ? ORDER BY sort, id`).all(itemId);
+  }
+  if (!Array.isArray(qs) || qs.length === 0) return res.status(400).json({ error: 'No questions' });
+  const id = db.prepare(`INSERT INTO quiz_templates (name) VALUES (?)`).run(String(name).trim()).lastInsertRowid;
+  const ins = db.prepare(`INSERT INTO quiz_template_questions (template_id, type, prompt, choices, correct_answer, points, sort) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+  qs.forEach((q, i) => ins.run(id, q.type, String(q.prompt).trim(),
+    typeof q.choices === 'string' ? q.choices : JSON.stringify(q.choices || []),
+    String(q.correct_answer ?? q.correctAnswer ?? '').trim(), Number(q.points) || 1, i));
+  res.json({ id });
+});
+
+app.delete('/api/quiz-templates/:id', requirePin, (req, res) => {
+  db.prepare(`DELETE FROM quiz_templates WHERE id = ?`).run(req.params.id);
+  res.json({ ok: true });
 });
 
 // ---------- daily agenda / scheduling ----------

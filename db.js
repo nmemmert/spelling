@@ -181,7 +181,39 @@ db.exec(`
     sort INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_schedule_day ON schedule(student_id, date);
+
+  CREATE TABLE IF NOT EXISTS quiz_templates (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS quiz_template_questions (
+    id INTEGER PRIMARY KEY,
+    template_id INTEGER NOT NULL REFERENCES quiz_templates(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    choices TEXT NOT NULL DEFAULT '[]',
+    correct_answer TEXT NOT NULL,
+    points INTEGER NOT NULL DEFAULT 1,
+    sort INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE TABLE IF NOT EXISTS submission_history (
+    id INTEGER PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    score REAL,
+    points_possible REAL,
+    answers TEXT,
+    completed_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
+
+function tryAlter(sql) {
+  try { db.exec(sql); } catch { /* column already exists */ }
+}
+tryAlter(`ALTER TABLE items ADD COLUMN due_date TEXT`);
+tryAlter(`ALTER TABLE items ADD COLUMN allow_retakes INTEGER NOT NULL DEFAULT 0`);
+tryAlter(`ALTER TABLE items ADD COLUMN prereq_item_id INTEGER`);
 
 export const sha256 = (s) => createHash('sha256').update(String(s)).digest('hex');
 
