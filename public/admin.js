@@ -539,7 +539,7 @@ let plannerStudentId = null;
 let plannerCoursesCache = [];
 
 async function loadPlannerPanel() {
-  const students = await api('/api/students');
+  const [students, courses] = await Promise.all([api('/api/students'), api('/api/admin/courses')]);
   if (students.length === 0) {
     $('#planner-grid').innerHTML = `<p class="hint">Add a kid first.</p>`;
     return;
@@ -547,8 +547,24 @@ async function loadPlannerPanel() {
   $('#planner-student').innerHTML = students.map((s) => `<option value="${s.id}">${esc(s.emoji)} ${esc(s.name)}</option>`).join('');
   if (!plannerStudentId || !students.some((s) => s.id === plannerStudentId)) plannerStudentId = students[0].id;
   $('#planner-student').value = plannerStudentId;
+  $('#auto-course').innerHTML = courses.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  if (!$('#auto-start-date').value) $('#auto-start-date').value = plannerWeekStart;
   await renderPlanner();
 }
+
+$('#auto-schedule-btn').addEventListener('click', async () => {
+  const courseId = Number($('#auto-course').value);
+  const startDate = $('#auto-start-date').value;
+  const itemsPerDay = Number($('#auto-items-per-day').value) || 1;
+  if (!courseId || !startDate) { $('#auto-schedule-msg').textContent = 'Pick a course and start date.'; return; }
+  const { scheduled } = await api('/api/schedule/auto', {
+    method: 'POST',
+    body: { studentId: plannerStudentId, courseId, startDate, itemsPerDay },
+  });
+  $('#auto-schedule-msg').textContent = `Scheduled ${scheduled} item${scheduled === 1 ? '' : 's'} starting ${startDate}.`;
+  plannerWeekStart = mondayOf(startDate + 'T12:00:00');
+  renderPlanner();
+});
 
 $('#planner-student').addEventListener('change', () => {
   plannerStudentId = Number($('#planner-student').value);

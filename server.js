@@ -951,6 +951,52 @@ app.get('/api/schedule/:studentId', (req, res) => {
   res.json({ tasks });
 });
 
+app.post('/api/schedule/auto', requirePin, (req, res) => {
+  const { studentId, courseId, startDate, itemsPerDay = 1 } = req.body;
+  if (!isDateStr(startDate)) return res.status(400).json({ error: 'startDate=YYYY-MM-DD required' });
+  const items = db.prepare(`
+    SELECT i.id, i.title FROM items i
+    JOIN units u ON u.id = i.unit_id
+    WHERE u.course_id = ?
+    ORDER BY u.sort, i.sort
+  `).all(courseId);
+  if (!items.length) return res.json({ scheduled: 0 });
+
+  const perDay = Math.max(1, Math.min(20, Number(itemsPerDay)));
+  const ins = db.prepare(`INSERT INTO schedule (student_id, date, item_id, title, sort) VALUES (?, ?, ?, '', ?)`);
+  const sortQ = db.prepare(`SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM schedule WHERE student_id = ? AND date = ?`);
+
+  let d = new Date(startDate + 'T12:00:00Z');
+  let scheduled = 0;
+  for (let i = 0; i < items.length; ) {
+    const dow = d.getUTCDay();
+    if (dow !== 0 && dow !== 6) {
+      const dateStr = d.toISOString().slice(0, 10);
+      for (let j = 0; j < perDay && i < items.length; j++, i++) {
+        const sort = sortQ.get(studentId, dateStr).n + j;
+        ins.run(studentId, dateStr, items[i].id, sort);
+        scheduled++;
+      }
+    }
+    d = new Date(d.getTime() + 86400000);
+  }
+  res.json({ scheduled });
+});
+
+app.post('/api/schedule/copy', requirePin, (req, res) => {
+  const { studentId, from, to } = req.body;
+  if (!isDateStr(from) || !isDateStr(to)) return res.status(400).json({ error: 'from/to dates required' });
+  const offsetDays = Math.round((new Date(to) - new Date(from)) / 86400000);
+  const rows = db.prepare(`
+    SELECT date, item_id, title, sort FROM schedule WHERE student_id = ? AND date BETWEEN ? AND date(?, '+4 days')
+  `).all(studentId, from, from);
+  const ins = db.prepare(`
+    INSERT INTO schedule (student_id, date, item_id, title, sort) VALUES (?, date(?, ?), ?, ?, ?)
+  `);
+  for (const r of rows) ins.run(studentId, r.date, `+${offsetDays} days`, r.item_id, r.title, r.sort);
+  res.json({ copied: rows.length });
+});
+
 // Kid updates a standalone offline task: status (not_started/in_progress/done) + optional evidence
 app.post('/api/schedule/:id/done', (req, res) => {
   const row = db.prepare(`SELECT item_id FROM schedule WHERE id = ?`).get(req.params.id);
@@ -1003,21 +1049,6 @@ app.get('/api/schedule-week/:studentId', requirePin, (req, res) => {
     ORDER BY sc.date, sc.sort, sc.id
   `).all(req.params.studentId, start, start);
   res.json({ tasks });
-});
-
-// Copy one week's plan to another week
-app.post('/api/schedule/copy', requirePin, (req, res) => {
-  const { studentId, from, to } = req.body;
-  if (!isDateStr(from) || !isDateStr(to)) return res.status(400).json({ error: 'from/to dates required' });
-  const offsetDays = Math.round((new Date(to) - new Date(from)) / 86400000);
-  const rows = db.prepare(`
-    SELECT date, item_id, title, sort FROM schedule WHERE student_id = ? AND date BETWEEN ? AND date(?, '+4 days')
-  `).all(studentId, from, from);
-  const ins = db.prepare(`
-    INSERT INTO schedule (student_id, date, item_id, title, sort) VALUES (?, date(?, ?), ?, ?, ?)
-  `);
-  for (const r of rows) ins.run(studentId, r.date, `+${offsetDays} days`, r.item_id, r.title, r.sort);
-  res.json({ copied: rows.length });
 });
 
 // Printable weekly report: schedule completion + any graded work that week

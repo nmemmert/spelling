@@ -197,6 +197,18 @@
           <button id="planner-copy" class="secondary">Copy last week here</button>
           <button id="planner-print">🖨 Print week report</button>
         </div>
+
+        <details id="auto-schedule-details" class="admin-card" style="margin-bottom:1rem">
+          <summary style="cursor:pointer;font-weight:600">⚡ Auto-schedule a course</summary>
+          <div class="inline-form" style="margin-top:.75rem">
+            <label>Course <select id="auto-course"></select></label>
+            <label>Start date <input type="date" id="auto-start-date"></label>
+            <label>Items/day <input type="number" id="auto-items-per-day" value="1" min="1" max="10" style="width:5rem"></label>
+            <button id="auto-schedule-btn">Schedule</button>
+          </div>
+          <p id="auto-schedule-msg" class="hint" style="margin-top:.5rem"></p>
+        </details>
+
         <div id="planner-grid" class="planner-grid"></div>
       </section>
 
