@@ -305,6 +305,8 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-due-date').value = item.due_date || '';
     $('#ie-allow-retakes').checked = !!item.allow_retakes;
     $('#ie-prereq').value = item.prereq_item_id || '';
+    $('#ie-evidence-mode').value = item.evidence_mode || 'none';
+    $('#ie-retake-policy').value = item.retake_policy || 'latest';
     if (item.type === 'spelling_practice' || item.type === 'spelling_test') $('#ie-list').value = item.ref_id;
     if (item.type === 'flashcards') $('#ie-deck').value = item.ref_id;
     if (item.type === 'quiz') (item.questions || []).forEach(addQuestionRow);
@@ -324,6 +326,8 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-due-date').value = '';
     $('#ie-allow-retakes').checked = false;
     $('#ie-prereq').value = '';
+    $('#ie-evidence-mode').value = 'none';
+    $('#ie-retake-policy').value = 'latest';
     $('#ie-delete').hidden = true;
   }
   updateItemFieldVisibility();
@@ -488,6 +492,8 @@ $('#item-form').addEventListener('submit', async (e) => {
     dueDate: $('#ie-due-date').value || null,
     allowRetakes: $('#ie-allow-retakes').checked,
     prereqItemId: prereqVal ? Number(prereqVal) : null,
+    evidenceMode: $('#ie-evidence-mode').value,
+    retakePolicy: $('#ie-retake-policy').value,
   };
   if (type === 'quiz') {
     body.questions = Array.from(document.querySelectorAll('.quiz-q-row')).map((row) => ({
@@ -683,30 +689,71 @@ async function printWeekReport(studentId, start) {
 // Grading queue
 // ============================================================
 
+$('#evidence-lightbox-close').addEventListener('click', () => { $('#evidence-lightbox').hidden = true; });
+
+function showEvidenceLightbox(notes, photo) {
+  let html = '';
+  if (photo) html += `<img src="${photo}" style="max-width:100%;border-radius:8px;margin-bottom:.75rem">`;
+  if (notes) html += `<p style="white-space:pre-wrap">${esc(notes)}</p>`;
+  $('#evidence-lightbox-body').innerHTML = html || '<p class="hint">No evidence content.</p>';
+  $('#evidence-lightbox').hidden = false;
+}
+
+const STUDENT_NOTE_LABEL = { needs_help: '🙋 Needs help', not_sure: '🤔 Not sure' };
+
 async function loadGrading() {
   const rows = await api('/api/grading-queue');
   $('#grading-empty').hidden = rows.length > 0;
   $('#grading-rows').innerHTML = rows
-    .map(
-      (r) => `<div class="item-row">
-        <span>${esc(r.emoji)}</span>
-        <strong class="grow">${esc(r.studentName)}</strong>
-        <span>${esc(r.itemTitle)}</span>
-        <span class="hint">${esc(r.courseName)} · ${esc(r.unitName)}</span>
-        <input type="number" class="grade-input" min="0" max="${r.points_possible}" placeholder="/ ${r.points_possible}" data-sub="${r.submissionId}">
-        <button data-save-grade="${r.submissionId}">Save</button>
-      </div>`
-    )
+    .map((r) => {
+      const hasEvidence = r.evidence_notes || r.evidence_photo;
+      const noteTag = r.student_note ? `<span class="badge-tag">${STUDENT_NOTE_LABEL[r.student_note] || r.student_note}</span>` : '';
+      const evidenceBtn = hasEvidence
+        ? `<button class="secondary small" data-evidence-notes="${esc(r.evidence_notes || '')}" data-evidence-photo="${r.evidence_photo ? 'yes' : ''}" data-sub-id="${r.submissionId}">📎 Evidence</button>`
+        : '';
+      return `<div class="grading-card">
+        <div class="grading-header">
+          <span>${esc(r.emoji)}</span>
+          <strong>${esc(r.studentName)}</strong>
+          <span class="grow">${esc(r.itemTitle)}</span>
+          <span class="hint">${esc(r.courseName)} · ${esc(r.unitName)}</span>
+          ${noteTag}
+        </div>
+        ${evidenceBtn}
+        <div class="grading-footer">
+          <input type="number" class="grade-input" min="0" max="${r.points_possible}" placeholder="Score / ${r.points_possible || '?'}" data-sub="${r.submissionId}">
+          <input type="text" class="comment-input" placeholder="Parent comment (optional)" data-comment-sub="${r.submissionId}">
+          <button data-save-grade="${r.submissionId}">Save grade</button>
+        </div>
+      </div>`;
+    })
     .join('');
 
-  document.querySelectorAll('[data-save-grade]').forEach((btn) =>
+  document.querySelectorAll('[data-evidence-notes]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      // photo may be truncated in the attribute — fetch full evidence via API
+      const subId = btn.dataset.subId;
+      let photo = null;
+      if (btn.dataset.evidencePhoto === 'yes') {
+        const full = await fetch(`/api/grading-queue/${subId}/evidence`, { headers: { 'x-pin': parentPin } });
+        if (full.ok) { const d = await full.json(); photo = d.evidence_photo; }
+      }
+      showEvidenceLightbox(btn.dataset.evidenceNotes || null, photo);
+    });
+  });
+
+  document.querySelectorAll('[data-save-grade]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const input = document.querySelector(`.grade-input[data-sub="${btn.dataset.saveGrade}"]`);
+      const commentInput = document.querySelector(`.comment-input[data-comment-sub="${btn.dataset.saveGrade}"]`);
       if (input.value === '') return;
-      await api(`/api/submissions/${btn.dataset.saveGrade}/grade`, { method: 'PUT', body: { score: Number(input.value) } });
+      await api(`/api/submissions/${btn.dataset.saveGrade}/grade`, {
+        method: 'PUT',
+        body: { score: Number(input.value), parentComment: commentInput?.value || '' },
+      });
       loadGrading();
-    })
-  );
+    });
+  });
 }
 
 // ============================================================

@@ -416,3 +416,31 @@ td.overdue, .overdue { background: var(--bad-bg) !important; }
 }
 .modal-box h3 { margin-bottom: 1rem; }
 .modal-box .secondary { margin-top: 1rem; }
+
+/* ---------- evidence forms ---------- */
+.evidence-form { margin: 0.75rem 0; border: 1.5px dashed var(--accent); border-radius: 10px; padding: 0.75rem; }
+.evidence-form summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.evidence-inner { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; }
+.evidence-inner textarea { width: 100%; border: 1.5px solid #d8d2c0; border-radius: 8px; padding: 0.5rem; font-family: inherit; font-size: 1rem; resize: vertical; }
+.evidence-photo-row { display: flex; align-items: center; gap: 0.5rem; }
+.evidence-note-label select { width: 100%; padding: 0.4rem 0.6rem; border: 1.5px solid #d8d2c0; border-radius: 8px; font-family: inherit; }
+.parent-comment { background: var(--good-bg); border-radius: 10px; padding: 0.75rem 1rem; margin: 0.75rem 0; color: var(--good); }
+.status-banner.bad { background: var(--bad-bg); color: var(--bad); border-radius: 10px; padding: 0.75rem 1rem; margin: 0.75rem 0; }
+
+/* ---------- offline 3-state tasks ---------- */
+.today-row-offline { background: var(--card); border: 1.5px solid #e2dccf; border-radius: 14px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; text-align: left; }
+.offline-main { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.offline-main .row-title { flex: 1; font-weight: 600; }
+.offline-controls { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.offline-status-btn { padding: 0.3rem 0.75rem; border: 1.5px solid var(--muted); border-radius: 20px; background: transparent; font-size: 0.85rem; cursor: pointer; }
+.offline-status-btn.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+.offline-evidence-form { border: none; padding: 0; }
+.offline-evidence-form summary { font-size: 0.85rem; color: var(--muted); cursor: pointer; }
+
+/* ---------- grading queue cards ---------- */
+.grading-card { background: var(--card); border: 1.5px solid #e2dccf; border-radius: 14px; padding: 1rem; margin-bottom: 0.75rem; }
+.grading-header { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.grading-header .grow { flex: 1; font-weight: 600; }
+.grading-footer { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 0.6rem; }
+.comment-input { flex: 1; min-width: 140px; padding: 0.4rem 0.6rem; border: 1.5px solid #d8d2c0; border-radius: 8px; font-family: inherit; }
+.badge-tag { background: var(--gold); color: #333; border-radius: 20px; padding: 0.2rem 0.6rem; font-size: 0.8rem; font-weight: 600; }

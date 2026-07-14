@@ -214,6 +214,15 @@ function tryAlter(sql) {
 tryAlter(`ALTER TABLE items ADD COLUMN due_date TEXT`);
 tryAlter(`ALTER TABLE items ADD COLUMN allow_retakes INTEGER NOT NULL DEFAULT 0`);
 tryAlter(`ALTER TABLE items ADD COLUMN prereq_item_id INTEGER`);
+tryAlter(`ALTER TABLE items ADD COLUMN evidence_mode TEXT NOT NULL DEFAULT 'none'`);
+tryAlter(`ALTER TABLE items ADD COLUMN retake_policy TEXT NOT NULL DEFAULT 'latest'`);
+tryAlter(`ALTER TABLE submissions ADD COLUMN evidence_notes TEXT`);
+tryAlter(`ALTER TABLE submissions ADD COLUMN evidence_photo TEXT`);
+tryAlter(`ALTER TABLE submissions ADD COLUMN student_note TEXT`);
+tryAlter(`ALTER TABLE submissions ADD COLUMN parent_comment TEXT`);
+tryAlter(`ALTER TABLE schedule ADD COLUMN status TEXT NOT NULL DEFAULT 'not_started'`);
+tryAlter(`ALTER TABLE schedule ADD COLUMN evidence_notes TEXT`);
+tryAlter(`ALTER TABLE schedule ADD COLUMN evidence_photo TEXT`);
 
 export const sha256 = (s) => createHash('sha256').update(String(s)).digest('hex');
 

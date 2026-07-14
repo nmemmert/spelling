@@ -54,6 +54,46 @@ document.querySelectorAll('[data-back]').forEach((btn) =>
   })
 );
 
+// ---------- evidence photo helpers ----------
+
+let evidencePhotoBase64 = null;
+
+function compressPhoto(file, maxDim = 1200, quality = 0.75) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read file'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not read image'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+$('#assignment-photo-btn').addEventListener('click', () => $('#assignment-photo-input').click());
+$('#assignment-photo-input').addEventListener('change', async () => {
+  const file = $('#assignment-photo-input').files[0];
+  if (!file) return;
+  try {
+    const dataUrl = await compressPhoto(file);
+    evidencePhotoBase64 = dataUrl;
+    $('#assignment-photo-status').textContent = '✅ Photo ready';
+  } catch { $('#assignment-photo-status').textContent = '❌ Could not load photo'; }
+});
+
 // ---------- text to speech (spelling module) ----------
 
 function speak(text, rate = 0.85) {
@@ -145,16 +185,38 @@ async function openKid(id, tab = 'today') {
   switchTab(tab);
 }
 
+const OFFLINE_STATUS_ICON = { not_started: '⬜', in_progress: '🔄', done: '✅' };
+
 function renderToday(tasks) {
   $('#today-empty').hidden = tasks.length > 0;
   $('#today-list').innerHTML = tasks
     .map((t) => {
       if (!t.itemId) {
-        return `<button class="today-row offline" data-schedule-id="${t.id}">
-          <span class="row-check">${t.done ? '✅' : '⬜'}</span>
-          <span class="row-title">${esc(t.offlineTitle)}</span>
-          <span class="row-badge">📌 Offline</span>
-        </button>`;
+        const st = t.offlineStatus || (t.done ? 'done' : 'not_started');
+        return `<div class="today-row-offline" data-schedule-id="${t.id}">
+          <div class="offline-main">
+            <span class="row-check">${OFFLINE_STATUS_ICON[st] || '⬜'}</span>
+            <span class="row-title">${esc(t.offlineTitle)}</span>
+            <span class="row-badge">📌${t.hasEvidence ? ' 📎' : ''}</span>
+          </div>
+          <div class="offline-controls">
+            <button class="offline-status-btn ${st === 'not_started' ? 'active' : ''}" data-sid="${t.id}" data-status="not_started">Not started</button>
+            <button class="offline-status-btn ${st === 'in_progress' ? 'active' : ''}" data-sid="${t.id}" data-status="in_progress">In progress</button>
+            <button class="offline-status-btn ${st === 'done' ? 'active' : ''}" data-sid="${t.id}" data-status="done">Done ✓</button>
+          </div>
+          <details class="offline-evidence-form">
+            <summary>📎 Add notes / photo</summary>
+            <div class="evidence-inner">
+              <textarea class="offline-notes" placeholder="Notes…" rows="2"></textarea>
+              <div class="evidence-photo-row">
+                <button type="button" class="secondary small offline-photo-btn">📷 Photo</button>
+                <input type="file" class="offline-photo-input" accept="image/*" capture="environment" hidden>
+                <span class="offline-photo-status hint"></span>
+              </div>
+              <button type="button" class="secondary small offline-evidence-save" data-sid="${t.id}">Save evidence</button>
+            </div>
+          </details>
+        </div>`;
       }
       const badge = statusBadge(t.type, t.subStatus, t.score, t.points_possible, t.done);
       return `<button class="today-row" data-item-id="${t.itemId}" data-item-type="${t.type}">
@@ -165,13 +227,43 @@ function renderToday(tasks) {
     })
     .join('');
 
-  document.querySelectorAll('.today-row.offline').forEach((row) =>
-    row.addEventListener('click', async () => {
-      const done = row.querySelector('.row-check').textContent.trim() !== '✅';
-      await api(`/api/schedule/${row.dataset.scheduleId}/done`, { method: 'POST', body: { done } });
+  // Offline status buttons
+  document.querySelectorAll('.offline-status-btn').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      await api(`/api/schedule/${btn.dataset.sid}/done`, { method: 'POST', body: { status: btn.dataset.status } });
       openKid(currentStudent.id, 'today');
     })
   );
+
+  // Offline evidence photo picker
+  document.querySelectorAll('.today-row-offline').forEach((row) => {
+    const photoBtn = row.querySelector('.offline-photo-btn');
+    const photoInput = row.querySelector('.offline-photo-input');
+    const photoStatus = row.querySelector('.offline-photo-status');
+    photoBtn.addEventListener('click', () => photoInput.click());
+    photoInput.addEventListener('change', async () => {
+      const file = photoInput.files[0];
+      if (!file) return;
+      try {
+        photoInput._dataUrl = await compressPhoto(file);
+        photoStatus.textContent = '✅ Ready';
+      } catch { photoStatus.textContent = '❌ Error'; }
+    });
+  });
+
+  // Offline evidence save
+  document.querySelectorAll('.offline-evidence-save').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      const row = btn.closest('.today-row-offline');
+      const notes = row.querySelector('.offline-notes').value || null;
+      const photoInput = row.querySelector('.offline-photo-input');
+      const photo = photoInput._dataUrl || null;
+      await api(`/api/schedule/${btn.dataset.sid}/done`, { method: 'POST', body: { evidenceNotes: notes, evidencePhoto: photo } });
+      btn.textContent = '✅ Saved';
+      setTimeout(() => openKid(currentStudent.id, 'today'), 600);
+    })
+  );
+
   document.querySelectorAll('.today-row:not(.offline)').forEach((row) =>
     row.addEventListener('click', () => {
       backTarget = () => openKid(currentStudent.id, 'today');
@@ -293,6 +385,12 @@ async function openLesson(itemId) {
 // ---------- assignment ----------
 
 async function openAssignment(itemId) {
+  evidencePhotoBase64 = null;
+  $('#assignment-photo-status').textContent = '';
+  $('#assignment-photo-input').value = '';
+  $('#assignment-evidence-notes').value = '';
+  $('#assignment-student-note').value = '';
+
   const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
   $('#assignment-kicker').textContent = `${item.course_name} · ${item.unit_name}`;
   $('#assignment-title').textContent = item.title;
@@ -301,15 +399,30 @@ async function openAssignment(itemId) {
 
   const btn = $('#assignment-done-btn');
   const status = $('#assignment-status');
+  const commentEl = $('#assignment-comment');
+  const evidenceSection = $('#assignment-evidence-section');
+  const needsEvidence = item.evidence_mode === 'required' || item.evidence_mode === 'optional';
+
+  // Show parent comment if graded
+  if (item.submission?.parent_comment) {
+    commentEl.hidden = false;
+    commentEl.innerHTML = `<strong>Parent feedback:</strong> ${esc(item.submission.parent_comment)}`;
+  } else {
+    commentEl.hidden = true;
+  }
+
   if (item.submission && item.submission.status === 'graded') {
     status.hidden = false;
     status.className = 'status-banner good';
     status.textContent = `🌟 Graded: ${item.submission.score} / ${item.submission.points_possible}`;
+    evidenceSection.hidden = !needsEvidence || !item.allow_retakes;
     if (item.allow_retakes) {
       btn.hidden = false;
       btn.textContent = '🔁 Retake';
       btn.onclick = async () => {
-        await api(`/api/items/${itemId}/complete`, { method: 'POST', body: { studentId: currentStudent.id, date: todayStr() } });
+        const body = { studentId: currentStudent.id, date: todayStr() };
+        if (needsEvidence) { body.evidenceNotes = $('#assignment-evidence-notes').value || null; body.evidencePhoto = evidencePhotoBase64; body.studentNote = $('#assignment-student-note').value || null; }
+        await api(`/api/items/${itemId}/complete`, { method: 'POST', body });
         openAssignment(itemId);
       };
     } else {
@@ -317,15 +430,23 @@ async function openAssignment(itemId) {
     }
   } else if (item.submission && item.submission.status === 'done') {
     btn.hidden = true;
+    evidenceSection.hidden = true;
     status.hidden = false;
     status.className = 'status-banner';
     status.textContent = `⏳ Turned in — waiting for a parent to grade it.`;
   } else {
     btn.hidden = false;
-    btn.textContent = 'Mark as done ✓';
+    btn.textContent = item.evidence_mode === 'required' ? 'Submit with evidence ✓' : 'Mark as done ✓';
     status.hidden = true;
+    evidenceSection.hidden = !needsEvidence;
     btn.onclick = async () => {
-      await api(`/api/items/${itemId}/complete`, { method: 'POST', body: { studentId: currentStudent.id, date: todayStr() } });
+      if (item.evidence_mode === 'required' && !$('#assignment-evidence-notes').value && !evidencePhotoBase64) {
+        status.hidden = false; status.className = 'status-banner bad'; status.textContent = 'Evidence required — add notes or a photo first.';
+        return;
+      }
+      const body = { studentId: currentStudent.id, date: todayStr() };
+      if (needsEvidence) { body.evidenceNotes = $('#assignment-evidence-notes').value || null; body.evidencePhoto = evidencePhotoBase64; body.studentNote = $('#assignment-student-note').value || null; }
+      await api(`/api/items/${itemId}/complete`, { method: 'POST', body });
       openAssignment(itemId);
     };
   }

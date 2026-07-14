@@ -462,7 +462,7 @@ app.get('/api/admin/courses/:id', requirePin, (req, res) => {
 
 // Full item detail for the admin item editor (quiz correct answers always included)
 app.get('/api/admin/items/:id', requirePin, (req, res) => {
-  const item = db.prepare(`SELECT id, unit_id, type, title, body, points, ref_id, due_date, allow_retakes, prereq_item_id FROM items WHERE id = ?`).get(req.params.id);
+  const item = db.prepare(`SELECT id, unit_id, type, title, body, points, ref_id, due_date, allow_retakes, prereq_item_id, evidence_mode, retake_policy FROM items WHERE id = ?`).get(req.params.id);
   if (!item) return res.status(404).json({ error: 'No such item' });
   if (item.type === 'quiz') {
     item.questions = db.prepare(`
@@ -543,14 +543,15 @@ function saveQuizQuestions(itemId, questions) {
 app.post('/api/items', requirePin, (req, res) => {
   const err = validateItemBody(req.body);
   if (err) return res.status(400).json({ error: err });
-  const { unitId, type, title, body, points, refId, dueDate, allowRetakes, prereqItemId } = req.body;
+  const { unitId, type, title, body, points, refId, dueDate, allowRetakes, prereqItemId, evidenceMode, retakePolicy } = req.body;
   const sort = db.prepare(`SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM items WHERE unit_id = ?`).get(unitId).n;
   const id = db.prepare(`
-    INSERT INTO items (unit_id, type, title, body, points, ref_id, sort, due_date, allow_retakes, prereq_item_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO items (unit_id, type, title, body, points, ref_id, sort, due_date, allow_retakes, prereq_item_id, evidence_mode, retake_policy)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(unitId, type, String(title).trim(), String(body || ''), Number(points) || 0,
          (type === 'flashcards' || type === 'spelling_practice' || type === 'spelling_test') ? refId : null,
-         sort, dueDate || null, allowRetakes ? 1 : 0, prereqItemId || null).lastInsertRowid;
+         sort, dueDate || null, allowRetakes ? 1 : 0, prereqItemId || null,
+         evidenceMode || 'none', retakePolicy || 'latest').lastInsertRowid;
   if (type === 'quiz') {
     saveQuizQuestions(id, req.body.questions);
     const totalPoints = req.body.questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0);
@@ -565,14 +566,15 @@ app.put('/api/items/:id', requirePin, (req, res) => {
   if (!db.prepare(`SELECT id FROM items WHERE id = ?`).get(req.params.id)) {
     return res.status(404).json({ error: 'No such item' });
   }
-  const { type, title, body, points, refId, dueDate, allowRetakes, prereqItemId } = req.body;
+  const { type, title, body, points, refId, dueDate, allowRetakes, prereqItemId, evidenceMode, retakePolicy } = req.body;
   const finalPoints = type === 'quiz'
     ? req.body.questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0)
     : (Number(points) || 0);
-  db.prepare(`UPDATE items SET type = ?, title = ?, body = ?, points = ?, ref_id = ?, due_date = ?, allow_retakes = ?, prereq_item_id = ? WHERE id = ?`)
+  db.prepare(`UPDATE items SET type = ?, title = ?, body = ?, points = ?, ref_id = ?, due_date = ?, allow_retakes = ?, prereq_item_id = ?, evidence_mode = ?, retake_policy = ? WHERE id = ?`)
     .run(type, String(title).trim(), String(body || ''), finalPoints,
          (type === 'flashcards' || type === 'spelling_practice' || type === 'spelling_test') ? refId : null,
-         dueDate || null, allowRetakes ? 1 : 0, prereqItemId || null, req.params.id);
+         dueDate || null, allowRetakes ? 1 : 0, prereqItemId || null,
+         evidenceMode || 'none', retakePolicy || 'latest', req.params.id);
   if (type === 'quiz') saveQuizQuestions(req.params.id, req.body.questions);
   res.json({ ok: true });
 });
@@ -640,7 +642,7 @@ app.get('/api/courses/:id/detail', (req, res) => {
 app.get('/api/items/:id', (req, res) => {
   const studentId = req.query.studentId;
   const item = db.prepare(`
-    SELECT i.id, i.type, i.title, i.body, i.points, i.ref_id, i.due_date, i.allow_retakes, i.prereq_item_id,
+    SELECT i.id, i.type, i.title, i.body, i.points, i.ref_id, i.due_date, i.allow_retakes, i.prereq_item_id, i.evidence_mode, i.retake_policy,
            u.name AS unit_name, u.course_id, c.name AS course_name
     FROM items i JOIN units u ON u.id = i.unit_id JOIN courses c ON c.id = u.course_id
     WHERE i.id = ?
@@ -655,7 +657,7 @@ app.get('/api/items/:id', (req, res) => {
   }
 
   item.submission = db.prepare(`
-    SELECT status, score, points_possible, answers, completed_at, graded_at
+    SELECT status, score, points_possible, answers, completed_at, graded_at, parent_comment, student_note
     FROM submissions WHERE student_id = ? AND item_id = ?
   `).get(studentId, req.params.id) || null;
 
@@ -681,25 +683,31 @@ app.get('/api/items/:id', (req, res) => {
 // Mark a lesson viewed, an assignment done, or a practice/flashcards session finished.
 // Never downgrades an already-graded submission unless allow_retakes is set.
 app.post('/api/items/:id/complete', (req, res) => {
-  const { studentId, date } = req.body;
+  const { studentId, date, evidenceNotes, evidencePhoto, studentNote } = req.body;
   const item = db.prepare(`SELECT id, points, allow_retakes FROM items WHERE id = ?`).get(req.params.id);
   if (!item) return res.status(404).json({ error: 'No such item' });
 
   if (item.allow_retakes) {
     db.prepare(`
-      INSERT INTO submissions (student_id, item_id, status, points_possible, completed_at)
-      VALUES (?, ?, 'done', ?, datetime('now'))
+      INSERT INTO submissions (student_id, item_id, status, points_possible, completed_at, evidence_notes, evidence_photo, student_note)
+      VALUES (?, ?, 'done', ?, datetime('now'), ?, ?, ?)
       ON CONFLICT (student_id, item_id) DO UPDATE SET
         status = 'done', points_possible = excluded.points_possible,
-        completed_at = datetime('now'), score = NULL, graded_at = NULL
-    `).run(studentId, req.params.id, item.points || null);
+        completed_at = datetime('now'), score = NULL, graded_at = NULL,
+        evidence_notes = excluded.evidence_notes, evidence_photo = excluded.evidence_photo,
+        student_note = excluded.student_note
+    `).run(studentId, req.params.id, item.points || null, evidenceNotes || null, evidencePhoto || null, studentNote || null);
   } else {
     db.prepare(`
-      INSERT INTO submissions (student_id, item_id, status, points_possible, completed_at)
-      VALUES (?, ?, 'done', ?, datetime('now'))
-      ON CONFLICT (student_id, item_id) DO UPDATE SET completed_at = datetime('now')
+      INSERT INTO submissions (student_id, item_id, status, points_possible, completed_at, evidence_notes, evidence_photo, student_note)
+      VALUES (?, ?, 'done', ?, datetime('now'), ?, ?, ?)
+      ON CONFLICT (student_id, item_id) DO UPDATE SET
+        completed_at = datetime('now'),
+        evidence_notes = COALESCE(excluded.evidence_notes, evidence_notes),
+        evidence_photo = COALESCE(excluded.evidence_photo, evidence_photo),
+        student_note = COALESCE(excluded.student_note, student_note)
       WHERE submissions.status != 'graded'
-    `).run(studentId, req.params.id, item.points || null);
+    `).run(studentId, req.params.id, item.points || null, evidenceNotes || null, evidencePhoto || null, studentNote || null);
   }
 
   markScheduleDone.run(studentId, req.params.id, isDateStr(date) ? date : today());
@@ -742,15 +750,16 @@ app.post('/api/items/:id/quiz-submit', (req, res) => {
 app.get('/api/grading-queue', requirePin, (req, res) => {
   res.json(db.prepare(`
     SELECT sub.id AS submissionId, sub.completed_at, sub.points_possible,
+           sub.evidence_notes, sub.evidence_photo, sub.student_note,
            s.id AS studentId, s.name AS studentName, s.emoji,
-           i.id AS itemId, i.title AS itemTitle,
+           i.id AS itemId, i.title AS itemTitle, i.type AS itemType,
            c.name AS courseName, u.name AS unitName
     FROM submissions sub
     JOIN students s ON s.id = sub.student_id
     JOIN items i ON i.id = sub.item_id
     JOIN units u ON u.id = i.unit_id
     JOIN courses c ON c.id = u.course_id
-    WHERE sub.status = 'done' AND i.type = 'assignment'
+    WHERE sub.status = 'done' AND i.type IN ('assignment', 'lesson', 'spelling_practice', 'flashcards')
     ORDER BY sub.completed_at
   `).all());
 });
@@ -758,8 +767,12 @@ app.get('/api/grading-queue', requirePin, (req, res) => {
 app.put('/api/submissions/:id/grade', requirePin, (req, res) => {
   const score = Number(req.body.score);
   if (Number.isNaN(score)) return res.status(400).json({ error: 'Score must be a number' });
-  db.prepare(`UPDATE submissions SET score = ?, status = 'graded', graded_at = datetime('now') WHERE id = ?`)
-    .run(score, req.params.id);
+  const comment = req.body.parentComment !== undefined ? String(req.body.parentComment).trim() || null : undefined;
+  db.prepare(`
+    UPDATE submissions SET score = ?, status = 'graded', graded_at = datetime('now')
+    ${comment !== undefined ? ', parent_comment = ?' : ''}
+    WHERE id = ?
+  `).run(...(comment !== undefined ? [score, comment, req.params.id] : [score, req.params.id]));
   res.json({ ok: true });
 });
 
@@ -770,7 +783,7 @@ app.get('/api/gradebook/:courseId', requirePin, (req, res) => {
   if (!course) return res.status(404).json({ error: 'No such course' });
 
   const gradableItems = db.prepare(`
-    SELECT i.id, i.title, i.type, i.points, i.due_date
+    SELECT i.id, i.title, i.type, i.points, i.due_date, i.retake_policy
     FROM items i JOIN units u ON u.id = i.unit_id
     WHERE u.course_id = ? AND i.type IN (${GRADABLE_TYPES.map(() => '?').join(',')})
     ORDER BY u.sort, i.sort, i.id
@@ -781,7 +794,9 @@ app.get('/api/gradebook/:courseId', requirePin, (req, res) => {
     JOIN enrollments e ON e.student_id = s.id WHERE e.course_id = ? ORDER BY s.name
   `).all(req.params.courseId);
 
-  const scoreStmt = db.prepare(`SELECT score, points_possible, status FROM submissions WHERE student_id = ? AND item_id = ?`);
+  const scoreStmt = db.prepare(`SELECT score, points_possible, status, parent_comment FROM submissions WHERE student_id = ? AND item_id = ?`);
+  const histBest = db.prepare(`SELECT MAX(score * 1.0 / points_possible) AS ratio, MAX(score) AS score, points_possible FROM submission_history WHERE student_id = ? AND item_id = ? AND points_possible > 0`);
+  const histAvg = db.prepare(`SELECT AVG(score) AS score, points_possible, COUNT(*) AS cnt FROM submission_history WHERE student_id = ? AND item_id = ? AND points_possible > 0`);
   const now = today();
   for (const s of students) {
     s.scores = {};
@@ -789,9 +804,17 @@ app.get('/api/gradebook/:courseId', requirePin, (req, res) => {
     for (const item of gradableItems) {
       const row = scoreStmt.get(s.id, item.id);
       const overdue = !!(item.due_date && item.due_date < now && (!row || row.status !== 'graded'));
-      s.scores[item.id] = row ? { ...row, overdue } : (overdue ? { overdue: true } : null);
+      let effectiveScore = row?.score;
+      if (row?.status === 'graded' && item.retake_policy === 'highest') {
+        const best = histBest.get(s.id, item.id);
+        if (best?.score !== null) effectiveScore = best.score;
+      } else if (row?.status === 'graded' && item.retake_policy === 'average') {
+        const avg = histAvg.get(s.id, item.id);
+        if (avg?.cnt > 0) effectiveScore = Math.round(avg.score * 10) / 10;
+      }
+      s.scores[item.id] = row ? { ...row, score: effectiveScore, overdue } : (overdue ? { overdue: true } : null);
       if (row && row.status === 'graded' && row.points_possible) {
-        earned += row.score;
+        earned += effectiveScore ?? 0;
         possible += row.points_possible;
       }
     }
@@ -837,6 +860,20 @@ app.get('/api/gradebook/:courseId/csv', requirePin, (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send([header, ...rows].map((r) => r.join(',')).join('\n'));
+});
+
+// Full evidence for a submission (photo can be large, not included in queue list)
+app.get('/api/grading-queue/:id/evidence', requirePin, (req, res) => {
+  const row = db.prepare(`SELECT evidence_notes, evidence_photo FROM submissions WHERE id = ?`).get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  res.json(row);
+});
+
+// Evidence detail for a schedule item (offline task)
+app.get('/api/schedule/:id/evidence', requirePin, (req, res) => {
+  const row = db.prepare(`SELECT evidence_notes, evidence_photo FROM schedule WHERE id = ?`).get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'No such task' });
+  res.json(row);
 });
 
 // Score history for a student on one item
@@ -898,7 +935,8 @@ app.get('/api/schedule/:studentId', (req, res) => {
   const date = isDateStr(req.query.date) ? req.query.date : null;
   if (!date) return res.status(400).json({ error: 'date=YYYY-MM-DD required' });
   const tasks = db.prepare(`
-    SELECT sc.id, sc.date, sc.title AS offlineTitle, sc.done,
+    SELECT sc.id, sc.date, sc.title AS offlineTitle, sc.done, sc.status AS offlineStatus,
+           sc.evidence_notes IS NOT NULL OR sc.evidence_photo IS NOT NULL AS hasEvidence,
            i.id AS itemId, i.type, i.title AS itemTitle,
            c.name AS courseName, c.color AS courseColor,
            sub.status AS subStatus, sub.score, sub.points_possible
@@ -913,15 +951,20 @@ app.get('/api/schedule/:studentId', (req, res) => {
   res.json({ tasks });
 });
 
-// Kid toggles a standalone offline task
+// Kid updates a standalone offline task: status (not_started/in_progress/done) + optional evidence
 app.post('/api/schedule/:id/done', (req, res) => {
   const row = db.prepare(`SELECT item_id FROM schedule WHERE id = ?`).get(req.params.id);
   if (!row) return res.status(404).json({ error: 'No such task' });
   if (row.item_id) return res.status(400).json({ error: 'Course items complete themselves — open the item instead' });
-  const done = req.body.done ? 1 : 0;
+  const status = ['not_started', 'in_progress', 'done'].includes(req.body.status) ? req.body.status : (req.body.done ? 'done' : 'not_started');
+  const done = status === 'done' ? 1 : 0;
   db.prepare(`
-    UPDATE schedule SET done = ?, done_at = CASE WHEN ? THEN datetime('now') ELSE NULL END WHERE id = ?
-  `).run(done, done, req.params.id);
+    UPDATE schedule SET
+      status = ?, done = ?, done_at = CASE WHEN ? THEN datetime('now') ELSE NULL END,
+      evidence_notes = COALESCE(?, evidence_notes),
+      evidence_photo = COALESCE(?, evidence_photo)
+    WHERE id = ?
+  `).run(status, done, done, req.body.evidenceNotes || null, req.body.evidencePhoto || null, req.params.id);
   res.json({ ok: true });
 });
 

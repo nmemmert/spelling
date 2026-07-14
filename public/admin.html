@@ -120,6 +120,22 @@
           <label>Prerequisite item (must be done first)
             <select id="ie-prereq"><option value="">None</option></select>
           </label>
+          <div class="inline-form">
+            <label>Evidence from student
+              <select id="ie-evidence-mode">
+                <option value="none">None</option>
+                <option value="optional">Optional</option>
+                <option value="required">Required</option>
+              </select>
+            </label>
+            <label>Retake score policy
+              <select id="ie-retake-policy">
+                <option value="latest">Latest attempt</option>
+                <option value="highest">Highest score</option>
+                <option value="average">Average of all</option>
+              </select>
+            </label>
+          </div>
 
           <!-- Scan a page: visible for lesson + quiz types -->
           <div id="ie-scan-section" class="scan-card" hidden>
@@ -189,6 +205,14 @@
         <h1>Grading Queue</h1>
         <div id="grading-rows"></div>
         <p id="grading-empty" class="hint" hidden>Nothing waiting to be graded 🎉</p>
+        <!-- Evidence lightbox -->
+        <div id="evidence-lightbox" class="modal" hidden>
+          <div class="modal-box">
+            <h3>Evidence</h3>
+            <div id="evidence-lightbox-body"></div>
+            <button id="evidence-lightbox-close" class="secondary">Close</button>
+          </div>
+        </div>
       </section>
 
       <!-- Gradebook -->

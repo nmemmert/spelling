@@ -73,8 +73,29 @@
       <h1 id="assignment-title"></h1>
       <p id="assignment-points" class="points-label"></p>
       <div id="assignment-body" class="lesson-body"></div>
+      <div id="assignment-evidence-section" hidden>
+        <details id="assignment-evidence-details" class="evidence-form">
+          <summary>📎 Add evidence (photo or notes)</summary>
+          <div class="evidence-inner">
+            <textarea id="assignment-evidence-notes" placeholder="Notes about your work…" rows="3"></textarea>
+            <div class="evidence-photo-row">
+              <button type="button" id="assignment-photo-btn" class="secondary small">📷 Add photo</button>
+              <input type="file" id="assignment-photo-input" accept="image/*" capture="environment" hidden>
+              <span id="assignment-photo-status" class="hint"></span>
+            </div>
+            <label class="checkbox-label evidence-note-label">
+              <select id="assignment-student-note">
+                <option value="">I felt good about this</option>
+                <option value="needs_help">🙋 I need help with this</option>
+                <option value="not_sure">🤔 I did it but I'm not sure</option>
+              </select>
+            </label>
+          </div>
+        </details>
+      </div>
       <button id="assignment-done-btn" class="check-btn">Mark as done ✓</button>
       <div id="assignment-status" class="status-banner" hidden></div>
+      <div id="assignment-comment" class="parent-comment" hidden></div>
     </div>
   </section>
 
