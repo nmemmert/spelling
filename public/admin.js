@@ -337,7 +337,7 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-heading').textContent = `Edit: ${item.title}`;
     $('#ie-type').value = item.type;
     $('#ie-title').value = item.title;
-    $('#ie-body-lesson').value = item.body;
+    $('#ie-body-lesson').innerHTML = item.body || '';
     $('#ie-body-assignment').value = item.body;
     $('#ie-points').value = item.points || 10;
     $('#ie-due-date').value = item.due_date || '';
@@ -358,7 +358,7 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-heading').textContent = 'New item';
     $('#ie-type').value = 'lesson';
     $('#ie-title').value = '';
-    $('#ie-body-lesson').value = '';
+    $('#ie-body-lesson').innerHTML = '';
     $('#ie-body-assignment').value = '';
     $('#ie-points').value = 10;
     $('#ie-due-date').value = '';
@@ -385,6 +385,61 @@ function updateItemFieldVisibility() {
   $('#ie-import-section').hidden = type === 'spelling_practice' || type === 'spelling_test' || type === 'flashcards';
 }
 $('#ie-type').addEventListener('change', updateItemFieldVisibility);
+
+// ---------- rich text editor (lesson body) ----------
+
+function getLessonBody() {
+  const html = $('#ie-body-lesson').innerHTML.trim();
+  return html === '<br>' ? '' : html;
+}
+
+let rtesavedRange = null;
+
+// Save selection whenever the editor loses focus (e.g. when clicking a toolbar button)
+$('#ie-body-lesson').addEventListener('blur', () => {
+  const sel = window.getSelection();
+  rtesavedRange = sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+});
+
+function rteRestoreAndExec(cmd, val = null) {
+  $('#ie-body-lesson').focus();
+  if (rtesavedRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(rtesavedRange);
+  }
+  document.execCommand(cmd, false, val);
+}
+
+// Format buttons (bold, italic, heading, lists, etc.)
+document.querySelectorAll('.rte-btn[data-cmd]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    rteRestoreAndExec(btn.dataset.cmd, btn.dataset.val || null);
+  });
+});
+
+// Link button
+$('#rte-link-btn').addEventListener('click', () => {
+  const savedRange = rtesavedRange;
+  const url = prompt('Enter URL (e.g. https://example.com):');
+  if (url) {
+    rteRestoreAndExec('createLink', url);
+  }
+});
+
+// YouTube embed button
+$('#rte-youtube-btn').addEventListener('click', () => {
+  const input = prompt('YouTube URL or video ID:');
+  if (!input) return;
+  const match = input.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([a-zA-Z0-9_-]{11})/);
+  const id = match ? match[1] : input.trim();
+  if (id) {
+    rteRestoreAndExec(
+      'insertHTML',
+      `<br><iframe width="560" height="315" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen style="max-width:100%;border-radius:10px"></iframe><br>`
+    );
+  }
+});
 
 // ---------- scan a page (photo -> lesson/quiz content via local Ollama) ----------
 
@@ -459,7 +514,7 @@ $('#scan-go-btn').addEventListener('click', async () => {
     const providerLabel = result._provider === 'cloud' ? 'cloud API' : 'local Ollama';
     const fallbackNote = result._fallback ? ` (primary failed — used ${providerLabel} as fallback: ${result._primaryError})` : ` via ${providerLabel}`;
     if (mode === 'lesson') {
-      $('#ie-body-lesson').value = result.body || '';
+      $('#ie-body-lesson').innerHTML = result.body || '';
       $('#scan-status').textContent = `✅ Scanned${fallbackNote}. Review the text below before saving.`;
     } else {
       $('#ie-questions').innerHTML = '';
@@ -590,7 +645,7 @@ $('#item-form').addEventListener('submit', async (e) => {
     unitId: Number($('#ie-unit-id').value),
     type,
     title,
-    body: type === 'lesson' ? $('#ie-body-lesson').value : type === 'assignment' ? $('#ie-body-assignment').value : '',
+    body: type === 'lesson' ? getLessonBody() : type === 'assignment' ? $('#ie-body-assignment').value : '',
     points: type === 'assignment' ? Number($('#ie-points').value) || 0 : 0,
     refId: type === 'spelling_practice' || type === 'spelling_test' ? Number($('#ie-list').value)
          : type === 'flashcards' ? Number($('#ie-deck').value) : null,

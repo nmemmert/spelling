@@ -162,9 +162,24 @@
           </div>
 
           <div id="ie-field-lesson" class="ie-field">
-            <label>Lesson content (text, or paste HTML — images/YouTube embeds allowed)
-              <textarea id="ie-body-lesson" rows="8" placeholder="Weather is what the sky and air are doing right now.&#10;&#10;&lt;iframe src=&quot;https://www.youtube.com/embed/VIDEO_ID&quot;&gt;&lt;/iframe&gt;"></textarea>
-            </label>
+            <div class="rte-label">Lesson content</div>
+            <div class="rte-toolbar">
+              <button type="button" class="rte-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+              <button type="button" class="rte-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+              <button type="button" class="rte-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" data-cmd="formatBlock" data-val="h2" title="Heading">H2</button>
+              <button type="button" class="rte-btn" data-cmd="formatBlock" data-val="h3" title="Sub-heading">H3</button>
+              <button type="button" class="rte-btn" data-cmd="formatBlock" data-val="p" title="Paragraph">¶</button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Bullet list">• List</button>
+              <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" id="rte-link-btn" title="Add link">🔗 Link</button>
+              <button type="button" class="rte-btn" id="rte-youtube-btn" title="Embed YouTube">▶ YouTube</button>
+            </div>
+            <div id="ie-body-lesson" class="rte-editor lesson-body" contenteditable="true"
+              data-placeholder="Weather is what the sky and air are doing right now.&#10;Add images, YouTube embeds, and more."></div>
           </div>
 
           <div id="ie-field-assignment" class="ie-field">

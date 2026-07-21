@@ -483,6 +483,47 @@ td.overdue, .overdue { background: var(--bad-bg) !important; }
 .parent-comment { background: var(--good-bg); border-radius: 10px; padding: 0.75rem 1rem; margin: 0.75rem 0; color: var(--good); }
 .status-banner.bad { background: var(--bad-bg); color: var(--bad); border-radius: 10px; padding: 0.75rem 1rem; margin: 0.75rem 0; }
 
+/* ---------- rich text editor (lesson input) ---------- */
+.rte-label {
+  font-weight: 700; font-size: 0.9rem; margin-bottom: 0.3rem;
+}
+.rte-toolbar {
+  display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center;
+  padding: 0.4rem 0.6rem;
+  background: #f0ead8;
+  border: 2px solid #d8d2c0;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+}
+.rte-btn {
+  font-size: 0.85rem; font-family: inherit; font-weight: 600;
+  background: var(--card); color: var(--ink);
+  border: 1.5px solid #c8c2b0; border-radius: 6px;
+  padding: 0.25rem 0.55rem; cursor: pointer; line-height: 1.4;
+}
+.rte-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.rte-sep {
+  display: inline-block; width: 1px; height: 1.4rem;
+  background: #c8c2b0; margin: 0 0.15rem; flex-shrink: 0;
+}
+.rte-editor {
+  min-height: 200px; outline: none; cursor: text;
+  border: 2px solid #d8d2c0; border-radius: 0 0 10px 10px;
+  padding: 0.75rem; margin-bottom: 0;
+  font-size: 1.05rem; line-height: 1.6;
+  white-space: pre-wrap;
+}
+.rte-editor:focus { border-color: var(--accent); }
+.rte-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted); pointer-events: none; white-space: pre-wrap;
+}
+.rte-editor h2 { font-size: 1.3rem; margin: 0.6rem 0 0.3rem; }
+.rte-editor h3 { font-size: 1.1rem; margin: 0.5rem 0 0.25rem; }
+.rte-editor ul, .rte-editor ol { margin: 0.4rem 0 0.4rem 1.5rem; }
+.rte-editor a { color: var(--accent-dark); }
+.rte-editor img, .rte-editor iframe { max-width: 100%; border-radius: 10px; }
+
 /* ---------- offline 3-state tasks ---------- */
 .today-row-offline { background: var(--card); border: 1.5px solid #e2dccf; border-radius: 14px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; text-align: left; }
 .offline-main { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
