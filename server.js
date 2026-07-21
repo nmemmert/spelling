@@ -496,8 +496,14 @@ app.get('/api/admin/courses/:id', requirePin, (req, res) => {
   const course = db.prepare(`SELECT id, name, subject, color, archived FROM courses WHERE id = ?`).get(req.params.id);
   if (!course) return res.status(404).json({ error: 'No such course' });
   const units = db.prepare(`SELECT id, name, sort FROM units WHERE course_id = ? ORDER BY sort, id`).all(req.params.id);
-  const itemStmt = db.prepare(`SELECT id, type, title, points, ref_id, sort, due_date, allow_retakes, prereq_item_id FROM items WHERE unit_id = ? ORDER BY sort, id`);
-  for (const u of units) u.items = itemStmt.all(u.id);
+  const itemStmt = db.prepare(`SELECT id, type, title, body, points, ref_id, sort, due_date, allow_retakes, prereq_item_id FROM items WHERE unit_id = ? ORDER BY sort, id`);
+  const qStmt = db.prepare(`SELECT type, prompt, choices, correct_answer, points FROM quiz_questions WHERE item_id = ? ORDER BY sort, id`);
+  for (const u of units) {
+    u.items = itemStmt.all(u.id).map((it) => {
+      if (it.type === 'quiz') it.questions = qStmt.all(it.id).map((q) => ({ ...q, choices: JSON.parse(q.choices) }));
+      return it;
+    });
+  }
   res.json({ ...course, units });
 });
 

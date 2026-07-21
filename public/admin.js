@@ -959,25 +959,51 @@ async function printMonthReport(studentId, monthMonday, monthRef) {
 
 async function printCourse(courseId) {
   const course = await api(`/api/admin/courses/${courseId}`);
+
+  function renderItemBody(it) {
+    let html = '';
+    if (it.body) {
+      html += `<div class="item-body">${it.body.split(/\n\n+/).map((p) => `<p>${esc(p.trim())}</p>`).join('')}</div>`;
+    }
+    if (it.type === 'quiz' && it.questions?.length) {
+      html += `<ol class="quiz-qs">${it.questions.map((q, i) => {
+        const choices = q.choices?.length
+          ? `<ul>${q.choices.map((c) => `<li>${esc(c)}${q.correct_answer === c ? ' ✓' : ''}</li>`).join('')}</ul>`
+          : '';
+        return `<li><strong>${esc(q.prompt)}</strong>${choices}</li>`;
+      }).join('')}</ol>`;
+    }
+    return html;
+  }
+
   const unitBlocks = course.units.map((u) => {
-    const items = u.items.map((it) =>
-      `<tr><td>${TYPE_ICON[it.type] || ''} ${esc(it.title)}</td><td>${TYPE_LABEL[it.type] || ''}</td></tr>`
-    ).join('');
-    return `<h2>${esc(u.name)}</h2>
-    <table><tr><th>Item</th><th>Type</th></tr>${items || '<tr><td colspan="2">No items</td></tr>'}</table>`;
+    const items = u.items.map((it) => `
+      <div class="item-block">
+        <div class="item-header">${TYPE_ICON[it.type] || ''} <strong>${esc(it.title)}</strong> <span class="item-type">${TYPE_LABEL[it.type] || ''}</span>${it.points ? ` <span class="item-pts">${it.points} pts</span>` : ''}</div>
+        ${renderItemBody(it)}
+      </div>`).join('');
+    return `<div class="unit-block"><h2>${esc(u.name)}</h2>${items || '<p class="empty">No items.</p>'}</div>`;
   }).join('');
 
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head><title>${esc(course.name)}</title>
   <style>
-    body { font-family: Georgia, serif; max-width: 700px; margin: 2rem auto; color: #222; }
-    h1 { font-size: 1.5rem; border-bottom: 3px solid #222; padding-bottom: .4rem; }
-    h2 { font-size: 1.1rem; margin: 1.5rem 0 .4rem; color: #444; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: .5rem; }
-    td, th { border: 1px solid #bbb; padding: .35rem .6rem; text-align: left; font-size: .9rem; }
-    th { background: #f0f0f0; }
+    body { font-family: Georgia, serif; max-width: 740px; margin: 2rem auto; color: #222; font-size: .95rem; }
+    h1 { font-size: 1.6rem; border-bottom: 3px solid #222; padding-bottom: .4rem; margin-bottom: 1.5rem; }
+    h2 { font-size: 1.1rem; background: #eee; padding: .4rem .7rem; border-radius: 4px; margin: 1.5rem 0 .5rem; }
+    .unit-block { margin-bottom: 1rem; }
+    .item-block { border-left: 3px solid #ccc; padding: .5rem .75rem; margin-bottom: .75rem; }
+    .item-header { font-size: 1rem; margin-bottom: .3rem; }
+    .item-type { color: #666; font-size: .85rem; font-style: italic; }
+    .item-pts { color: #888; font-size: .8rem; margin-left: .4rem; }
+    .item-body p { margin: .3rem 0; line-height: 1.5; }
+    .quiz-qs { margin: .4rem 0 0 1.2rem; }
+    .quiz-qs li { margin: .4rem 0; }
+    .quiz-qs ul { margin: .2rem 0 .2rem 1rem; list-style: lower-alpha; }
+    .empty { color: #888; font-style: italic; }
+    @media print { body { margin: 1cm; } h2 { break-after: avoid; } .item-block { break-inside: avoid; } }
   </style></head><body>
-  <h1>${esc(course.name)}${course.subject ? ` <small style="font-size:.8em;color:#666">— ${esc(course.subject)}</small>` : ''}</h1>
+  <h1>${esc(course.name)}${course.subject ? ` <small style="font-size:.75em;color:#666">— ${esc(course.subject)}</small>` : ''}</h1>
   ${unitBlocks || '<p>No units in this course.</p>'}
   <script>window.print()<\/script></body></html>`);
   win.document.close();
