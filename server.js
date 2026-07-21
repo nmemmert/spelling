@@ -1120,7 +1120,7 @@ app.get('/api/schedule-range/:studentId', requirePin, (req, res) => {
   if (!start || !end) return res.status(400).json({ error: 'start and end (YYYY-MM-DD) required' });
   const tasks = db.prepare(`
     SELECT sc.id, sc.date, sc.title AS offlineTitle, sc.done,
-           i.id AS itemId, i.type, i.title AS itemTitle, c.name AS courseName
+           i.id AS itemId, i.type, i.title AS itemTitle, i.body, c.name AS courseName
     FROM schedule sc
     LEFT JOIN items i ON i.id = sc.item_id
     LEFT JOIN units u ON u.id = i.unit_id
@@ -1139,7 +1139,7 @@ app.get('/api/week-report/:studentId', requirePin, (req, res) => {
   if (!student) return res.status(404).json({ error: 'No such student' });
 
   const tasks = db.prepare(`
-    SELECT sc.date, sc.title AS offlineTitle, sc.done, i.title AS itemTitle, i.type, c.name AS courseName
+    SELECT sc.date, sc.title AS offlineTitle, sc.done, i.title AS itemTitle, i.type, i.body, c.name AS courseName
     FROM schedule sc
     LEFT JOIN items i ON i.id = sc.item_id
     LEFT JOIN units u ON u.id = i.unit_id

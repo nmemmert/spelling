@@ -880,11 +880,31 @@ function toggleAddTaskForm(date) {
   });
 }
 
+function renderPrintTaskBlock(t) {
+  const title = t.itemTitle || t.offlineTitle;
+  const course = t.courseName ? `<span class="task-course">${esc(t.courseName)}</span>` : `<span class="task-course offline">Offline</span>`;
+  const status = t.done ? `<span class="done-tag">✓ done</span>` : '';
+  const typeTag = t.type ? `<span class="type-tag">${TYPE_LABEL[t.type] || t.type}</span>` : '';
+  let body = '';
+  if (t.body) body = `<div class="task-body">${t.body.split(/\n\n+/).map((p) => `<p>${esc(p.trim())}</p>`).join('')}</div>`;
+  return `<div class="task-block">
+    <div class="task-header">${course} ${typeTag} <strong>${esc(title)}</strong> ${status}</div>
+    ${body}
+  </div>`;
+}
+
 async function printWeekReport(studentId, start) {
   const r = await api(`/api/week-report/${studentId}?start=${start}`);
-  const taskRows = r.tasks
-    .map((t) => `<tr><td>${t.date}</td><td>${esc(t.itemTitle || t.offlineTitle)}</td><td>${esc(t.courseName || 'Offline')}</td><td>${t.done ? '✓ done' : '—'}</td></tr>`)
-    .join('');
+  // Group tasks by date
+  const byDate = {};
+  for (const t of r.tasks) { (byDate[t.date] = byDate[t.date] || []).push(t); }
+  const dayBlocks = Object.entries(byDate).map(([date, tasks]) =>
+    `<div class="day-block">
+      <h3>${date}</h3>
+      ${tasks.map(renderPrintTaskBlock).join('')}
+    </div>`
+  ).join('') || '<p class="empty">Nothing scheduled this week.</p>';
+
   const gradedRows = r.graded
     .map((g) => `<tr><td>${esc(g.itemTitle)}</td><td>${esc(g.courseName)}</td><td>${g.score}/${g.points_possible}</td></tr>`)
     .join('');
@@ -892,22 +912,34 @@ async function printWeekReport(studentId, start) {
     .map((t) => `<tr><td>${esc(t.list)}</td><td>${t.score}/${t.total}</td></tr>`)
     .join('');
   const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>Weekly Report</title>
+  win.document.write(`<!DOCTYPE html><html><head><title>Weekly Plan — ${esc(r.student)}</title>
     <style>
-      body { font-family: Georgia, serif; max-width: 640px; margin: 2rem auto; color: #222; }
-      h1 { font-size: 1.4rem; border-bottom: 2px solid #222; padding-bottom: 0.4rem; }
-      h2 { font-size: 1.1rem; margin-top: 1.5rem; }
-      table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-      td, th { border: 1px solid #999; padding: 0.4rem 0.6rem; text-align: left; }
+      body { font-family: Georgia, serif; max-width: 680px; margin: 2rem auto; color: #222; font-size: .95rem; }
+      h1 { font-size: 1.4rem; border-bottom: 2px solid #222; padding-bottom: .4rem; }
+      h2 { font-size: 1.1rem; margin: 1.5rem 0 .5rem; border-bottom: 1px solid #ccc; padding-bottom: .2rem; }
+      h3 { font-size: 1rem; margin: 1rem 0 .3rem; color: #555; }
+      .day-block { margin-bottom: .75rem; }
+      .task-block { border-left: 3px solid #bbb; padding: .3rem .7rem; margin-bottom: .5rem; break-inside: avoid; }
+      .task-header { font-size: .95rem; margin-bottom: .2rem; }
+      .task-course { font-weight: 700; color: #3a6fd8; }
+      .task-course.offline { color: #888; font-weight: 400; }
+      .type-tag { font-size: .78rem; color: #888; font-style: italic; }
+      .done-tag { font-size: .78rem; color: #2e9e5b; font-weight: 700; }
+      .task-body p { margin: .2rem 0; font-size: .88rem; color: #444; line-height: 1.5; }
+      table { width: 100%; border-collapse: collapse; margin-top: .4rem; }
+      td, th { border: 1px solid #bbb; padding: .35rem .6rem; text-align: left; font-size: .88rem; }
+      th { background: #f0f0f0; }
+      .empty { color: #888; font-style: italic; }
+      @media print { h2 { break-after: avoid; } .task-block { break-inside: avoid; } }
     </style></head><body>
-    <h1>Weekly Report — ${esc(r.student)}</h1>
+    <h1>Weekly Plan — ${esc(r.student)}</h1>
     <p>Week of ${r.start}</p>
     <h2>Schedule</h2>
-    <table><tr><th>Date</th><th>Task</th><th>Course</th><th>Status</th></tr>${taskRows || '<tr><td colspan="4">Nothing scheduled</td></tr>'}</table>
+    ${dayBlocks}
     <h2>Graded work</h2>
-    <table><tr><th>Item</th><th>Course</th><th>Score</th></tr>${gradedRows || '<tr><td colspan="3">Nothing graded this week</td></tr>'}</table>
+    ${gradedRows ? `<table><tr><th>Item</th><th>Course</th><th>Score</th></tr>${gradedRows}</table>` : '<p class="empty">Nothing graded this week.</p>'}
     <h2>Spelling tests</h2>
-    <table><tr><th>List</th><th>Score</th></tr>${spellingRows || '<tr><td colspan="2">No spelling tests this week</td></tr>'}</table>
+    ${spellingRows ? `<table><tr><th>List</th><th>Score</th></tr>${spellingRows}</table>` : '<p class="empty">No spelling tests this week.</p>'}
     <script>window.print()<\/script></body></html>`);
   win.document.close();
 }
@@ -933,26 +965,52 @@ async function printMonthReport(studentId, monthMonday, monthRef) {
   const calRows = weeks.map((week) =>
     `<tr>${week.map((day) => {
       const dayTasks = tasks.filter((t) => t.date === day.date);
-      const items = dayTasks.map((t) => `<div class="cell-task${t.done ? ' done' : ''}">${t.itemTitle || t.offlineTitle}</div>`).join('');
+      const items = dayTasks.map((t) => {
+        const label = t.itemTitle || t.offlineTitle;
+        const course = t.courseName ? `<span class="cell-course">${esc(t.courseName)}</span> ` : '';
+        return `<div class="cell-task${t.done ? ' done' : ''}">${course}${esc(label)}</div>`;
+      }).join('');
       return `<td><div class="date-num">${day.date.slice(5)}</div>${items || ''}</td>`;
     }).join('')}</tr>`
   ).join('');
 
+  // Detail section: all days that have tasks, grouped by date
+  const taskDays = weeks.flatMap((w) => w).filter((day) => tasks.some((t) => t.date === day.date));
+  const detailBlocks = taskDays.map((day) => {
+    const dayTasks = tasks.filter((t) => t.date === day.date);
+    return `<div class="detail-day">
+      <h3>${day.date}</h3>
+      ${dayTasks.map(renderPrintTaskBlock).join('')}
+    </div>`;
+  }).join('');
+
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head><title>${monthLabel(monthRef)} — ${student?.name || ''}</title>
   <style>
-    body { font-family: Georgia, serif; margin: 1.5cm; color: #222; }
-    h1 { font-size: 1.4rem; border-bottom: 2px solid #222; padding-bottom: .4rem; margin-bottom: .75rem; }
+    body { font-family: Georgia, serif; margin: 1cm; color: #222; font-size: .88rem; }
+    h1 { font-size: 1.3rem; border-bottom: 2px solid #222; padding-bottom: .4rem; margin-bottom: .75rem; }
+    h2 { font-size: 1rem; margin: 1.5rem 0 .5rem; border-bottom: 1px solid #ccc; padding-bottom: .2rem; }
+    h3 { font-size: .9rem; color: #555; margin: .75rem 0 .25rem; }
     table { width: 100%; border-collapse: collapse; }
-    th { background: #f0f0f0; padding: .4rem; font-size: .85rem; border: 1px solid #bbb; }
-    td { vertical-align: top; border: 1px solid #bbb; padding: .4rem; min-height: 3.5rem; width: 20%; }
-    .date-num { font-size: .75rem; color: #888; font-weight: 700; margin-bottom: .25rem; }
-    .cell-task { font-size: .78rem; margin: .1rem 0; padding: .1rem .3rem; background: #e8f0ff; border-radius: 3px; }
+    th { background: #f0f0f0; padding: .3rem; font-size: .8rem; border: 1px solid #bbb; }
+    td { vertical-align: top; border: 1px solid #bbb; padding: .3rem; min-height: 3rem; width: 20%; }
+    .date-num { font-size: .7rem; color: #888; font-weight: 700; margin-bottom: .2rem; }
+    .cell-course { font-weight: 700; color: #3a6fd8; font-size: .7rem; }
+    .cell-task { font-size: .72rem; margin: .1rem 0; padding: .1rem .3rem; background: #e8f0ff; border-radius: 3px; }
     .cell-task.done { background: #e8f7ee; text-decoration: line-through; color: #666; }
-    @media print { @page { size: landscape; margin: 1cm; } }
+    .task-block { border-left: 3px solid #bbb; padding: .3rem .6rem; margin-bottom: .4rem; break-inside: avoid; }
+    .task-header { font-size: .88rem; }
+    .task-course { font-weight: 700; color: #3a6fd8; }
+    .task-course.offline { color: #888; font-weight: 400; }
+    .type-tag { font-size: .75rem; color: #888; font-style: italic; }
+    .done-tag { font-size: .75rem; color: #2e9e5b; font-weight: 700; }
+    .task-body p { margin: .15rem 0; font-size: .82rem; color: #444; line-height: 1.4; }
+    .empty { color: #888; font-style: italic; }
+    @media print { @page { size: landscape; margin: .75cm; } h2 { break-after: avoid; } .task-block { break-inside: avoid; } }
   </style></head><body>
   <h1>${monthLabel(monthRef)} — ${esc(student?.name || '')}</h1>
   <table><tr>${DAY_SHORT.map((d) => `<th>${d}</th>`).join('')}</tr>${calRows}</table>
+  ${detailBlocks ? `<h2>Assignment Detail</h2>${detailBlocks}` : ''}
   <script>window.print()<\/script></body></html>`);
   win.document.close();
 }
