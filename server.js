@@ -1306,7 +1306,7 @@ app.get('/api/tts', (req, res) => {
       '--model', PIPER_MODEL,
       '--output_file', cachePath,
       '--quiet',
-    ], { input: text, encoding: 'buffer', timeout: 15000 });
+    ], { input: text, timeout: 15000 });
 
     if (result.status !== 0 || !existsSync(cachePath)) {
       return res.status(500).json({ error: 'TTS generation failed' });

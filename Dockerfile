@@ -2,7 +2,7 @@ FROM node:26-slim
 WORKDIR /app
 
 # Install piper TTS binary and an English voice model
-RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates libespeak-ng1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -qO /tmp/piper.tar.gz \
