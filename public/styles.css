@@ -370,10 +370,25 @@ button.tiny { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
 
 /* ---------- planner ---------- */
 .week-label { font-weight: 700; }
+/* planner week view */
 .planner-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-top: 1rem; }
 .planner-day { background: var(--card); border-radius: 14px; padding: 0.85rem; box-shadow: 0 2px 8px rgba(45, 49, 66, 0.06); }
 .planner-day h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .planner-day h3 small { display: block; font-weight: 400; color: var(--muted); }
+
+/* planner month view */
+.planner-grid.planner-month { display: block; }
+.planner-month-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-bottom: 3px; }
+.planner-month-header div { text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--muted); padding: 0.2rem 0; }
+.planner-month-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-bottom: 3px; }
+.planner-day-compact { border-radius: 8px; padding: 0.5rem; min-height: 80px; }
+.planner-day-compact h3 { font-size: 0.75rem; margin-bottom: 0.3rem; }
+.planner-day-compact .planner-task { font-size: 0.72rem; padding: 0.2rem 0.4rem; }
+.planner-day-compact .planner-task span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%; }
+.planner-day-compact .secondary.small { font-size: 0.7rem; padding: 0.2rem 0.4rem; margin-top: 0.2rem; }
+
+/* view toggle active state */
+.secondary.active-view { background: var(--accent); color: #fff; }
 .planner-tasks { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.5rem; min-height: 1.5rem; }
 .planner-task {
   display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;

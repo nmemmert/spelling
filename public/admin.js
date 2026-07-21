@@ -259,6 +259,8 @@ async function openCourseDetail(id) {
     btn.addEventListener('click', () => openItemEditor(btn.dataset.unitId, btn.dataset.editItem))
   );
 
+  $('#cd-print').onclick = () => printCourse(id);
+
   document.querySelectorAll('.panel').forEach((p) => (p.hidden = p.id !== 'panel-course-detail'));
   document.querySelectorAll('.admin-nav .nav-pill').forEach((p) => p.classList.remove('active'));
 }
@@ -640,6 +642,22 @@ function addDays(dateStr, n) {
 let plannerWeekStart = mondayOf(new Date());
 let plannerStudentId = null;
 let plannerCoursesCache = [];
+let plannerMode = 'week'; // 'week' | 'month'
+let plannerMonthRef = null; // YYYY-MM-01 of the month being viewed
+
+function firstMondayOfMonth(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(1);
+  return mondayOf(d);
+}
+function addMonths(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setMonth(d.getMonth() + n);
+  return d.toISOString().slice(0, 10);
+}
+function monthLabel(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleString('default', { month: 'long', year: 'numeric' });
+}
 
 async function loadPlannerPanel() {
   const [students, courses] = await Promise.all([api('/api/students'), api('/api/admin/courses')]);
@@ -673,8 +691,42 @@ $('#planner-student').addEventListener('change', () => {
   plannerStudentId = Number($('#planner-student').value);
   renderPlanner();
 });
-$('#planner-prev').addEventListener('click', () => { plannerWeekStart = addDays(plannerWeekStart, -7); renderPlanner(); });
-$('#planner-next').addEventListener('click', () => { plannerWeekStart = addDays(plannerWeekStart, 7); renderPlanner(); });
+$('#planner-view-week').addEventListener('click', () => {
+  plannerMode = 'week';
+  $('#planner-view-week').classList.add('active-view');
+  $('#planner-view-month').classList.remove('active-view');
+  $('#planner-copy').hidden = false;
+  renderPlanner();
+});
+$('#planner-view-month').addEventListener('click', () => {
+  plannerMode = 'month';
+  // derive the month from the current week view date
+  const ref = new Date(plannerWeekStart + 'T00:00:00');
+  plannerMonthRef = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}-01`;
+  plannerWeekStart = firstMondayOfMonth(plannerMonthRef);
+  $('#planner-view-month').classList.add('active-view');
+  $('#planner-view-week').classList.remove('active-view');
+  $('#planner-copy').hidden = true;
+  renderPlanner();
+});
+$('#planner-prev').addEventListener('click', () => {
+  if (plannerMode === 'month') {
+    plannerMonthRef = addMonths(plannerMonthRef, -1);
+    plannerWeekStart = firstMondayOfMonth(plannerMonthRef);
+  } else {
+    plannerWeekStart = addDays(plannerWeekStart, -7);
+  }
+  renderPlanner();
+});
+$('#planner-next').addEventListener('click', () => {
+  if (plannerMode === 'month') {
+    plannerMonthRef = addMonths(plannerMonthRef, 1);
+    plannerWeekStart = firstMondayOfMonth(plannerMonthRef);
+  } else {
+    plannerWeekStart = addDays(plannerWeekStart, 7);
+  }
+  renderPlanner();
+});
 
 $('#planner-copy').addEventListener('click', async () => {
   const from = addDays(plannerWeekStart, -7);
@@ -683,44 +735,15 @@ $('#planner-copy').addEventListener('click', async () => {
   renderPlanner();
 });
 
-$('#planner-print').addEventListener('click', () => printWeekReport(plannerStudentId, plannerWeekStart));
+$('#planner-print').addEventListener('click', () => {
+  if (plannerMode === 'month') printMonthReport(plannerStudentId, plannerWeekStart, plannerMonthRef);
+  else printWeekReport(plannerStudentId, plannerWeekStart);
+});
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-async function renderPlanner() {
-  const end = addDays(plannerWeekStart, 4);
-  $('#planner-week-label').textContent = `${plannerWeekStart} → ${end}`;
-  const [{ tasks }, courses] = await Promise.all([
-    api(`/api/schedule-week/${plannerStudentId}?start=${plannerWeekStart}`),
-    api(`/api/courses/mine/${plannerStudentId}`),
-  ]);
-  plannerCoursesCache = courses;
-
-  const days = DAY_NAMES.map((name, i) => ({ name, date: addDays(plannerWeekStart, i) }));
-  $('#planner-grid').innerHTML = days
-    .map((day) => {
-      const dayTasks = tasks.filter((t) => t.date === day.date);
-      return `<div class="planner-day" data-drop-date="${day.date}">
-        <h3>${day.name}<small>${day.date}</small></h3>
-        <div class="planner-tasks" data-drop-date="${day.date}">
-          ${dayTasks
-            .map(
-              (t) => `<div class="planner-task ${t.done ? 'done' : ''}" draggable="true" data-task-id="${t.id}">
-                <span>${t.itemId ? TYPE_ICON[t.type] : '📌'} ${esc(t.itemTitle || t.offlineTitle)}</span>
-                <button class="danger tiny" data-del-schedule="${t.id}">✕</button>
-              </div>`
-            )
-            .join('') || '<p class="hint tiny">Nothing planned</p>'}
-        </div>
-        <button class="secondary small" data-add-task="${day.date}">+ Add</button>
-        <div class="add-task-form" data-form-for="${day.date}" hidden></div>
-      </div>`;
-    })
-    .join('');
-
-  // Drag-and-drop: tasks between days
+function attachPlannerEvents() {
   let draggingId = null;
-
   document.querySelectorAll('.planner-task[draggable]').forEach((el) => {
     el.addEventListener('dragstart', (e) => {
       draggingId = el.dataset.taskId;
@@ -733,7 +756,6 @@ async function renderPlanner() {
       document.querySelectorAll('.planner-tasks').forEach((col) => col.classList.remove('drop-target'));
     });
   });
-
   document.querySelectorAll('.planner-tasks').forEach((col) => {
     col.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -745,12 +767,10 @@ async function renderPlanner() {
       e.preventDefault();
       col.classList.remove('drop-target');
       if (!draggingId) return;
-      const newDate = col.dataset.dropDate;
-      await api(`/api/schedule/${draggingId}`, { method: 'PATCH', body: { date: newDate } });
+      await api(`/api/schedule/${draggingId}`, { method: 'PATCH', body: { date: col.dataset.dropDate } });
       renderPlanner();
     });
   });
-
   document.querySelectorAll('[data-del-schedule]').forEach((btn) =>
     btn.addEventListener('click', async () => {
       await api(`/api/schedule/${btn.dataset.delSchedule}`, { method: 'DELETE' });
@@ -760,6 +780,61 @@ async function renderPlanner() {
   document.querySelectorAll('[data-add-task]').forEach((btn) =>
     btn.addEventListener('click', () => toggleAddTaskForm(btn.dataset.addTask))
   );
+}
+
+function renderDayCell(day, tasks, compact = false) {
+  const dayTasks = tasks.filter((t) => t.date === day.date);
+  return `<div class="planner-day${compact ? ' planner-day-compact' : ''}" data-drop-date="${day.date}">
+    <h3>${compact ? day.name.slice(0,3) : day.name}<small>${compact ? day.date.slice(5) : day.date}</small></h3>
+    <div class="planner-tasks" data-drop-date="${day.date}">
+      ${dayTasks.map((t) => `<div class="planner-task ${t.done ? 'done' : ''}" draggable="true" data-task-id="${t.id}">
+        <span>${t.itemId ? TYPE_ICON[t.type] : '📌'} ${esc(t.itemTitle || t.offlineTitle)}</span>
+        <button class="danger tiny" data-del-schedule="${t.id}">✕</button>
+      </div>`).join('') || `<p class="hint tiny">—</p>`}
+    </div>
+    <button class="secondary small" data-add-task="${day.date}">+ Add</button>
+    <div class="add-task-form" data-form-for="${day.date}" hidden></div>
+  </div>`;
+}
+
+async function renderPlanner() {
+  const courses = await api(`/api/courses/mine/${plannerStudentId}`);
+  plannerCoursesCache = courses;
+
+  if (plannerMode === 'month') {
+    // Build 4-5 week rows covering the month
+    const month = new Date(plannerMonthRef + 'T00:00:00').getMonth();
+    const weeks = [];
+    let cursor = plannerWeekStart;
+    for (let w = 0; w < 6; w++) {
+      const weekDays = DAY_NAMES.map((name, i) => ({ name, date: addDays(cursor, i) }));
+      const fridayMonth = new Date(weekDays[4].date + 'T00:00:00').getMonth();
+      const mondayMonth = new Date(weekDays[0].date + 'T00:00:00').getMonth();
+      if (w > 0 && mondayMonth !== month && fridayMonth !== month) break;
+      weeks.push(weekDays);
+      cursor = addDays(cursor, 7);
+    }
+    const rangeStart = weeks[0][0].date;
+    const rangeEnd = weeks[weeks.length - 1][4].date;
+    const { tasks } = await api(`/api/schedule-range/${plannerStudentId}?start=${rangeStart}&end=${rangeEnd}`);
+
+    $('#planner-week-label').textContent = monthLabel(plannerMonthRef);
+    $('#planner-grid').className = 'planner-grid planner-month';
+    $('#planner-grid').innerHTML =
+      `<div class="planner-month-header">${DAY_NAMES.map((d) => `<div>${d.slice(0,3)}</div>`).join('')}</div>` +
+      weeks.map((week) =>
+        `<div class="planner-month-row">${week.map((day) => renderDayCell(day, tasks, true)).join('')}</div>`
+      ).join('');
+  } else {
+    const end = addDays(plannerWeekStart, 4);
+    $('#planner-week-label').textContent = `${plannerWeekStart} → ${end}`;
+    const { tasks } = await api(`/api/schedule-week/${plannerStudentId}?start=${plannerWeekStart}`);
+    const days = DAY_NAMES.map((name, i) => ({ name, date: addDays(plannerWeekStart, i) }));
+    $('#planner-grid').className = 'planner-grid';
+    $('#planner-grid').innerHTML = days.map((day) => renderDayCell(day, tasks)).join('');
+  }
+
+  attachPlannerEvents();
 }
 
 function toggleAddTaskForm(date) {
@@ -834,6 +909,77 @@ async function printWeekReport(studentId, start) {
     <h2>Spelling tests</h2>
     <table><tr><th>List</th><th>Score</th></tr>${spellingRows || '<tr><td colspan="2">No spelling tests this week</td></tr>'}</table>
     <script>window.print()<\/script></body></html>`);
+  win.document.close();
+}
+
+async function printMonthReport(studentId, monthMonday, monthRef) {
+  const month = new Date(monthRef + 'T00:00:00').getMonth();
+  const weeks = [];
+  let cursor = monthMonday;
+  for (let w = 0; w < 6; w++) {
+    const weekDays = DAY_NAMES.map((name, i) => ({ name, date: addDays(cursor, i) }));
+    const fridayMonth = new Date(weekDays[4].date + 'T00:00:00').getMonth();
+    const mondayMonth = new Date(weekDays[0].date + 'T00:00:00').getMonth();
+    if (w > 0 && mondayMonth !== month && fridayMonth !== month) break;
+    weeks.push(weekDays);
+    cursor = addDays(cursor, 7);
+  }
+  const rangeStart = weeks[0][0].date;
+  const rangeEnd = weeks[weeks.length - 1][4].date;
+  const student = (await api('/api/students')).find((s) => s.id === studentId);
+  const { tasks } = await api(`/api/schedule-range/${studentId}?start=${rangeStart}&end=${rangeEnd}`);
+
+  const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const calRows = weeks.map((week) =>
+    `<tr>${week.map((day) => {
+      const dayTasks = tasks.filter((t) => t.date === day.date);
+      const items = dayTasks.map((t) => `<div class="cell-task${t.done ? ' done' : ''}">${t.itemTitle || t.offlineTitle}</div>`).join('');
+      return `<td><div class="date-num">${day.date.slice(5)}</div>${items || ''}</td>`;
+    }).join('')}</tr>`
+  ).join('');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>${monthLabel(monthRef)} — ${student?.name || ''}</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 1.5cm; color: #222; }
+    h1 { font-size: 1.4rem; border-bottom: 2px solid #222; padding-bottom: .4rem; margin-bottom: .75rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f0f0f0; padding: .4rem; font-size: .85rem; border: 1px solid #bbb; }
+    td { vertical-align: top; border: 1px solid #bbb; padding: .4rem; min-height: 3.5rem; width: 20%; }
+    .date-num { font-size: .75rem; color: #888; font-weight: 700; margin-bottom: .25rem; }
+    .cell-task { font-size: .78rem; margin: .1rem 0; padding: .1rem .3rem; background: #e8f0ff; border-radius: 3px; }
+    .cell-task.done { background: #e8f7ee; text-decoration: line-through; color: #666; }
+    @media print { @page { size: landscape; margin: 1cm; } }
+  </style></head><body>
+  <h1>${monthLabel(monthRef)} — ${esc(student?.name || '')}</h1>
+  <table><tr>${DAY_SHORT.map((d) => `<th>${d}</th>`).join('')}</tr>${calRows}</table>
+  <script>window.print()<\/script></body></html>`);
+  win.document.close();
+}
+
+async function printCourse(courseId) {
+  const course = await api(`/api/admin/courses/${courseId}`);
+  const unitBlocks = course.units.map((u) => {
+    const items = u.items.map((it) =>
+      `<tr><td>${TYPE_ICON[it.type] || ''} ${esc(it.title)}</td><td>${TYPE_LABEL[it.type] || ''}</td></tr>`
+    ).join('');
+    return `<h2>${esc(u.name)}</h2>
+    <table><tr><th>Item</th><th>Type</th></tr>${items || '<tr><td colspan="2">No items</td></tr>'}</table>`;
+  }).join('');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>${esc(course.name)}</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 700px; margin: 2rem auto; color: #222; }
+    h1 { font-size: 1.5rem; border-bottom: 3px solid #222; padding-bottom: .4rem; }
+    h2 { font-size: 1.1rem; margin: 1.5rem 0 .4rem; color: #444; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: .5rem; }
+    td, th { border: 1px solid #bbb; padding: .35rem .6rem; text-align: left; font-size: .9rem; }
+    th { background: #f0f0f0; }
+  </style></head><body>
+  <h1>${esc(course.name)}${course.subject ? ` <small style="font-size:.8em;color:#666">— ${esc(course.subject)}</small>` : ''}</h1>
+  ${unitBlocks || '<p>No units in this course.</p>'}
+  <script>window.print()<\/script></body></html>`);
   win.document.close();
 }
 

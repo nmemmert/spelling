@@ -86,7 +86,7 @@
         </div>
 
         <div class="admin-card">
-          <h2>Units &amp; content</h2>
+          <h2>Units &amp; content <button type="button" id="cd-print" class="secondary small" style="float:right">🖨 Print course</button></h2>
           <div id="cd-units"></div>
           <form id="add-unit-form" class="inline-form">
             <input id="new-unit-name" placeholder="Unit name (e.g. Week 1: Weather)" aria-label="Unit name">
@@ -200,14 +200,16 @@
 
       <!-- Planner -->
       <section id="panel-planner" class="panel">
-        <h1>Weekly Planner</h1>
+        <h1>Planner</h1>
         <div class="inline-form">
           <label>Kid <select id="planner-student"></select></label>
-          <button id="planner-prev" class="secondary">← Prev week</button>
+          <button id="planner-view-week" class="secondary active-view">Week</button>
+          <button id="planner-view-month" class="secondary">Month</button>
+          <button id="planner-prev" class="secondary">← Prev</button>
           <span id="planner-week-label" class="week-label"></span>
-          <button id="planner-next" class="secondary">Next week →</button>
-          <button id="planner-copy" class="secondary">Copy last week here</button>
-          <button id="planner-print">🖨 Print week report</button>
+          <button id="planner-next" class="secondary">Next →</button>
+          <button id="planner-copy" class="secondary">Copy last week</button>
+          <button id="planner-print">🖨 Print</button>
         </div>
 
         <details id="auto-schedule-details" class="admin-card" style="margin-bottom:1rem">

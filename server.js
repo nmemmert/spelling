@@ -1108,6 +1108,23 @@ app.get('/api/schedule-week/:studentId', requirePin, (req, res) => {
   res.json({ tasks });
 });
 
+app.get('/api/schedule-range/:studentId', requirePin, (req, res) => {
+  const start = isDateStr(req.query.start) ? req.query.start : null;
+  const end   = isDateStr(req.query.end)   ? req.query.end   : null;
+  if (!start || !end) return res.status(400).json({ error: 'start and end (YYYY-MM-DD) required' });
+  const tasks = db.prepare(`
+    SELECT sc.id, sc.date, sc.title AS offlineTitle, sc.done,
+           i.id AS itemId, i.type, i.title AS itemTitle, c.name AS courseName
+    FROM schedule sc
+    LEFT JOIN items i ON i.id = sc.item_id
+    LEFT JOIN units u ON u.id = i.unit_id
+    LEFT JOIN courses c ON c.id = u.course_id
+    WHERE sc.student_id = ? AND sc.date BETWEEN ? AND ?
+    ORDER BY sc.date, sc.sort, sc.id
+  `).all(req.params.studentId, start, end);
+  res.json({ tasks });
+});
+
 // Printable weekly report: schedule completion + any graded work that week
 app.get('/api/week-report/:studentId', requirePin, (req, res) => {
   const start = isDateStr(req.query.start) ? req.query.start : null;
