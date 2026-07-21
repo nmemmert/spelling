@@ -380,6 +380,14 @@ button.tiny { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
   background: #f7f2e3; border-radius: 8px; padding: 0.4rem 0.6rem; font-size: 0.85rem;
 }
 .planner-task.done { opacity: 0.55; text-decoration: line-through; }
+.planner-task[draggable] { cursor: grab; }
+.planner-task[draggable]:active { cursor: grabbing; }
+.planner-task.dragging { opacity: 0.35; }
+.planner-tasks.drop-target {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 8px;
+  outline: 2px dashed var(--accent);
+}
 .add-task-form { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
 .add-task-form select, .add-task-form input { font-size: 0.85rem; padding: 0.4rem; border: 2px solid #d8d2c0; border-radius: 8px; font-family: inherit; }
 .or-divider { text-align: center; font-size: 0.75rem; color: var(--muted); }
@@ -477,3 +485,97 @@ td.overdue, .overdue { background: var(--bad-bg) !important; }
 .grading-footer { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 0.6rem; }
 .comment-input { flex: 1; min-width: 140px; padding: 0.4rem 0.6rem; border: 1.5px solid #d8d2c0; border-radius: 8px; font-family: inherit; }
 .badge-tag { background: var(--gold); color: #333; border-radius: 20px; padding: 0.2rem 0.6rem; font-size: 0.8rem; font-weight: 600; }
+
+/* ---------- themes ---------- */
+body.theme-green  { --accent: #2e9e5b; --accent-dark: #247a47; --bg: #f0faf4; }
+body.theme-purple { --accent: #7c5cbf; --accent-dark: #6245a0; --bg: #f8f4ff; }
+body.theme-orange { --accent: #e8802a; --accent-dark: #c96a1a; --bg: #fff8f0; }
+body.theme-pink   { --accent: #d45d8a; --accent-dark: #b4487a; --bg: #fff0f5; }
+
+/* ---------- kid top bar + theme picker ---------- */
+.kid-topbar { display: flex; justify-content: space-between; align-items: center; }
+.theme-picker-btn {
+  background: none; border: none; font-size: 1.3rem; cursor: pointer;
+  padding: 0.25rem 0.5rem; color: var(--muted); line-height: 1;
+}
+.theme-dots {
+  display: flex; gap: 0.6rem; justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+.theme-dot {
+  width: 2rem; height: 2rem; border-radius: 50%;
+  border: 3px solid transparent; cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s;
+}
+.theme-dot:hover { transform: scale(1.2); }
+.theme-dot.active { border-color: var(--ink); box-shadow: 0 0 0 2px var(--bg); }
+.theme-dot.theme-blue   { background: #4f86f7; }
+.theme-dot.theme-green  { background: #2e9e5b; }
+.theme-dot.theme-purple { background: #7c5cbf; }
+.theme-dot.theme-orange { background: #e8802a; }
+.theme-dot.theme-pink   { background: #d45d8a; }
+
+/* ---------- celebration overlay ---------- */
+#celebration-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center;
+}
+#celebration-content {
+  background: var(--card); border-radius: var(--radius);
+  padding: 2.5rem 2rem; text-align: center;
+  max-width: 360px; width: 92%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+  animation: pop-in 0.25s ease;
+}
+@keyframes pop-in { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.celebration-emoji { font-size: 5rem; animation: bounce 0.6s ease infinite alternate; display: block; }
+@keyframes bounce { to { transform: translateY(-14px); } }
+#celebration-content h2 { font-size: 1.8rem; margin: 0.5rem 0 1rem; }
+.streak-badge { font-size: 2.6rem; font-weight: 800; color: var(--accent); }
+.streak-label { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+.best-streak-label { font-size: 0.85rem; color: var(--gold); font-weight: 700; margin-bottom: 0.5rem; }
+
+/* ---------- streak pill on kid home ---------- */
+.streak-pill {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  background: var(--good-bg); color: var(--good);
+  border-radius: 999px; padding: 0.25rem 0.9rem;
+  font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;
+}
+
+/* ---------- feedback indicator ---------- */
+.feedback-badge {
+  display: inline-block; background: var(--gold); color: #333;
+  font-size: 0.7rem; font-weight: 800; border-radius: 999px;
+  padding: 0.1rem 0.45rem; margin-left: 0.35rem; vertical-align: middle;
+}
+.parent-comment {
+  background: var(--good-bg); border-radius: 10px;
+  padding: 0.9rem 1rem; margin: 0.75rem 0; color: var(--good);
+  border-left: 4px solid var(--good);
+  font-size: 1.05rem;
+}
+
+/* ---------- print list button ---------- */
+.big-btn.print-list {
+  background: #6b7280; color: #fff; font-size: 1.2rem;
+}
+
+/* ---------- grading badge on admin nav ---------- */
+.nav-pill.grading-pending { background: var(--bad); color: #fff; border-color: var(--bad); }
+
+/* ---------- admin theme swatches ---------- */
+.theme-swatch-row { display: flex; gap: 0.4rem; align-items: center; }
+.theme-swatch {
+  width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  transition: transform 0.1s;
+}
+.theme-swatch:hover { transform: scale(1.2); }
+.theme-swatch.selected { border-color: var(--ink); }
+.theme-swatch.theme-blue   { background: #4f86f7; }
+.theme-swatch.theme-green  { background: #2e9e5b; }
+.theme-swatch.theme-purple { background: #7c5cbf; }
+.theme-swatch.theme-orange { background: #e8802a; }
+.theme-swatch.theme-pink   { background: #d45d8a; }

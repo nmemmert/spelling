@@ -2,8 +2,10 @@ import express from 'express';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import mammoth from 'mammoth';
 import { db, sha256 } from './db.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -81,7 +83,28 @@ const GRADABLE_TYPES = ['assignment', 'quiz', 'spelling_test'];
 // ---------- kid picker ----------
 
 app.get('/api/students', (req, res) => {
-  res.json(db.prepare(`SELECT id, name, emoji FROM students ORDER BY name`).all());
+  res.json(db.prepare(`SELECT id, name, emoji, theme, streak_count, streak_date FROM students ORDER BY name`).all());
+});
+
+app.patch('/api/students/:id/theme', (req, res) => {
+  const theme = ['blue','green','purple','orange','pink'].includes(req.body.theme) ? req.body.theme : 'blue';
+  db.prepare(`UPDATE students SET theme = ? WHERE id = ?`).run(theme, req.params.id);
+  res.json({ ok: true });
+});
+
+app.post('/api/students/:id/complete-day', (req, res) => {
+  const student = db.prepare(`SELECT streak_date, streak_count, best_streak FROM students WHERE id = ?`).get(req.params.id);
+  if (!student) return res.status(404).json({ error: 'Not found' });
+  const t = today();
+  if (student.streak_date === t) return res.json({ streak: student.streak_count, best: student.best_streak, alreadyCounted: true });
+  const d = new Date(t + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  const yesterday = d.toISOString().slice(0, 10);
+  const newStreak = student.streak_date === yesterday ? student.streak_count + 1 : 1;
+  const newBest = Math.max(newStreak, student.best_streak);
+  db.prepare(`UPDATE students SET streak_date = ?, streak_count = ?, best_streak = ? WHERE id = ?`)
+    .run(t, newStreak, newBest, req.params.id);
+  res.json({ streak: newStreak, best: newBest, alreadyCounted: false });
 });
 
 // ---------- spelling module ----------
@@ -375,6 +398,14 @@ app.post('/api/students', requirePin, (req, res) => {
   const id = db.prepare(`INSERT INTO students (name, emoji) VALUES (?, ?)`)
     .run(name, req.body.emoji || '🙂').lastInsertRowid;
   res.json({ id });
+});
+
+app.put('/api/students/:id', requirePin, (req, res) => {
+  const { emoji, theme } = req.body;
+  if (emoji) db.prepare(`UPDATE students SET emoji = ? WHERE id = ?`).run(String(emoji), req.params.id);
+  if (theme && ['blue','green','purple','orange','pink'].includes(theme))
+    db.prepare(`UPDATE students SET theme = ? WHERE id = ?`).run(theme, req.params.id);
+  res.json({ ok: true });
 });
 
 app.delete('/api/students/:id', requirePin, (req, res) => {
@@ -757,6 +788,15 @@ app.post('/api/items/:id/quiz-submit', (req, res) => {
 
 // ---------- grading (parent) ----------
 
+app.get('/api/grading-queue/count', requirePin, (req, res) => {
+  const { n } = db.prepare(`
+    SELECT COUNT(*) AS n FROM submissions sub
+    JOIN items i ON i.id = sub.item_id
+    WHERE sub.status = 'done' AND i.type IN ('assignment', 'lesson', 'spelling_practice', 'flashcards')
+  `).get();
+  res.json({ count: n });
+});
+
 app.get('/api/grading-queue', requirePin, (req, res) => {
   res.json(db.prepare(`
     SELECT sub.id AS submissionId, sub.completed_at, sub.points_possible,
@@ -949,7 +989,7 @@ app.get('/api/schedule/:studentId', (req, res) => {
            sc.evidence_notes IS NOT NULL OR sc.evidence_photo IS NOT NULL AS hasEvidence,
            i.id AS itemId, i.type, i.title AS itemTitle,
            c.name AS courseName, c.color AS courseColor,
-           sub.status AS subStatus, sub.score, sub.points_possible
+           sub.status AS subStatus, sub.score, sub.points_possible, sub.parent_comment AS parentComment
     FROM schedule sc
     LEFT JOIN items i ON i.id = sc.item_id
     LEFT JOIN units u ON u.id = i.unit_id
@@ -1037,6 +1077,13 @@ app.post('/api/schedule', requirePin, (req, res) => {
     INSERT INTO schedule (student_id, date, item_id, title, sort) VALUES (?, ?, ?, ?, ?)
   `).run(studentId, date, itemId || null, itemId ? '' : String(title).trim(), sort).lastInsertRowid;
   res.json({ id });
+});
+
+app.patch('/api/schedule/:id', requirePin, (req, res) => {
+  const { date } = req.body;
+  if (!isDateStr(date)) return res.status(400).json({ error: 'date=YYYY-MM-DD required' });
+  db.prepare(`UPDATE schedule SET date = ? WHERE id = ?`).run(date, req.params.id);
+  res.json({ ok: true });
 });
 
 app.delete('/api/schedule/:id', requirePin, (req, res) => {
@@ -1317,6 +1364,102 @@ app.get('/api/tts', (req, res) => {
   res.setHeader('Content-Type', 'audio/wav');
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   res.send(readFileSync(cachePath));
+});
+
+// ---------- Homeschool folder import ----------
+
+const HOMESCHOOL_DIR = "/Users/nateemmert/Library/CloudStorage/SeaDrive-NateEmmert(seafile.necloud.us)/My Libraries/Homeschool";
+
+function listDocxFiles(dir, base = '') {
+  const results = [];
+  let entries;
+  try { entries = readdirSync(dir); } catch { return results; }
+  for (const name of entries) {
+    const full = join(dir, name);
+    let stat;
+    try { stat = statSync(full); } catch { continue; }
+    if (stat.isDirectory()) {
+      results.push(...listDocxFiles(full, base ? `${base}/${name}` : name));
+    } else if (name.toLowerCase().endsWith('.docx') && !name.startsWith('~$')) {
+      results.push({ name, path: base ? `${base}/${name}` : name, full });
+    }
+  }
+  return results;
+}
+
+app.get('/api/admin/homeschool-files', requirePin, (req, res) => {
+  const files = listDocxFiles(HOMESCHOOL_DIR);
+  res.json({ files: files.map(({ name, path }) => ({ name, path })) });
+});
+
+const TEXT_SCAN_PROMPTS = {
+  lesson: `You are given the text content of a homeschool lesson or assignment document. Extract it as structured content.
+
+Respond with ONLY a JSON object in exactly this shape, nothing else, no markdown fences:
+{"title": "the document title or heading", "body": "the full text content, paragraphs separated by a blank line"}`,
+
+  quiz: `You are given the text content of a homeschool quiz or test document. Extract every question exactly as written.
+
+For each question determine:
+- "type": "mc" if it has lettered/numbered answer choices, "tf" if it is true/false, "short" if it expects a written answer
+- "prompt": the exact question text
+- "choices": for "mc", an array of the exact answer choice texts (empty array for "tf" or "short")
+- "correctAnswer": the marked answer if clearly indicated; for "tf" use exactly "true" or "false"; otherwise use ""
+- "points": 1 unless the document states a different value
+
+Respond with ONLY a JSON object in exactly this shape, nothing else, no markdown fences:
+{"title": "the quiz/test title", "questions": [{"type": "mc", "prompt": "...", "choices": ["...", "..."], "correctAnswer": "...", "points": 1}]}`,
+};
+
+app.post('/api/admin/import-docx', requirePin, async (req, res) => {
+  const { path: relPath, mode } = req.body;
+  if (!relPath || !TEXT_SCAN_PROMPTS[mode]) {
+    return res.status(400).json({ error: 'path and mode (lesson or quiz) required' });
+  }
+  const fullPath = join(HOMESCHOOL_DIR, relPath);
+  if (!fullPath.startsWith(HOMESCHOOL_DIR)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  let buffer;
+  try { buffer = await readFile(fullPath); }
+  catch (err) { return res.status(404).json({ error: `Could not read file: ${err.message}` }); }
+
+  let docText;
+  try {
+    const result = await mammoth.extractRawText({ buffer });
+    docText = result.value.trim();
+  } catch (err) {
+    return res.status(500).json({ error: `Could not parse docx: ${err.message}` });
+  }
+  if (!docText) return res.status(400).json({ error: 'Document appears to be empty' });
+
+  const host = (getSetting('ollama_host') || 'http://localhost:11434').replace(/\/+$/, '');
+  const model = getSetting('ollama_model') || 'llava';
+  const prompt = TEXT_SCAN_PROMPTS[mode] + '\n\nDOCUMENT TEXT:\n' + docText;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 180_000);
+  try {
+    const r = await fetch(`${host}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, prompt, stream: false, format: 'json' }),
+      signal: controller.signal,
+    });
+    if (!r.ok) {
+      const t = await r.text().catch(() => '');
+      throw new Error(`Ollama error (${r.status}): ${t.slice(0, 200)}`);
+    }
+    const data = await r.json();
+    const parsed = parseVisionJson(data.response);
+    return res.json(parsed);
+  } catch (err) {
+    if (err.name === 'AbortError') return res.status(504).json({ error: 'Ollama timed out.' });
+    return res.status(502).json({ error: err.message });
+  } finally {
+    clearTimeout(timer);
+  }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));

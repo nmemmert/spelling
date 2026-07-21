@@ -183,16 +183,41 @@ function diffLetters(typed, correct) {
   return { typedHtml: typedParts.join(''), correctHtml: correctParts.join('') };
 }
 
+// ---------- themes ----------
+
+const THEMES = {
+  blue:   {},
+  green:  { '--accent': '#2e9e5b', '--accent-dark': '#247a47', '--bg': '#f0faf4' },
+  purple: { '--accent': '#7c5cbf', '--accent-dark': '#6245a0', '--bg': '#f8f4ff' },
+  orange: { '--accent': '#e8802a', '--accent-dark': '#c96a1a', '--bg': '#fff8f0' },
+  pink:   { '--accent': '#d45d8a', '--accent-dark': '#b4487a', '--bg': '#fff0f5' },
+};
+const THEME_NAMES = Object.keys(THEMES);
+const DEFAULT_VARS = { '--accent': '#4f86f7', '--accent-dark': '#3a6fd8', '--bg': '#fdf6e3' };
+
+function applyTheme(theme) {
+  const vars = THEMES[theme] || {};
+  for (const [k, v] of Object.entries(DEFAULT_VARS))
+    document.documentElement.style.setProperty(k, vars[k] || v);
+  document.body.className = theme && theme !== 'blue' ? `theme-${theme}` : '';
+}
+
+function resetTheme() {
+  for (const k of Object.keys(DEFAULT_VARS)) document.documentElement.style.removeProperty(k);
+  document.body.className = '';
+}
+
 // ---------- home (kid picker) ----------
 
 let currentStudent = null;
 
 async function loadHome() {
+  resetTheme();
   const students = await api('/api/students');
   $('#no-kids').hidden = students.length > 0;
   $('#kid-cards').innerHTML = students
     .map(
-      (s) => `<button class="kid-card" data-id="${s.id}">
+      (s) => `<button class="kid-card" data-id="${s.id}" data-theme="${esc(s.theme || 'blue')}">
         <span class="avatar">${esc(s.emoji)}</span>${esc(s.name)}</button>`
     )
     .join('');
@@ -219,7 +244,20 @@ async function openKid(id, tab = 'today') {
     api(`/api/courses/mine/${id}`),
   ]);
   currentStudent = state.student;
+  applyTheme(currentStudent.theme || 'blue');
+  updateThemeDots(currentStudent.theme || 'blue');
+
   $('#kid-greeting').textContent = `${state.student.emoji} Hi, ${state.student.name}!`;
+
+  // Show streak pill if kid has a streak
+  const existingPill = document.querySelector('.streak-pill');
+  if (existingPill) existingPill.remove();
+  if (state.student.streak_count >= 2) {
+    const pill = document.createElement('div');
+    pill.className = 'streak-pill';
+    pill.textContent = `🔥 ${state.student.streak_count} day streak!`;
+    $('#kid-greeting').insertAdjacentElement('afterend', pill);
+  }
 
   renderToday(agenda.tasks);
   renderCourseCards(courses);
@@ -227,7 +265,57 @@ async function openKid(id, tab = 'today') {
 
   show('kid');
   switchTab(tab);
+
+  // Celebrate if all today's tasks are done
+  if (agenda.tasks.length > 0) {
+    const allDone = agenda.tasks.every((t) =>
+      t.done || t.offlineStatus === 'done' || t.subStatus === 'graded' || t.subStatus === 'done'
+    );
+    if (allDone) {
+      const result = await api(`/api/students/${id}/complete-day`, { method: 'POST' });
+      if (!result.alreadyCounted) showCelebration(result);
+    }
+  }
 }
+
+function updateThemeDots(active) {
+  document.querySelectorAll('.theme-dot').forEach((btn) =>
+    btn.classList.toggle('active', btn.dataset.theme === active)
+  );
+}
+
+function showCelebration({ streak, best }) {
+  const isRecord = streak > 1 && streak === best;
+  let streakHtml = '';
+  if (streak >= 2) {
+    streakHtml = `<div class="streak-badge">🔥 ${streak} days in a row!</div>
+      ${isRecord ? `<div class="best-streak-label">🏆 New record!</div>` : `<div class="streak-label">Best: ${best} days</div>`}`;
+  } else {
+    streakHtml = `<div class="streak-label" style="margin-bottom:1rem">Keep it up — come back tomorrow for a streak!</div>`;
+  }
+  $('#streak-display').innerHTML = streakHtml;
+  $('#celebration-overlay').hidden = false;
+}
+
+$('#celebration-close').addEventListener('click', () => {
+  $('#celebration-overlay').hidden = true;
+});
+
+// Theme picker toggle
+$('#theme-picker-btn').addEventListener('click', () => {
+  $('#theme-dots').hidden = !$('#theme-dots').hidden;
+});
+
+document.querySelectorAll('.theme-dot').forEach((btn) =>
+  btn.addEventListener('click', async () => {
+    const theme = btn.dataset.theme;
+    applyTheme(theme);
+    updateThemeDots(theme);
+    currentStudent.theme = theme;
+    await api(`/api/students/${currentStudent.id}/theme`, { method: 'PATCH', body: { theme } });
+    $('#theme-dots').hidden = true;
+  })
+);
 
 const OFFLINE_STATUS_ICON = { not_started: '⬜', in_progress: '🔄', done: '✅' };
 
@@ -263,9 +351,10 @@ function renderToday(tasks) {
         </div>`;
       }
       const badge = statusBadge(t.type, t.subStatus, t.score, t.points_possible, t.done);
+      const feedbackBadge = t.parentComment ? `<span class="feedback-badge">💬 feedback</span>` : '';
       return `<button class="today-row" data-item-id="${t.itemId}" data-item-type="${t.type}">
         <span class="row-check">${t.done ? '✅' : TYPE_ICON[t.type]}</span>
-        <span class="row-title">${esc(t.itemTitle)}<small>${esc(t.courseName)}</small></span>
+        <span class="row-title">${esc(t.itemTitle)}${feedbackBadge}<small>${esc(t.courseName)}</small></span>
         <span class="row-badge">${badge}</span>
       </button>`;
     })
@@ -341,6 +430,9 @@ function renderCourseCards(courses) {
   );
 }
 
+let currentSpellingListId = null;
+let currentSpellingListName = '';
+
 function renderSpellingTab(state) {
   let html;
   if (state.assignment) {
@@ -348,14 +440,54 @@ function renderSpellingTab(state) {
     html = `<strong>This week: ${esc(state.assignment.name)}</strong>
       <div class="mastery-dots">${'🌟'.repeat(mastered)}${'⚪'.repeat(Math.max(0, total - mastered))}</div>
       <div>${mastered} of ${total} words mastered</div>`;
+    currentSpellingListId = state.assignment.id;
+    currentSpellingListName = state.assignment.name;
   } else {
     html = `No list assigned yet — ask a parent to pick one!`;
+    currentSpellingListId = null;
   }
   if (state.dueReviews > 0) {
     html += `<div>🔁 ${state.dueReviews} old ${state.dueReviews === 1 ? 'word' : 'words'} due for review</div>`;
   }
   $('#kid-week').innerHTML = html;
   $('#btn-test').disabled = !state.assignment;
+  $('#btn-print-list').disabled = !state.assignment;
+}
+
+$('#btn-print-list').addEventListener('click', async () => {
+  if (!currentSpellingListId) return;
+  const list = await api(`/api/lists/${currentSpellingListId}`);
+  printSpellingWorksheet(list.name, list.words);
+});
+
+function printSpellingWorksheet(name, words) {
+  const rows = words
+    .map((w) => {
+      const sentence = w.sentence ? `<div style="color:#888;font-size:.85em;font-style:italic">${esc(w.sentence)}</div>` : '';
+      return `<tr>
+        <td style="font-weight:700;font-size:1.1em;padding:.6rem .75rem">${esc(w.word)}${sentence}</td>
+        <td style="border-bottom:1.5px solid #aaa;width:35%"></td>
+        <td style="border-bottom:1.5px solid #aaa;width:35%"></td>
+      </tr>`;
+    })
+    .join('');
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Spelling: ${esc(name)}</title>
+    <style>
+      body { font-family: Georgia, serif; max-width: 680px; margin: 2rem auto; color: #222; }
+      h1 { font-size: 1.4rem; border-bottom: 2px solid #222; padding-bottom: .4rem; }
+      table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+      td { padding: .55rem .75rem; }
+      th { text-align: left; color: #555; font-size: .85rem; font-weight: 600; padding: .4rem .75rem; }
+    </style></head><body>
+    <h1>✏️ Spelling: ${esc(name)}</h1>
+    <p style="color:#555;font-size:.9em">Write each word twice — once to practice, once from memory.</p>
+    <table>
+      <tr><th>Word</th><th>Practice</th><th>From memory</th></tr>
+      ${rows}
+    </table>
+    <script>window.print()<\/script></body></html>`);
+  win.document.close();
 }
 
 // ---------- course detail ----------
@@ -450,7 +582,7 @@ async function openAssignment(itemId) {
   // Show parent comment if graded
   if (item.submission?.parent_comment) {
     commentEl.hidden = false;
-    commentEl.innerHTML = `<strong>Parent feedback:</strong> ${esc(item.submission.parent_comment)}`;
+    commentEl.innerHTML = `<strong>💬 Feedback from your parent:</strong><br>${esc(item.submission.parent_comment)}`;
   } else {
     commentEl.hidden = true;
   }

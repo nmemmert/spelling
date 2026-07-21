@@ -52,6 +52,21 @@ async function unlock() {
   $('#pin-gate').hidden = true;
   $('#console').hidden = false;
   showPanel('kids');
+  loadGradingBadge();
+}
+
+async function loadGradingBadge() {
+  try {
+    const { count } = await api('/api/grading-queue/count');
+    const pill = document.querySelector('.nav-pill[data-panel="grading"]');
+    if (count > 0) {
+      pill.textContent = `✅ Grading (${count})`;
+      pill.classList.add('grading-pending');
+    } else {
+      pill.textContent = '✅ Grading';
+      pill.classList.remove('grading-pending');
+    }
+  } catch {}
 }
 
 if (parentPin) unlock();
@@ -81,19 +96,40 @@ function showPanel(name) {
 // Kids
 // ============================================================
 
+const THEME_COLORS = { blue: '#4f86f7', green: '#2e9e5b', purple: '#7c5cbf', orange: '#e8802a', pink: '#d45d8a' };
+
 async function loadKids() {
   const students = await api('/api/students');
   $('#student-rows').innerHTML = students.length
     ? students
-        .map(
-          (s) => `<div class="item-row">
-            <span>${esc(s.emoji)}</span>
+        .map((s) => {
+          const theme = s.theme || 'blue';
+          const swatches = Object.entries(THEME_COLORS)
+            .map(([t, c]) => `<button class="theme-swatch theme-${t} ${t === theme ? 'selected' : ''}" data-student-theme="${s.id}" data-theme="${t}" title="${t}" style="background:${c}"></button>`)
+            .join('');
+          const streak = s.streak_count >= 2 ? `<span style="color:#e8802a;font-size:.85rem">🔥 ${s.streak_count} day streak</span>` : '';
+          return `<div class="item-row">
+            <span style="font-size:1.5rem">${esc(s.emoji)}</span>
             <strong class="grow">${esc(s.name)}</strong>
+            ${streak}
+            <div class="theme-swatch-row" title="Kid's color theme">${swatches}</div>
             <button class="danger" data-del-student="${s.id}">Remove</button>
-          </div>`
-        )
+          </div>`;
+        })
         .join('')
     : `<p class="hint">No kids yet — add one below.</p>`;
+
+  document.querySelectorAll('[data-student-theme]').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      const studentId = btn.dataset.studentTheme;
+      const theme = btn.dataset.theme;
+      await api(`/api/students/${studentId}`, { method: 'PUT', body: { theme } });
+      // Update selected state without full reload
+      document.querySelectorAll(`[data-student-theme="${studentId}"]`).forEach((b) =>
+        b.classList.toggle('selected', b.dataset.theme === theme)
+      );
+    })
+  );
 
   document.querySelectorAll('[data-del-student]').forEach((btn) =>
     btn.addEventListener('click', async () => {
@@ -332,6 +368,7 @@ async function openItemEditor(unitId, itemId) {
   }
   updateItemFieldVisibility();
   resetScanSection();
+  resetImportSection();
   showPanel('item-editor');
 }
 
@@ -343,12 +380,19 @@ function updateItemFieldVisibility() {
   $('#ie-field-spelling').hidden = type !== 'spelling_practice' && type !== 'spelling_test';
   $('#ie-field-flashcards').hidden = type !== 'flashcards';
   $('#ie-scan-section').hidden = type !== 'lesson' && type !== 'quiz';
+  $('#ie-import-section').hidden = type === 'spelling_practice' || type === 'spelling_test' || type === 'flashcards';
 }
 $('#ie-type').addEventListener('change', updateItemFieldVisibility);
 
 // ---------- scan a page (photo -> lesson/quiz content via local Ollama) ----------
 
 let scanImageBase64 = null;
+
+function resetImportSection() {
+  $('#import-file-select').innerHTML = '<option value="">— choose a file —</option>';
+  $('#import-go-btn').disabled = true;
+  $('#import-status').textContent = '';
+}
 
 function resetScanSection() {
   scanImageBase64 = null;
@@ -428,6 +472,65 @@ $('#scan-go-btn').addEventListener('click', async () => {
     $('#scan-status').textContent = `❌ ${err.message}`;
   } finally {
     $('#scan-go-btn').disabled = false;
+  }
+});
+
+// ---------- import from Homeschool folder ----------
+
+$('#import-load-btn').addEventListener('click', async () => {
+  $('#import-status').textContent = 'Loading files…';
+  $('#import-file-select').innerHTML = '<option value="">— loading… —</option>';
+  try {
+    const { files } = await api('/api/admin/homeschool-files');
+    if (!files.length) {
+      $('#import-file-select').innerHTML = '<option value="">No .docx files found</option>';
+      $('#import-status').textContent = '';
+      return;
+    }
+    $('#import-file-select').innerHTML =
+      '<option value="">— choose a file —</option>' +
+      files.map((f) => `<option value="${esc(f.path)}">${esc(f.path)}</option>`).join('');
+    $('#import-go-btn').disabled = false;
+    $('#import-status').textContent = `${files.length} file(s) found.`;
+  } catch (err) {
+    $('#import-status').textContent = `❌ ${err.message}`;
+  }
+});
+
+$('#import-file-select').addEventListener('change', () => {
+  $('#import-go-btn').disabled = !$('#import-file-select').value;
+});
+
+$('#import-go-btn').addEventListener('click', async () => {
+  const path = $('#import-file-select').value;
+  if (!path) return;
+  const type = $('#ie-type').value;
+  const mode = type === 'quiz' ? 'quiz' : type === 'lesson' ? 'lesson' : 'lesson';
+  $('#import-go-btn').disabled = true;
+  $('#import-status').textContent = '🔍 Extracting content… this may take a minute.';
+  try {
+    const result = await api('/api/admin/import-docx', { method: 'POST', body: { path, mode } });
+    if (!$('#ie-title').value && result.title) $('#ie-title').value = result.title;
+    if (mode === 'quiz' && result.questions) {
+      $('#ie-questions').innerHTML = '';
+      questionCount = 0;
+      const normalized = result.questions.map((q) => ({
+        ...q,
+        correct_answer: q.correctAnswer ?? q.correct_answer ?? '',
+      }));
+      normalized.forEach(addQuestionRow);
+      $('#import-status').textContent = `✅ Imported ${result.questions.length} question(s). Review before saving.`;
+    } else if (result.body) {
+      const bodyField = type === 'assignment' ? '#ie-body-assignment' : '#ie-body-lesson';
+      $(bodyField).value = result.body;
+      $('#import-status').textContent = '✅ Content imported. Review before saving.';
+    } else {
+      $('#import-status').textContent = '⚠️ File imported but no content was found.';
+    }
+  } catch (err) {
+    $('#import-status').textContent = `❌ ${err.message}`;
+  } finally {
+    $('#import-go-btn').disabled = false;
   }
 });
 
@@ -597,12 +700,12 @@ async function renderPlanner() {
   $('#planner-grid').innerHTML = days
     .map((day) => {
       const dayTasks = tasks.filter((t) => t.date === day.date);
-      return `<div class="planner-day">
+      return `<div class="planner-day" data-drop-date="${day.date}">
         <h3>${day.name}<small>${day.date}</small></h3>
-        <div class="planner-tasks">
+        <div class="planner-tasks" data-drop-date="${day.date}">
           ${dayTasks
             .map(
-              (t) => `<div class="planner-task ${t.done ? 'done' : ''}">
+              (t) => `<div class="planner-task ${t.done ? 'done' : ''}" draggable="true" data-task-id="${t.id}">
                 <span>${t.itemId ? TYPE_ICON[t.type] : '📌'} ${esc(t.itemTitle || t.offlineTitle)}</span>
                 <button class="danger tiny" data-del-schedule="${t.id}">✕</button>
               </div>`
@@ -614,6 +717,39 @@ async function renderPlanner() {
       </div>`;
     })
     .join('');
+
+  // Drag-and-drop: tasks between days
+  let draggingId = null;
+
+  document.querySelectorAll('.planner-task[draggable]').forEach((el) => {
+    el.addEventListener('dragstart', (e) => {
+      draggingId = el.dataset.taskId;
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    el.addEventListener('dragend', () => {
+      draggingId = null;
+      el.classList.remove('dragging');
+      document.querySelectorAll('.planner-tasks').forEach((col) => col.classList.remove('drop-target'));
+    });
+  });
+
+  document.querySelectorAll('.planner-tasks').forEach((col) => {
+    col.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      col.classList.add('drop-target');
+    });
+    col.addEventListener('dragleave', () => col.classList.remove('drop-target'));
+    col.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      col.classList.remove('drop-target');
+      if (!draggingId) return;
+      const newDate = col.dataset.dropDate;
+      await api(`/api/schedule/${draggingId}`, { method: 'PATCH', body: { date: newDate } });
+      renderPlanner();
+    });
+  });
 
   document.querySelectorAll('[data-del-schedule]').forEach((btn) =>
     btn.addEventListener('click', async () => {
@@ -768,6 +904,7 @@ async function loadGrading() {
         body: { score: Number(input.value), parentComment: commentInput?.value || '' },
       });
       loadGrading();
+      loadGradingBadge();
     });
   });
 }
@@ -886,11 +1023,19 @@ function renderLists(lists) {
       (l) => `<div class="item-row">
         <strong class="grow">${esc(l.name)}</strong>
         <span>${l.wordCount} words${l.builtin ? ' · built-in' : ''}</span>
+        <button class="secondary small" data-print-list="${l.id}">🖨 Worksheet</button>
         <button data-edit-list="${l.id}">${l.builtin ? 'Copy & edit' : 'Edit'}</button>
         ${l.builtin ? '' : `<button class="danger" data-del-list="${l.id}">Delete</button>`}
       </div>`
     )
     .join('');
+
+  document.querySelectorAll('[data-print-list]').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      const list = await api(`/api/lists/${btn.dataset.printList}`);
+      printSpellingWorksheet(list.name, list.words);
+    })
+  );
 
   document.querySelectorAll('[data-edit-list]').forEach((btn) =>
     btn.addEventListener('click', async () => {
@@ -964,6 +1109,36 @@ function renderResults(students) {
     .join('');
 
   document.querySelectorAll('[data-print]').forEach((btn) => btn.addEventListener('click', () => printSpellingReport(btn.dataset.print)));
+}
+
+function printSpellingWorksheet(name, words) {
+  const rows = words
+    .map((w) => {
+      const sentence = w.sentence ? `<div style="color:#888;font-size:.85em;font-style:italic">${esc(w.sentence)}</div>` : '';
+      return `<tr>
+        <td style="font-weight:700;font-size:1.1em;padding:.6rem .75rem">${esc(w.word)}${sentence}</td>
+        <td style="border-bottom:1.5px solid #aaa;width:35%"></td>
+        <td style="border-bottom:1.5px solid #aaa;width:35%"></td>
+      </tr>`;
+    })
+    .join('');
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Spelling: ${esc(name)}</title>
+    <style>
+      body { font-family: Georgia, serif; max-width: 680px; margin: 2rem auto; color: #222; }
+      h1 { font-size: 1.4rem; border-bottom: 2px solid #222; padding-bottom: .4rem; }
+      table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+      td { padding: .55rem .75rem; }
+      th { text-align: left; color: #555; font-size: .85rem; font-weight: 600; padding: .4rem .75rem; }
+    </style></head><body>
+    <h1>✏️ Spelling: ${esc(name)}</h1>
+    <p style="color:#555;font-size:.9em">Write each word twice — once to practice, once from memory.</p>
+    <table>
+      <tr><th>Word</th><th>Practice</th><th>From memory</th></tr>
+      ${rows}
+    </table>
+    <script>window.print()<\/script></body></html>`);
+  win.document.close();
 }
 
 async function printSpellingReport(testId) {

@@ -19,8 +19,18 @@
 
   <!-- Kid home: Today's work + nav -->
   <section id="view-kid" class="view" hidden>
-    <button class="back-btn" data-nav="home">← Switch</button>
+    <div class="kid-topbar">
+      <button class="back-btn" data-nav="home">← Switch</button>
+      <button id="theme-picker-btn" class="theme-picker-btn" aria-label="Pick my color">🎨</button>
+    </div>
     <h1 id="kid-greeting"></h1>
+    <div id="theme-dots" class="theme-dots" hidden>
+      <button class="theme-dot theme-blue"   data-theme="blue"   title="Blue"></button>
+      <button class="theme-dot theme-green"  data-theme="green"  title="Green"></button>
+      <button class="theme-dot theme-purple" data-theme="purple" title="Purple"></button>
+      <button class="theme-dot theme-orange" data-theme="orange" title="Orange"></button>
+      <button class="theme-dot theme-pink"   data-theme="pink"   title="Pink"></button>
+    </div>
 
     <div class="kid-nav">
       <button class="nav-pill active" data-tab="today">📋 Today</button>
@@ -43,9 +53,20 @@
       <div class="big-actions">
         <button id="btn-practice" class="big-btn practice">✏️ Practice</button>
         <button id="btn-test" class="big-btn test">⭐ Friday Test</button>
+        <button id="btn-print-list" class="big-btn print-list">🖨 Print my words</button>
       </div>
     </div>
   </section>
+
+  <!-- All-done celebration overlay -->
+  <div id="celebration-overlay" hidden>
+    <div id="celebration-content">
+      <div class="celebration-emoji">🎉</div>
+      <h2>All done for today!</h2>
+      <div id="streak-display"></div>
+      <button id="celebration-close" class="check-btn">High five! ✋</button>
+    </div>
+  </div>
 
   <!-- Course detail: units + items -->
   <section id="view-course" class="view" hidden>

@@ -224,6 +224,10 @@ tryAlter(`ALTER TABLE schedule ADD COLUMN status TEXT NOT NULL DEFAULT 'not_star
 tryAlter(`ALTER TABLE schedule ADD COLUMN evidence_notes TEXT`);
 tryAlter(`ALTER TABLE words ADD COLUMN definition TEXT NOT NULL DEFAULT ''`);
 tryAlter(`ALTER TABLE schedule ADD COLUMN evidence_photo TEXT`);
+tryAlter(`ALTER TABLE students ADD COLUMN theme TEXT NOT NULL DEFAULT 'blue'`);
+tryAlter(`ALTER TABLE students ADD COLUMN streak_date TEXT`);
+tryAlter(`ALTER TABLE students ADD COLUMN streak_count INTEGER NOT NULL DEFAULT 0`);
+tryAlter(`ALTER TABLE students ADD COLUMN best_streak INTEGER NOT NULL DEFAULT 0`);
 
 export const sha256 = (s) => createHash('sha256').update(String(s)).digest('hex');
 
