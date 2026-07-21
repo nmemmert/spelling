@@ -133,7 +133,13 @@ async function ttsDrain() {
   } else {
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 0.85; u.lang = 'en-US';
-    await new Promise((resolve) => { u.onend = resolve; u.onerror = resolve; speechSynthesis.speak(u); });
+    speechSynthesis.cancel();
+    await new Promise((resolve) => {
+      u.onend = resolve;
+      u.onerror = resolve;
+      // some browsers need a short delay after cancel() before speak() works
+      setTimeout(() => speechSynthesis.speak(u), 50);
+    });
   }
   ttsDrain();
 }
