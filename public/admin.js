@@ -897,7 +897,11 @@ function renderLists(lists) {
       const list = await api(`/api/lists/${btn.dataset.editList}`);
       $('#list-id').value = list.builtin ? '' : list.id;
       $('#list-name').value = list.builtin ? `${list.name} (copy)` : list.name;
-      $('#list-words').value = list.words.map((w) => (w.sentence ? `${w.word} | ${w.sentence}` : w.word)).join('\n');
+      $('#list-words').value = list.words.map((w) => {
+        if (w.definition) return `${w.word} | ${w.sentence} | ${w.definition}`;
+        if (w.sentence) return `${w.word} | ${w.sentence}`;
+        return w.word;
+      }).join('\n');
       $('#list-editor-title').textContent = list.builtin ? 'New list (from copy)' : `Editing: ${list.name}`;
       $('#list-editor-details').open = true;
       $('#list-name').scrollIntoView({ behavior: 'smooth' });
@@ -920,8 +924,8 @@ $('#list-form').addEventListener('submit', async (e) => {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [word, sentence = ''] = line.split('|').map((p) => p.trim());
-      return { word, sentence };
+      const [word, sentence = '', definition = ''] = line.split('|').map((p) => p.trim());
+      return { word, sentence, definition };
     });
   if (!name || words.length === 0) return msg('Give the list a name and at least one word.');
   const id = $('#list-id').value;

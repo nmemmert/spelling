@@ -1,9 +1,19 @@
 import express from 'express';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { db, sha256 } from './db.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = process.env.DATA_DIR || join(ROOT, 'data');
+const TTS_CACHE = join(DATA_DIR, 'tts-cache');
+mkdirSync(TTS_CACHE, { recursive: true });
+const PIPER_BIN = process.env.PIPER_BIN || 'piper';
+const PIPER_MODEL = process.env.PIPER_MODEL || join(ROOT, 'voices', 'en_US-lessac-medium.onnx');
+const PIPER_OK = existsSync(PIPER_MODEL);
+
 const app = express();
 app.use(express.json({ limit: '15mb' })); // photos for page-scanning are base64 in the JSON body
 app.use(express.static(join(ROOT, 'public')));
@@ -119,7 +129,7 @@ app.get('/api/session/:studentId', (req, res) => {
   }
 
   const weekWords = db.prepare(`
-    SELECT w.id, w.word, w.sentence, COALESCE(p.box, 0) AS box
+    SELECT w.id, w.word, w.sentence, w.definition, COALESCE(p.box, 0) AS box
     FROM words w
     LEFT JOIN progress p ON p.word_id = w.id AND p.student_id = ?
     WHERE w.list_id = ? AND COALESCE(p.box, 0) < ${MASTERED_BOX}
@@ -128,7 +138,7 @@ app.get('/api/session/:studentId', (req, res) => {
   `).all(id, listId);
 
   const reviews = db.prepare(`
-    SELECT w.id, w.word, w.sentence, p.box
+    SELECT w.id, w.word, w.sentence, w.definition, p.box
     FROM progress p JOIN words w ON w.id = p.word_id
     WHERE p.student_id = ? AND w.list_id <> ? AND p.box < ${MASTERED_BOX}
       AND date(p.due) <= date('now')
@@ -169,7 +179,7 @@ app.get('/api/test/:studentId', (req, res) => {
   }
   if (!list) return res.status(404).json({ error: 'No list assigned' });
 
-  const words = db.prepare(`SELECT id, word, sentence FROM words WHERE list_id = ?`).all(list.id);
+  const words = db.prepare(`SELECT id, word, sentence, definition FROM words WHERE list_id = ?`).all(list.id);
   res.json({ list, words: shuffle(words) });
 });
 
@@ -243,7 +253,7 @@ app.get('/api/lists', (req, res) => {
 app.get('/api/lists/:id', (req, res) => {
   const list = db.prepare(`SELECT id, name, builtin FROM lists WHERE id = ?`).get(req.params.id);
   if (!list) return res.status(404).json({ error: 'No such list' });
-  list.words = db.prepare(`SELECT id, word, sentence FROM words WHERE list_id = ? ORDER BY id`).all(req.params.id);
+  list.words = db.prepare(`SELECT id, word, sentence, definition FROM words WHERE list_id = ? ORDER BY id`).all(req.params.id);
   res.json(list);
 });
 
@@ -253,8 +263,8 @@ app.post('/api/lists', requirePin, (req, res) => {
     return res.status(400).json({ error: 'Name and at least one word required' });
   }
   const id = db.prepare(`INSERT INTO lists (name, builtin) VALUES (?, 0)`).run(String(name).trim()).lastInsertRowid;
-  const ins = db.prepare(`INSERT INTO words (list_id, word, sentence) VALUES (?, ?, ?)`);
-  for (const w of words) ins.run(id, String(w.word).trim(), String(w.sentence || '').trim());
+  const ins = db.prepare(`INSERT INTO words (list_id, word, sentence, definition) VALUES (?, ?, ?, ?)`);
+  for (const w of words) ins.run(id, String(w.word).trim(), String(w.sentence || '').trim(), String(w.definition || '').trim());
   res.json({ id });
 });
 
@@ -266,8 +276,8 @@ app.put('/api/lists/:id', requirePin, (req, res) => {
   }
   db.prepare(`UPDATE lists SET name = ? WHERE id = ?`).run(String(name).trim(), id);
   db.prepare(`DELETE FROM words WHERE list_id = ?`).run(id);
-  const ins = db.prepare(`INSERT INTO words (list_id, word, sentence) VALUES (?, ?, ?)`);
-  for (const w of words) ins.run(id, String(w.word).trim(), String(w.sentence || '').trim());
+  const ins = db.prepare(`INSERT INTO words (list_id, word, sentence, definition) VALUES (?, ?, ?, ?)`);
+  for (const w of words) ins.run(id, String(w.word).trim(), String(w.sentence || '').trim(), String(w.definition || '').trim());
   res.json({ ok: true });
 });
 
@@ -1277,6 +1287,35 @@ app.post('/api/admin/ollama-test', requirePin, async (req, res) => {
   } finally {
     clearTimeout(timer);
   }
+});
+
+// ---------- local TTS (Piper) ----------
+
+app.get('/api/tts/status', (_req, res) => res.json({ available: PIPER_OK }));
+
+app.get('/api/tts', (req, res) => {
+  if (!PIPER_OK) return res.status(503).json({ error: 'Piper not configured' });
+  const text = String(req.query.text || '').trim().slice(0, 500);
+  if (!text) return res.status(400).json({ error: 'text required' });
+
+  const hash = createHash('sha256').update(text).digest('hex').slice(0, 20);
+  const cachePath = join(TTS_CACHE, `${hash}.wav`);
+
+  if (!existsSync(cachePath)) {
+    const result = spawnSync(PIPER_BIN, [
+      '--model', PIPER_MODEL,
+      '--output_file', cachePath,
+      '--quiet',
+    ], { input: text, encoding: 'buffer', timeout: 15000 });
+
+    if (result.status !== 0 || !existsSync(cachePath)) {
+      return res.status(500).json({ error: 'TTS generation failed' });
+    }
+  }
+
+  res.setHeader('Content-Type', 'audio/wav');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.send(readFileSync(cachePath));
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));

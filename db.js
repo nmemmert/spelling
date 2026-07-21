@@ -222,6 +222,7 @@ tryAlter(`ALTER TABLE submissions ADD COLUMN student_note TEXT`);
 tryAlter(`ALTER TABLE submissions ADD COLUMN parent_comment TEXT`);
 tryAlter(`ALTER TABLE schedule ADD COLUMN status TEXT NOT NULL DEFAULT 'not_started'`);
 tryAlter(`ALTER TABLE schedule ADD COLUMN evidence_notes TEXT`);
+tryAlter(`ALTER TABLE words ADD COLUMN definition TEXT NOT NULL DEFAULT ''`);
 tryAlter(`ALTER TABLE schedule ADD COLUMN evidence_photo TEXT`);
 
 export const sha256 = (s) => createHash('sha256').update(String(s)).digest('hex');

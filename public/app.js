@@ -96,17 +96,55 @@ $('#assignment-photo-input').addEventListener('change', async () => {
 
 // ---------- text to speech (spelling module) ----------
 
-function speak(text, rate = 0.85) {
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = rate;
-  u.lang = 'en-US';
-  speechSynthesis.speak(u);
+// piperAvailable: null = not yet checked, true/false after first /api/tts/status call
+let piperAvailable = null;
+let ttsQueue = [];
+let ttsCurrentAudio = null;
+
+async function checkPiper() {
+  if (piperAvailable !== null) return piperAvailable;
+  try {
+    const { available } = await api('/api/tts/status');
+    piperAvailable = available;
+  } catch {
+    piperAvailable = false;
+  }
+  return piperAvailable;
 }
 
-function speakWord(w) {
+function ttsCancel() {
+  ttsQueue = [];
+  if (ttsCurrentAudio) { ttsCurrentAudio.pause(); ttsCurrentAudio = null; }
   speechSynthesis.cancel();
-  speak(w.word);
-  if (w.sentence) speak(w.sentence, 0.95);
+}
+
+async function ttsDrain() {
+  if (!ttsQueue.length) { ttsCurrentAudio = null; return; }
+  const text = ttsQueue.shift();
+
+  if (piperAvailable) {
+    const audio = new Audio(`/api/tts?text=${encodeURIComponent(text)}`);
+    ttsCurrentAudio = audio;
+    await new Promise((resolve) => {
+      audio.onended = resolve;
+      audio.onerror = resolve;
+      audio.play().catch(resolve);
+    });
+  } else {
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.85; u.lang = 'en-US';
+    await new Promise((resolve) => { u.onend = resolve; u.onerror = resolve; speechSynthesis.speak(u); });
+  }
+  ttsDrain();
+}
+
+async function speakWord(w) {
+  ttsCancel();
+  await checkPiper();
+  ttsQueue.push(w.word);
+  if (w.definition) ttsQueue.push(w.definition);
+  if (w.sentence) ttsQueue.push(w.sentence);
+  ttsDrain();
 }
 
 // ---------- letter diff (LCS alignment, spelling module) ----------
@@ -612,7 +650,7 @@ async function finishFlashcards(nothingDue) {
 
 // ---------- spelling: practice ----------
 
-const practice = { words: [], i: 0, missed: [], firstTryCorrect: 0, awaitingRetype: false, itemId: null };
+const practice = { words: [], i: 0, missed: [], missedWords: [], firstTryCorrect: 0, awaitingRetype: false, itemId: null, streak: 0 };
 
 async function startPractice({ listId, itemId } = {}) {
   const url = listId ? `/api/session/${currentStudent.id}?listId=${listId}` : `/api/session/${currentStudent.id}`;
@@ -625,7 +663,7 @@ async function startPractice({ listId, itemId } = {}) {
     show('practice');
     return;
   }
-  Object.assign(practice, { words, i: 0, missed: [], firstTryCorrect: 0, awaitingRetype: false, itemId: itemId || null });
+  Object.assign(practice, { words, i: 0, missed: [], missedWords: [], firstTryCorrect: 0, awaitingRetype: false, itemId: itemId || null, streak: 0 });
   $('#practice-card').hidden = false;
   $('#practice-done').hidden = true;
   show('practice');
@@ -661,12 +699,21 @@ $('#practice-form').addEventListener('submit', async (e) => {
   });
 
   if (result.correct) {
-    if (!practice.awaitingRetype) practice.firstTryCorrect++;
-    $('#feedback').innerHTML = `<div class="banner good">✅ ${practice.awaitingRetype ? 'You got it!' : 'Correct!'}</div>`;
+    if (!practice.awaitingRetype) {
+      practice.firstTryCorrect++;
+      practice.streak++;
+    }
+    const streakMsg = (!practice.awaitingRetype && practice.streak >= 2)
+      ? ` <span class="streak-badge">🔥 ${practice.streak} in a row!</span>` : '';
+    $('#feedback').innerHTML = `<div class="banner good">✅ ${practice.awaitingRetype ? 'You got it!' : 'Correct!'}${streakMsg}</div>`;
     input.disabled = true;
-    setTimeout(nextPracticeWord, 900);
+    setTimeout(nextPracticeWord, practice.streak >= 2 ? 1300 : 900);
   } else {
-    if (!practice.awaitingRetype) practice.missed.push(w.word);
+    if (!practice.awaitingRetype) {
+      practice.missed.push(w.word);
+      practice.missedWords.push(w);
+      practice.streak = 0;
+    }
     showStudyThenRetype(typed, w);
   }
 });
@@ -680,12 +727,14 @@ function showStudyThenRetype(typed, w) {
   const fb = $('#feedback');
   let secs = 4;
 
+  const hint = `Hint: starts with <strong>${esc(w.word[0].toUpperCase())}</strong>`;
   const render = () => {
     fb.innerHTML = `
       <div class="banner bad">Not quite — study it!</div>
       <div class="diff-line"><span class="label">You typed</span>${d.typedHtml}</div>
       <div class="diff-line"><span class="label">Correct</span>${d.correctHtml}</div>
       <div class="study-word">${esc(w.word)}</div>
+      <div class="hint-badge">${hint}</div>
       <div class="countdown">Memorize it… ${secs}</div>`;
   };
   render();
@@ -711,16 +760,28 @@ async function nextPracticeWord() {
   if (practice.itemId) {
     await api(`/api/items/${practice.itemId}/complete`, { method: 'POST', body: { studentId: currentStudent.id, date: todayStr() } });
   }
+  const missedWords = practice.missedWords.slice();
   const missedHtml = practice.missed.length
     ? `<p>Words to keep working on:</p><ul>${practice.missed.map((m) => `<li>📌 ${esc(m)}</li>`).join('')}</ul>`
     : `<p>Perfect round — every word right on the first try! 🏆</p>`;
+  const drillBtn = missedWords.length
+    ? `<button id="practice-drill-missed" class="check-btn secondary">🔁 Drill missed words</button>` : '';
   $('#practice-done').innerHTML = `
     <div>🎉 Practice complete!</div>
     <div class="big-score">${practice.firstTryCorrect} / ${practice.words.length}</div>
     <p>right on the first try</p>
     ${missedHtml}
+    ${drillBtn}
     <button id="practice-home">Back</button>`;
   $('#practice-done').hidden = false;
+  if (missedWords.length) {
+    $('#practice-drill-missed').addEventListener('click', () => {
+      Object.assign(practice, { words: shuffle(missedWords), i: 0, missed: [], missedWords: [], firstTryCorrect: 0, awaitingRetype: false, streak: 0 });
+      $('#practice-card').hidden = false;
+      $('#practice-done').hidden = true;
+      presentPracticeWord();
+    });
+  }
   $('#practice-home').addEventListener('click', () => backTarget());
 }
 
@@ -744,8 +805,18 @@ function presentTestWord() {
   $('#test-bar').style.width = `${(test.i / test.words.length) * 100}%`;
   const input = $('#test-input');
   input.value = '';
-  input.focus();
+  input.disabled = true;
+  $('#test-listening').hidden = false;
+  $('#test-form-row').hidden = true;
   speakWord(w);
+  // Enable input after TTS has had time to start (rough estimate: 1.5s per word)
+  const delay = 1500 + (w.definition ? 1500 : 0) + (w.sentence ? 1500 : 0);
+  setTimeout(() => {
+    $('#test-listening').hidden = true;
+    $('#test-form-row').hidden = false;
+    input.disabled = false;
+    input.focus();
+  }, delay);
 }
 
 $('#btn-test-speak').addEventListener('click', () => speakWord(test.words[test.i]));

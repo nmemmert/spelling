@@ -156,13 +156,16 @@
     <div class="progress-track"><div id="test-bar" class="progress-fill test-fill"></div></div>
 
     <div id="test-card" class="word-card">
-      <button id="btn-test-speak" class="speak-btn">🔊 Say it again</button>
-      <p class="prompt">Spell the word. No hints — you've got this!</p>
-      <form id="test-form" autocomplete="off">
-        <input id="test-input" class="spell-input" type="text" autocomplete="off"
-               autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Spell the word">
-        <button type="submit" class="check-btn">Next →</button>
-      </form>
+      <p id="test-listening" class="test-listening-state">🔊 Listen carefully…</p>
+      <div id="test-form-row" hidden>
+        <button id="btn-test-speak" class="speak-btn speak-btn-prominent">🔊 Hear it again</button>
+        <p class="prompt">Now spell the word:</p>
+        <form id="test-form" autocomplete="off">
+          <input id="test-input" class="spell-input" type="text" autocomplete="off"
+                 autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Spell the word">
+          <button type="submit" class="check-btn">Next →</button>
+        </form>
+      </div>
     </div>
 
     <div id="test-done" class="done-card" hidden></div>
