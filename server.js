@@ -1309,7 +1309,8 @@ app.get('/api/tts', (req, res) => {
     ], { input: text, timeout: 15000 });
 
     if (result.status !== 0 || !existsSync(cachePath)) {
-      return res.status(500).json({ error: 'TTS generation failed' });
+      console.error('piper failed:', result.status, result.stderr?.toString(), result.error);
+      return res.status(500).json({ error: 'TTS generation failed', detail: result.stderr?.toString() });
     }
   }
 
