@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certifi
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -qO /tmp/piper.tar.gz \
-      https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_linux_x86_64.tar.gz \
+      https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz \
     && tar -xzf /tmp/piper.tar.gz -C /tmp \
     && mv /tmp/piper/piper /usr/local/bin/piper \
     && rm -rf /tmp/piper*
