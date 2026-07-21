@@ -526,6 +526,7 @@ async function openCourse(courseId) {
       openItem(Number(row.dataset.itemId), row.dataset.itemType);
     })
   );
+  backTarget = () => openKid(currentStudent.id, 'courses');
   show('course');
 }
 
