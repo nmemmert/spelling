@@ -1255,7 +1255,7 @@ function renderLists(lists) {
         <span>${l.wordCount} words${l.builtin ? ' · built-in' : ''}</span>
         <button class="secondary small" data-print-list="${l.id}">🖨 Worksheet</button>
         <button data-edit-list="${l.id}">${l.builtin ? 'Copy & edit' : 'Edit'}</button>
-        ${l.builtin ? '' : `<button class="danger" data-del-list="${l.id}">Delete</button>`}
+        <button class="danger" data-del-list="${l.id}">Delete</button>
       </div>`
     )
     .join('');
@@ -1410,7 +1410,7 @@ async function loadDecks() {
         <strong class="grow">${esc(d.name)}</strong>
         <span>${d.cardCount} cards${d.builtin ? ' · built-in' : ''}</span>
         <button data-edit-deck="${d.id}">${d.builtin ? 'Copy & edit' : 'Edit'}</button>
-        ${d.builtin ? '' : `<button class="danger" data-del-deck="${d.id}">Delete</button>`}
+        <button class="danger" data-del-deck="${d.id}">Delete</button>
       </div>`
     )
     .join('');
