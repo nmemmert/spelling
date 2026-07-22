@@ -5,5 +5,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./data:/app/data
+      - spelling-data:/app/data
     restart: unless-stopped
+
+volumes:
+  spelling-data:
