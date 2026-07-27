@@ -305,8 +305,12 @@
             <div id="results-area"></div>
           </div>
           <div class="panel-col">
-            <details id="list-editor-details">
-              <summary id="list-editor-title">New list</summary>
+            <div class="toggle-btns">
+              <button type="button" id="list-new-btn">+ New list</button>
+              <button type="button" id="list-bulk-btn" class="secondary">⬆ Bulk import</button>
+            </div>
+            <div id="list-editor-section" hidden>
+              <h3 id="list-editor-title" class="section-form-title">New list</h3>
               <form id="list-form" class="admin-card">
                 <input type="hidden" id="list-id">
                 <input id="list-name" placeholder="List name (e.g. Week of July 6)" aria-label="List name">
@@ -316,12 +320,12 @@
                   placeholder="One word per line. Paste any list from your curriculum!&#10;&#10;Add an example sentence with |&#10;receive | Did you receive my letter?&#10;&#10;Or just a plain list:&#10;because&#10;enough&#10;friend"></textarea>
                 <div class="row-actions">
                   <button type="submit">Save list</button>
-                  <button type="button" id="list-cancel" class="secondary">Clear</button>
+                  <button type="button" id="list-cancel" class="secondary">Cancel</button>
                 </div>
               </form>
-            </details>
-            <details id="list-bulk-details">
-              <summary>Bulk import lists</summary>
+            </div>
+            <div id="list-bulk-section" hidden>
+              <h3 class="section-form-title">Bulk import lists</h3>
               <div class="admin-card">
                 <p class="hint" style="margin:0 0 0.5rem">Start each list with <strong># List name</strong> on its own line, then words below it. Optional group applies to all imported lists.</p>
                 <input id="list-bulk-group" placeholder="Group (e.g. Bible 6) — optional" aria-label="Group for bulk import" list="list-groups-datalist">
@@ -333,7 +337,7 @@
                 </div>
                 <p id="list-bulk-status" class="hint" style="margin:0.4rem 0 0"></p>
               </div>
-            </details>
+            </div>
           </div>
         </div>
       </section>
@@ -346,8 +350,12 @@
             <div id="deck-rows"></div>
           </div>
           <div class="panel-col">
-            <details id="deck-editor-details">
-              <summary id="deck-editor-title">New deck</summary>
+            <div class="toggle-btns">
+              <button type="button" id="deck-new-btn">+ New deck</button>
+              <button type="button" id="deck-bulk-btn" class="secondary">⬆ Bulk import</button>
+            </div>
+            <div id="deck-editor-section" hidden>
+              <h3 id="deck-editor-title" class="section-form-title">New deck</h3>
               <form id="deck-form" class="admin-card">
                 <input type="hidden" id="deck-id">
                 <input id="deck-name" placeholder="Deck name (e.g. State Capitals)" aria-label="Deck name">
@@ -357,12 +365,12 @@
                   placeholder="One card per line: front | back&#10;What is the capital of Ohio? | Columbus"></textarea>
                 <div class="row-actions">
                   <button type="submit">Save deck</button>
-                  <button type="button" id="deck-cancel" class="secondary">Clear</button>
+                  <button type="button" id="deck-cancel" class="secondary">Cancel</button>
                 </div>
               </form>
-            </details>
-            <details id="deck-bulk-details">
-              <summary>Bulk import decks</summary>
+            </div>
+            <div id="deck-bulk-section" hidden>
+              <h3 class="section-form-title">Bulk import decks</h3>
               <div class="admin-card">
                 <p class="hint" style="margin:0 0 0.5rem">Start each deck with <strong># Deck name</strong> on its own line, then cards below as <strong>front | back</strong>. Optional group applies to all imported decks.</p>
                 <input id="deck-bulk-group" placeholder="Group (e.g. Bible 6) — optional" aria-label="Group for bulk import" list="deck-groups-datalist">
@@ -374,7 +382,7 @@
                 </div>
                 <p id="deck-bulk-status" class="hint" style="margin:0.4rem 0 0"></p>
               </div>
-            </details>
+            </div>
           </div>
         </div>
       </section>

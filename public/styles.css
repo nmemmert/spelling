@@ -338,6 +338,11 @@ table.results tr:nth-child(even) td { background: #faf7ee; }
 .admin-main h2 { margin: 1.5rem 0 0.5rem; font-size: 1.15rem; }
 .panel { text-align: left; }
 
+/* ---------- toggle button rows (new/bulk import) ---------- */
+.toggle-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.toggle-btns button.active { background: var(--accent); color: #fff; }
+.section-form-title { font-size: 1rem; font-weight: 700; margin: 0 0 0; color: var(--ink); }
+
 /* 2-column layout for wide screens */
 .panel-cols { display: flex; flex-direction: column; gap: 1.5rem; }
 .panel-col { min-width: 0; }

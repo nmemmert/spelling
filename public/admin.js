@@ -1368,7 +1368,7 @@ function renderLists(lists) {
         return w.word;
       }).join('\n');
       $('#list-editor-title').textContent = list.builtin ? 'New list (from copy)' : `Editing: ${list.name}`;
-      $('#list-editor-details').open = true;
+      showSection('list', 'editor');
       $('#list-name').scrollIntoView({ behavior: 'smooth' });
     })
   );
@@ -1398,6 +1398,7 @@ $('#list-form').addEventListener('submit', async (e) => {
   if (id) await api(`/api/lists/${id}`, { method: 'PUT', body: { name, words, groupName } });
   else await api('/api/lists', { method: 'POST', body: { name, words, groupName } });
   clearListForm();
+  hideSections('list');
   msg('List saved.');
   loadSpelling();
 });
@@ -1408,7 +1409,30 @@ function clearListForm() {
   $('#list-group').value = '';
   $('#list-words').value = '';
   $('#list-editor-title').textContent = 'New list';
+  hideSections('list');
 }
+
+function showSection(type, which) {
+  $(`#${type}-editor-section`).hidden = which !== 'editor';
+  $(`#${type}-bulk-section`).hidden = which !== 'bulk';
+  $(`#${type}-new-btn`).classList.toggle('active', which === 'editor');
+  $(`#${type}-bulk-btn`).classList.toggle('active', which === 'bulk');
+}
+function hideSections(type) {
+  $(`#${type}-editor-section`).hidden = true;
+  $(`#${type}-bulk-section`).hidden = true;
+  $(`#${type}-new-btn`).classList.remove('active');
+  $(`#${type}-bulk-btn`).classList.remove('active');
+}
+
+$('#list-new-btn').addEventListener('click', () => {
+  if ($('#list-editor-section').hidden) showSection('list', 'editor');
+  else hideSections('list');
+});
+$('#list-bulk-btn').addEventListener('click', () => {
+  if ($('#list-bulk-section').hidden) showSection('list', 'bulk');
+  else hideSections('list');
+});
 
 function parseBulkSections(text) {
   const sections = [];
@@ -1560,7 +1584,7 @@ async function loadDecks() {
       $('#deck-group').value = deck.group_name || '';
       $('#deck-cards').value = deck.cards.map((c) => `${c.front} | ${c.back}`).join('\n');
       $('#deck-editor-title').textContent = deck.builtin ? 'New deck (from copy)' : `Editing: ${deck.name}`;
-      $('#deck-editor-details').open = true;
+      showSection('deck', 'editor');
       $('#deck-name').scrollIntoView({ behavior: 'smooth' });
     })
   );
@@ -1590,6 +1614,7 @@ $('#deck-form').addEventListener('submit', async (e) => {
   if (id) await api(`/api/decks/${id}`, { method: 'PUT', body: { name, cards, groupName } });
   else await api('/api/decks', { method: 'POST', body: { name, cards, groupName } });
   clearDeckForm();
+  hideSections('deck');
   msg('Deck saved.');
   loadDecks();
 });
@@ -1600,7 +1625,17 @@ function clearDeckForm() {
   $('#deck-group').value = '';
   $('#deck-cards').value = '';
   $('#deck-editor-title').textContent = 'New deck';
+  hideSections('deck');
 }
+
+$('#deck-new-btn').addEventListener('click', () => {
+  if ($('#deck-editor-section').hidden) showSection('deck', 'editor');
+  else hideSections('deck');
+});
+$('#deck-bulk-btn').addEventListener('click', () => {
+  if ($('#deck-bulk-section').hidden) showSection('deck', 'bulk');
+  else hideSections('deck');
+});
 
 $('#deck-bulk-save').addEventListener('click', async () => {
   const groupName = $('#deck-bulk-group').value.trim();
