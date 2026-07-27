@@ -280,6 +280,13 @@ $('#course-meta-form').addEventListener('submit', async (e) => {
   openCourseDetail(currentCourseId);
 });
 
+$('#cd-duplicate').addEventListener('click', async () => {
+  const { id } = await api(`/api/courses/${currentCourseId}/duplicate`, { method: 'POST' });
+  currentCourseId = id;
+  showPanel('course-detail');
+  msg('Course duplicated — update the name and details below.');
+});
+
 $('#cd-delete').addEventListener('click', async () => {
   if (!confirm('Delete this whole course, including all units, items, and grades?')) return;
   await api(`/api/courses/${currentCourseId}`, { method: 'DELETE' });

@@ -479,6 +479,43 @@ app.delete('/api/courses/:id', requirePin, (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/courses/:id/duplicate', requirePin, (req, res) => {
+  const src = db.prepare(`SELECT name, subject, color FROM courses WHERE id = ?`).get(req.params.id);
+  if (!src) return res.status(404).json({ error: 'No such course' });
+
+  const newCourseId = db.prepare(`INSERT INTO courses (name, subject, color) VALUES (?, ?, ?)`)
+    .run(`Copy of ${src.name}`, src.subject || '', src.color || '#4f86f7').lastInsertRowid;
+
+  const insUnit = db.prepare(`INSERT INTO units (course_id, name, sort) VALUES (?, ?, ?)`);
+  const insItem = db.prepare(`
+    INSERT INTO items (unit_id, type, title, body, points, ref_id, sort, due_date, allow_retakes, prereq_item_id, evidence_mode, retake_policy)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insQ = db.prepare(`INSERT INTO quiz_questions (item_id, type, prompt, choices, correct_answer, points, sort) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+  const getItems = db.prepare(`SELECT * FROM items WHERE unit_id = ? ORDER BY sort, id`);
+  const getQs = db.prepare(`SELECT * FROM quiz_questions WHERE item_id = ? ORDER BY sort, id`);
+
+  const units = db.prepare(`SELECT id, name, sort FROM units WHERE course_id = ? ORDER BY sort, id`).all(req.params.id);
+  for (const u of units) {
+    const newUnitId = insUnit.run(newCourseId, u.name, u.sort).lastInsertRowid;
+    for (const it of getItems.all(u.id)) {
+      const newItemId = insItem.run(
+        newUnitId, it.type, it.title, it.body, it.points, it.ref_id,
+        it.sort, it.due_date, it.allow_retakes,
+        null, // prereq_item_id: don't copy — old IDs won't match new items
+        it.evidence_mode || 'none', it.retake_policy || 'latest'
+      ).lastInsertRowid;
+      if (it.type === 'quiz') {
+        for (const q of getQs.all(it.id)) {
+          insQ.run(newItemId, q.type, q.prompt, q.choices, q.correct_answer, q.points, q.sort);
+        }
+      }
+    }
+  }
+
+  res.json({ id: newCourseId });
+});
+
 app.post('/api/courses/:id/enroll', requirePin, (req, res) => {
   db.prepare(`INSERT OR IGNORE INTO enrollments (student_id, course_id) VALUES (?, ?)`)
     .run(req.body.studentId, req.params.id);
