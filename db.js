@@ -228,6 +228,8 @@ tryAlter(`ALTER TABLE students ADD COLUMN theme TEXT NOT NULL DEFAULT 'blue'`);
 tryAlter(`ALTER TABLE students ADD COLUMN streak_date TEXT`);
 tryAlter(`ALTER TABLE students ADD COLUMN streak_count INTEGER NOT NULL DEFAULT 0`);
 tryAlter(`ALTER TABLE students ADD COLUMN best_streak INTEGER NOT NULL DEFAULT 0`);
+tryAlter(`ALTER TABLE lists ADD COLUMN group_name TEXT NOT NULL DEFAULT ''`);
+tryAlter(`ALTER TABLE decks ADD COLUMN group_name TEXT NOT NULL DEFAULT ''`);
 
 export const sha256 = (s) => createHash('sha256').update(String(s)).digest('hex');
 

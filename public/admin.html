@@ -287,6 +287,8 @@
           <form id="list-form" class="admin-card">
             <input type="hidden" id="list-id">
             <input id="list-name" placeholder="List name (e.g. Week of July 6)" aria-label="List name">
+            <input id="list-group" placeholder="Group (e.g. Bible 6)" aria-label="Group" list="list-groups-datalist">
+            <datalist id="list-groups-datalist"></datalist>
             <textarea id="list-words" rows="8"
               placeholder="One word per line. Paste any list from your curriculum!&#10;&#10;Add an example sentence with |&#10;receive | Did you receive my letter?&#10;&#10;Or just a plain list:&#10;because&#10;enough&#10;friend"></textarea>
             <div class="row-actions">
@@ -309,6 +311,8 @@
           <form id="deck-form" class="admin-card">
             <input type="hidden" id="deck-id">
             <input id="deck-name" placeholder="Deck name (e.g. State Capitals)" aria-label="Deck name">
+            <input id="deck-group" placeholder="Group (e.g. Bible 6)" aria-label="Group" list="deck-groups-datalist">
+            <datalist id="deck-groups-datalist"></datalist>
             <textarea id="deck-cards" rows="8"
               placeholder="One card per line: front | back&#10;What is the capital of Ohio? | Columbus"></textarea>
             <div class="row-actions">

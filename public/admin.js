@@ -1309,18 +1309,43 @@ function renderAssignRows(students) {
   );
 }
 
+function groupByName(arr) {
+  const map = {};
+  for (const item of arr) {
+    const k = item.group_name || '';
+    if (!map[k]) map[k] = [];
+    map[k].push(item);
+  }
+  return map;
+}
+
+function renderGroupSections(groups, renderItem) {
+  const named = Object.keys(groups).filter((k) => k).sort();
+  const ungrouped = groups[''] || [];
+  let html = '';
+  for (const g of named) {
+    html += `<div class="list-group"><div class="list-group-header">${esc(g)}</div>${groups[g].map(renderItem).join('')}</div>`;
+  }
+  if (ungrouped.length) {
+    html += `<div class="list-group">${named.length ? '<div class="list-group-header">Ungrouped</div>' : ''}${ungrouped.map(renderItem).join('')}</div>`;
+  }
+  return html || '<p class="hint">None yet.</p>';
+}
+
 function renderLists(lists) {
-  $('#list-rows').innerHTML = lists
-    .map(
-      (l) => `<div class="item-row">
+  const groups = groupByName(lists);
+  const groupNames = Object.keys(groups).filter((k) => k).sort();
+  $('#list-groups-datalist').innerHTML = groupNames.map((g) => `<option value="${esc(g)}">`).join('');
+
+  const renderItem = (l) => `<div class="item-row">
         <strong class="grow">${esc(l.name)}</strong>
         <span>${l.wordCount} words${l.builtin ? ' · built-in' : ''}</span>
         <button class="secondary small" data-print-list="${l.id}">🖨 Worksheet</button>
         <button data-edit-list="${l.id}">${l.builtin ? 'Copy & edit' : 'Edit'}</button>
         <button class="danger" data-del-list="${l.id}">Delete</button>
-      </div>`
-    )
-    .join('');
+      </div>`;
+
+  $('#list-rows').innerHTML = renderGroupSections(groups, renderItem);
 
   document.querySelectorAll('[data-print-list]').forEach((btn) =>
     btn.addEventListener('click', async () => {
@@ -1334,6 +1359,7 @@ function renderLists(lists) {
       const list = await api(`/api/lists/${btn.dataset.editList}`);
       $('#list-id').value = list.builtin ? '' : list.id;
       $('#list-name').value = list.builtin ? `${list.name} (copy)` : list.name;
+      $('#list-group').value = list.group_name || '';
       $('#list-words').value = list.words.map((w) => {
         if (w.definition) return `${w.word} | ${w.sentence} | ${w.definition}`;
         if (w.sentence) return `${w.word} | ${w.sentence}`;
@@ -1365,9 +1391,10 @@ $('#list-form').addEventListener('submit', async (e) => {
       return { word, sentence, definition };
     });
   if (!name || words.length === 0) return msg('Give the list a name and at least one word.');
+  const groupName = $('#list-group').value.trim();
   const id = $('#list-id').value;
-  if (id) await api(`/api/lists/${id}`, { method: 'PUT', body: { name, words } });
-  else await api('/api/lists', { method: 'POST', body: { name, words } });
+  if (id) await api(`/api/lists/${id}`, { method: 'PUT', body: { name, words, groupName } });
+  else await api('/api/lists', { method: 'POST', body: { name, words, groupName } });
   clearListForm();
   msg('List saved.');
   loadSpelling();
@@ -1376,6 +1403,7 @@ $('#list-cancel').addEventListener('click', clearListForm);
 function clearListForm() {
   $('#list-id').value = '';
   $('#list-name').value = '';
+  $('#list-group').value = '';
   $('#list-words').value = '';
   $('#list-editor-title').textContent = 'New list';
 }
@@ -1466,22 +1494,25 @@ async function printSpellingReport(testId) {
 async function loadDecks() {
   const decks = await api('/api/decks');
   cachedDecks = decks;
-  $('#deck-rows').innerHTML = decks
-    .map(
-      (d) => `<div class="item-row">
+  const groups = groupByName(decks);
+  const groupNames = Object.keys(groups).filter((k) => k).sort();
+  $('#deck-groups-datalist').innerHTML = groupNames.map((g) => `<option value="${esc(g)}">`).join('');
+
+  const renderItem = (d) => `<div class="item-row">
         <strong class="grow">${esc(d.name)}</strong>
         <span>${d.cardCount} cards${d.builtin ? ' · built-in' : ''}</span>
         <button data-edit-deck="${d.id}">${d.builtin ? 'Copy & edit' : 'Edit'}</button>
         <button class="danger" data-del-deck="${d.id}">Delete</button>
-      </div>`
-    )
-    .join('');
+      </div>`;
+
+  $('#deck-rows').innerHTML = renderGroupSections(groups, renderItem);
 
   document.querySelectorAll('[data-edit-deck]').forEach((btn) =>
     btn.addEventListener('click', async () => {
       const deck = await api(`/api/decks/${btn.dataset.editDeck}`);
       $('#deck-id').value = deck.builtin ? '' : deck.id;
       $('#deck-name').value = deck.builtin ? `${deck.name} (copy)` : deck.name;
+      $('#deck-group').value = deck.group_name || '';
       $('#deck-cards').value = deck.cards.map((c) => `${c.front} | ${c.back}`).join('\n');
       $('#deck-editor-title').textContent = deck.builtin ? 'New deck (from copy)' : `Editing: ${deck.name}`;
       $('#deck-editor-details').open = true;
@@ -1509,9 +1540,10 @@ $('#deck-form').addEventListener('submit', async (e) => {
       return { front, back };
     });
   if (!name || cards.length === 0) return msg('Give the deck a name and at least one card.');
+  const groupName = $('#deck-group').value.trim();
   const id = $('#deck-id').value;
-  if (id) await api(`/api/decks/${id}`, { method: 'PUT', body: { name, cards } });
-  else await api('/api/decks', { method: 'POST', body: { name, cards } });
+  if (id) await api(`/api/decks/${id}`, { method: 'PUT', body: { name, cards, groupName } });
+  else await api('/api/decks', { method: 'POST', body: { name, cards, groupName } });
   clearDeckForm();
   msg('Deck saved.');
   loadDecks();
@@ -1520,6 +1552,7 @@ $('#deck-cancel').addEventListener('click', clearDeckForm);
 function clearDeckForm() {
   $('#deck-id').value = '';
   $('#deck-name').value = '';
+  $('#deck-group').value = '';
   $('#deck-cards').value = '';
   $('#deck-editor-title').textContent = 'New deck';
 }

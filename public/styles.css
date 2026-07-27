@@ -354,6 +354,16 @@ table.results tr:nth-child(even) td { background: #faf7ee; }
 .color-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .archived-badge { background: #e8e2d0; color: var(--muted); font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 999px; }
 
+/* ---------- list/deck groups ---------- */
+.list-group { margin-bottom: 0.75rem; }
+.list-group-header {
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted);
+  padding: 0.5rem 0.25rem 0.2rem;
+  border-bottom: 1.5px solid #e8e2d0;
+  margin-bottom: 0.25rem;
+}
+
 /* ---------- roster chips ---------- */
 #cd-roster { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 #cd-roster .checkbox-label {

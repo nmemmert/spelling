@@ -267,37 +267,39 @@ app.get('/api/test-report/:testId', (req, res) => {
 
 app.get('/api/lists', (req, res) => {
   res.json(db.prepare(`
-    SELECT l.id, l.name, l.builtin, COUNT(w.id) AS wordCount
+    SELECT l.id, l.name, l.builtin, l.group_name, COUNT(w.id) AS wordCount
     FROM lists l LEFT JOIN words w ON w.list_id = l.id
-    GROUP BY l.id ORDER BY l.builtin, l.name
+    GROUP BY l.id ORDER BY l.group_name, l.builtin, l.name
   `).all());
 });
 
 app.get('/api/lists/:id', (req, res) => {
-  const list = db.prepare(`SELECT id, name, builtin FROM lists WHERE id = ?`).get(req.params.id);
+  const list = db.prepare(`SELECT id, name, builtin, group_name FROM lists WHERE id = ?`).get(req.params.id);
   if (!list) return res.status(404).json({ error: 'No such list' });
   list.words = db.prepare(`SELECT id, word, sentence, definition FROM words WHERE list_id = ? ORDER BY id`).all(req.params.id);
   res.json(list);
 });
 
 app.post('/api/lists', requirePin, (req, res) => {
-  const { name, words } = req.body;
+  const { name, words, groupName } = req.body;
   if (!name || !Array.isArray(words) || words.length === 0) {
     return res.status(400).json({ error: 'Name and at least one word required' });
   }
-  const id = db.prepare(`INSERT INTO lists (name, builtin) VALUES (?, 0)`).run(String(name).trim()).lastInsertRowid;
+  const id = db.prepare(`INSERT INTO lists (name, builtin, group_name) VALUES (?, 0, ?)`)
+    .run(String(name).trim(), String(groupName || '').trim()).lastInsertRowid;
   const ins = db.prepare(`INSERT INTO words (list_id, word, sentence, definition) VALUES (?, ?, ?, ?)`);
   for (const w of words) ins.run(id, String(w.word).trim(), String(w.sentence || '').trim(), String(w.definition || '').trim());
   res.json({ id });
 });
 
 app.put('/api/lists/:id', requirePin, (req, res) => {
-  const { name, words } = req.body;
+  const { name, words, groupName } = req.body;
   const id = req.params.id;
   if (!db.prepare(`SELECT id FROM lists WHERE id = ?`).get(id)) {
     return res.status(404).json({ error: 'No such list' });
   }
-  db.prepare(`UPDATE lists SET name = ? WHERE id = ?`).run(String(name).trim(), id);
+  db.prepare(`UPDATE lists SET name = ?, group_name = ? WHERE id = ?`)
+    .run(String(name).trim(), String(groupName || '').trim(), id);
   db.prepare(`DELETE FROM words WHERE list_id = ?`).run(id);
   const ins = db.prepare(`INSERT INTO words (list_id, word, sentence, definition) VALUES (?, ?, ?, ?)`);
   for (const w of words) ins.run(id, String(w.word).trim(), String(w.sentence || '').trim(), String(w.definition || '').trim());
@@ -313,37 +315,39 @@ app.delete('/api/lists/:id', requirePin, (req, res) => {
 
 app.get('/api/decks', (req, res) => {
   res.json(db.prepare(`
-    SELECT d.id, d.name, d.builtin, COUNT(c.id) AS cardCount
+    SELECT d.id, d.name, d.builtin, d.group_name, COUNT(c.id) AS cardCount
     FROM decks d LEFT JOIN cards c ON c.deck_id = d.id
-    GROUP BY d.id ORDER BY d.builtin, d.name
+    GROUP BY d.id ORDER BY d.group_name, d.builtin, d.name
   `).all());
 });
 
 app.get('/api/decks/:id', (req, res) => {
-  const deck = db.prepare(`SELECT id, name, builtin FROM decks WHERE id = ?`).get(req.params.id);
+  const deck = db.prepare(`SELECT id, name, builtin, group_name FROM decks WHERE id = ?`).get(req.params.id);
   if (!deck) return res.status(404).json({ error: 'No such deck' });
   deck.cards = db.prepare(`SELECT id, front, back FROM cards WHERE deck_id = ? ORDER BY id`).all(req.params.id);
   res.json(deck);
 });
 
 app.post('/api/decks', requirePin, (req, res) => {
-  const { name, cards } = req.body;
+  const { name, cards, groupName } = req.body;
   if (!name || !Array.isArray(cards) || cards.length === 0) {
     return res.status(400).json({ error: 'Name and at least one card required' });
   }
-  const id = db.prepare(`INSERT INTO decks (name, builtin) VALUES (?, 0)`).run(String(name).trim()).lastInsertRowid;
+  const id = db.prepare(`INSERT INTO decks (name, builtin, group_name) VALUES (?, 0, ?)`)
+    .run(String(name).trim(), String(groupName || '').trim()).lastInsertRowid;
   const ins = db.prepare(`INSERT INTO cards (deck_id, front, back) VALUES (?, ?, ?)`);
   for (const c of cards) ins.run(id, String(c.front).trim(), String(c.back).trim());
   res.json({ id });
 });
 
 app.put('/api/decks/:id', requirePin, (req, res) => {
-  const { name, cards } = req.body;
+  const { name, cards, groupName } = req.body;
   const id = req.params.id;
   if (!db.prepare(`SELECT id FROM decks WHERE id = ?`).get(id)) {
     return res.status(404).json({ error: 'No such deck' });
   }
-  db.prepare(`UPDATE decks SET name = ? WHERE id = ?`).run(String(name).trim(), id);
+  db.prepare(`UPDATE decks SET name = ?, group_name = ? WHERE id = ?`)
+    .run(String(name).trim(), String(groupName || '').trim(), id);
   db.prepare(`DELETE FROM cards WHERE deck_id = ?`).run(id);
   const ins = db.prepare(`INSERT INTO cards (deck_id, front, back) VALUES (?, ?, ?)`);
   for (const c of cards) ins.run(id, String(c.front).trim(), String(c.back).trim());
