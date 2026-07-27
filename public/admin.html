@@ -39,28 +39,46 @@
       <!-- Kids -->
       <section id="panel-kids" class="panel">
         <h1>Kids</h1>
-        <div id="student-rows"></div>
-        <form id="add-student-form" class="inline-form">
-          <input id="new-student-name" placeholder="Name" aria-label="New kid name">
-          <select id="new-student-emoji" aria-label="Avatar">
-            <option>🦊</option><option>🐸</option><option>🦄</option><option>🐯</option>
-            <option>🐼</option><option>🦖</option><option>🐙</option><option>🦉</option>
-            <option>🐻</option><option>🐰</option><option>🦁</option><option>🐶</option>
-          </select>
-          <button type="submit">Add kid</button>
-        </form>
+        <div class="panel-cols">
+          <div class="panel-col">
+            <div id="student-rows"></div>
+          </div>
+          <div class="panel-col">
+            <div class="admin-card">
+              <h2 style="margin:0 0 0.75rem">Add a kid</h2>
+              <form id="add-student-form" class="inline-form" style="flex-direction:column">
+                <input id="new-student-name" placeholder="Name" aria-label="New kid name">
+                <select id="new-student-emoji" aria-label="Avatar">
+                  <option>🦊</option><option>🐸</option><option>🦄</option><option>🐯</option>
+                  <option>🐼</option><option>🦖</option><option>🐙</option><option>🦉</option>
+                  <option>🐻</option><option>🐰</option><option>🦁</option><option>🐶</option>
+                </select>
+                <button type="submit">Add kid</button>
+              </form>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Courses list -->
       <section id="panel-courses" class="panel">
         <h1>Courses</h1>
-        <div id="course-rows"></div>
-        <form id="add-course-form" class="inline-form">
-          <input id="new-course-name" placeholder="Course name (e.g. Science 3)" aria-label="Course name">
-          <input id="new-course-subject" placeholder="Subject" aria-label="Subject">
-          <input id="new-course-color" type="color" value="#4f86f7" aria-label="Color">
-          <button type="submit">Add course</button>
-        </form>
+        <div class="panel-cols">
+          <div class="panel-col">
+            <div id="course-rows"></div>
+          </div>
+          <div class="panel-col">
+            <div class="admin-card">
+              <h2 style="margin:0 0 0.75rem">Add a course</h2>
+              <form id="add-course-form" class="inline-form" style="flex-direction:column">
+                <input id="new-course-name" placeholder="Course name (e.g. Science 3)" aria-label="Course name">
+                <input id="new-course-subject" placeholder="Subject" aria-label="Subject">
+                <input id="new-course-color" type="color" value="#4f86f7" aria-label="Color">
+                <button type="submit">Add course</button>
+              </form>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Course detail (units + items + roster) -->
@@ -277,80 +295,88 @@
       <!-- Spelling (legacy word lists + weekly assignment) -->
       <section id="panel-spelling" class="panel">
         <h1>Spelling</h1>
-        <h2>This week's list per kid</h2>
-        <div id="assign-rows"></div>
-
-        <h2>Word lists</h2>
-        <div id="list-rows"></div>
-        <details id="list-editor-details">
-          <summary id="list-editor-title">New list</summary>
-          <form id="list-form" class="admin-card">
-            <input type="hidden" id="list-id">
-            <input id="list-name" placeholder="List name (e.g. Week of July 6)" aria-label="List name">
-            <input id="list-group" placeholder="Group (e.g. Bible 6)" aria-label="Group" list="list-groups-datalist">
-            <datalist id="list-groups-datalist"></datalist>
-            <textarea id="list-words" rows="8"
-              placeholder="One word per line. Paste any list from your curriculum!&#10;&#10;Add an example sentence with |&#10;receive | Did you receive my letter?&#10;&#10;Or just a plain list:&#10;because&#10;enough&#10;friend"></textarea>
-            <div class="row-actions">
-              <button type="submit">Save list</button>
-              <button type="button" id="list-cancel" class="secondary">Clear</button>
-            </div>
-          </form>
-        </details>
-
-        <details id="list-bulk-details">
-          <summary>Bulk import lists</summary>
-          <div class="admin-card">
-            <p class="hint" style="margin:0 0 0.5rem">Start each list with <strong># List name</strong> on its own line, then words below it. Optional group applies to all imported lists.</p>
-            <input id="list-bulk-group" placeholder="Group (e.g. Bible 6) — optional" aria-label="Group for bulk import" list="list-groups-datalist">
-            <textarea id="list-bulk-text" rows="12"
-              placeholder="# Week 1&#10;because&#10;enough&#10;friend&#10;&#10;# Week 2&#10;receive | Did you receive my letter?&#10;achieve&#10;believe"></textarea>
-            <div class="row-actions">
-              <button type="button" id="list-bulk-save">Import all lists</button>
-              <button type="button" id="list-bulk-clear" class="secondary">Clear</button>
-            </div>
-            <p id="list-bulk-status" class="hint" style="margin:0.4rem 0 0"></p>
+        <div class="panel-cols">
+          <div class="panel-col">
+            <h2>This week's list per kid</h2>
+            <div id="assign-rows"></div>
+            <h2>Word lists</h2>
+            <div id="list-rows"></div>
+            <h2>Test results</h2>
+            <div id="results-area"></div>
           </div>
-        </details>
-
-        <h2>Test results</h2>
-        <div id="results-area"></div>
+          <div class="panel-col">
+            <details id="list-editor-details">
+              <summary id="list-editor-title">New list</summary>
+              <form id="list-form" class="admin-card">
+                <input type="hidden" id="list-id">
+                <input id="list-name" placeholder="List name (e.g. Week of July 6)" aria-label="List name">
+                <input id="list-group" placeholder="Group (e.g. Bible 6)" aria-label="Group" list="list-groups-datalist">
+                <datalist id="list-groups-datalist"></datalist>
+                <textarea id="list-words" rows="8"
+                  placeholder="One word per line. Paste any list from your curriculum!&#10;&#10;Add an example sentence with |&#10;receive | Did you receive my letter?&#10;&#10;Or just a plain list:&#10;because&#10;enough&#10;friend"></textarea>
+                <div class="row-actions">
+                  <button type="submit">Save list</button>
+                  <button type="button" id="list-cancel" class="secondary">Clear</button>
+                </div>
+              </form>
+            </details>
+            <details id="list-bulk-details">
+              <summary>Bulk import lists</summary>
+              <div class="admin-card">
+                <p class="hint" style="margin:0 0 0.5rem">Start each list with <strong># List name</strong> on its own line, then words below it. Optional group applies to all imported lists.</p>
+                <input id="list-bulk-group" placeholder="Group (e.g. Bible 6) — optional" aria-label="Group for bulk import" list="list-groups-datalist">
+                <textarea id="list-bulk-text" rows="12"
+                  placeholder="# Week 1&#10;because&#10;enough&#10;friend&#10;&#10;# Week 2&#10;receive | Did you receive my letter?&#10;achieve&#10;believe"></textarea>
+                <div class="row-actions">
+                  <button type="button" id="list-bulk-save">Import all lists</button>
+                  <button type="button" id="list-bulk-clear" class="secondary">Clear</button>
+                </div>
+                <p id="list-bulk-status" class="hint" style="margin:0.4rem 0 0"></p>
+              </div>
+            </details>
+          </div>
+        </div>
       </section>
 
       <!-- Flashcard decks -->
       <section id="panel-decks" class="panel">
         <h1>Flashcard Decks</h1>
-        <div id="deck-rows"></div>
-        <details id="deck-editor-details">
-          <summary id="deck-editor-title">New deck</summary>
-          <form id="deck-form" class="admin-card">
-            <input type="hidden" id="deck-id">
-            <input id="deck-name" placeholder="Deck name (e.g. State Capitals)" aria-label="Deck name">
-            <input id="deck-group" placeholder="Group (e.g. Bible 6)" aria-label="Group" list="deck-groups-datalist">
-            <datalist id="deck-groups-datalist"></datalist>
-            <textarea id="deck-cards" rows="8"
-              placeholder="One card per line: front | back&#10;What is the capital of Ohio? | Columbus"></textarea>
-            <div class="row-actions">
-              <button type="submit">Save deck</button>
-              <button type="button" id="deck-cancel" class="secondary">Clear</button>
-            </div>
-          </form>
-        </details>
-
-        <details id="deck-bulk-details">
-          <summary>Bulk import decks</summary>
-          <div class="admin-card">
-            <p class="hint" style="margin:0 0 0.5rem">Start each deck with <strong># Deck name</strong> on its own line, then cards below as <strong>front | back</strong>. Optional group applies to all imported decks.</p>
-            <input id="deck-bulk-group" placeholder="Group (e.g. Bible 6) — optional" aria-label="Group for bulk import" list="deck-groups-datalist">
-            <textarea id="deck-bulk-text" rows="12"
-              placeholder="# Chapter 1 Vocab&#10;What is photosynthesis? | The process plants use to make food&#10;What does chlorophyll do? | Absorbs light&#10;&#10;# Chapter 2 Vocab&#10;What is mitosis? | Cell division producing identical cells"></textarea>
-            <div class="row-actions">
-              <button type="button" id="deck-bulk-save">Import all decks</button>
-              <button type="button" id="deck-bulk-clear" class="secondary">Clear</button>
-            </div>
-            <p id="deck-bulk-status" class="hint" style="margin:0.4rem 0 0"></p>
+        <div class="panel-cols">
+          <div class="panel-col">
+            <div id="deck-rows"></div>
           </div>
-        </details>
+          <div class="panel-col">
+            <details id="deck-editor-details">
+              <summary id="deck-editor-title">New deck</summary>
+              <form id="deck-form" class="admin-card">
+                <input type="hidden" id="deck-id">
+                <input id="deck-name" placeholder="Deck name (e.g. State Capitals)" aria-label="Deck name">
+                <input id="deck-group" placeholder="Group (e.g. Bible 6)" aria-label="Group" list="deck-groups-datalist">
+                <datalist id="deck-groups-datalist"></datalist>
+                <textarea id="deck-cards" rows="8"
+                  placeholder="One card per line: front | back&#10;What is the capital of Ohio? | Columbus"></textarea>
+                <div class="row-actions">
+                  <button type="submit">Save deck</button>
+                  <button type="button" id="deck-cancel" class="secondary">Clear</button>
+                </div>
+              </form>
+            </details>
+            <details id="deck-bulk-details">
+              <summary>Bulk import decks</summary>
+              <div class="admin-card">
+                <p class="hint" style="margin:0 0 0.5rem">Start each deck with <strong># Deck name</strong> on its own line, then cards below as <strong>front | back</strong>. Optional group applies to all imported decks.</p>
+                <input id="deck-bulk-group" placeholder="Group (e.g. Bible 6) — optional" aria-label="Group for bulk import" list="deck-groups-datalist">
+                <textarea id="deck-bulk-text" rows="12"
+                  placeholder="# Chapter 1 Vocab&#10;What is photosynthesis? | The process plants use to make food&#10;What does chlorophyll do? | Absorbs light&#10;&#10;# Chapter 2 Vocab&#10;What is mitosis? | Cell division producing identical cells"></textarea>
+                <div class="row-actions">
+                  <button type="button" id="deck-bulk-save">Import all decks</button>
+                  <button type="button" id="deck-bulk-clear" class="secondary">Clear</button>
+                </div>
+                <p id="deck-bulk-status" class="hint" style="margin:0.4rem 0 0"></p>
+              </div>
+            </details>
+          </div>
+        </div>
       </section>
 
       <!-- Settings -->
