@@ -21,9 +21,17 @@ async function api(path, opts = {}) {
   return data;
 }
 
-function msg(text) {
-  $('#admin-msg').textContent = text;
-  setTimeout(() => ($('#admin-msg').textContent = ''), 4000);
+let _toastTimer = null;
+function msg(text, type = 'success') {
+  const el = $('#toast');
+  el.textContent = text;
+  el.className = type === 'error' ? 'toast-error' : '';
+  el.hidden = false;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    el.classList.add('toast-out');
+    setTimeout(() => { el.hidden = true; el.classList.remove('toast-out'); }, 400);
+  }, 3000);
 }
 
 const TYPE_ICON = {
@@ -135,6 +143,7 @@ async function loadKids() {
     btn.addEventListener('click', async () => {
       if (!confirm('Remove this kid and all their progress? This cannot be undone.')) return;
       await api(`/api/students/${btn.dataset.delStudent}`, { method: 'DELETE' });
+      msg('Kid removed.');
       loadKids();
     })
   );
@@ -146,6 +155,7 @@ $('#add-student-form').addEventListener('submit', async (e) => {
   if (!name) return;
   await api('/api/students', { method: 'POST', body: { name, emoji: $('#new-student-emoji').value } });
   $('#new-student-name').value = '';
+  msg('Kid added.');
   loadKids();
 });
 
@@ -249,6 +259,7 @@ async function openCourseDetail(id) {
     btn.addEventListener('click', async () => {
       if (!confirm('Delete this unit and everything in it?')) return;
       await api(`/api/units/${btn.dataset.delUnit}`, { method: 'DELETE' });
+      msg('Unit deleted.');
       openCourseDetail(id);
     })
   );
@@ -290,6 +301,7 @@ $('#cd-duplicate').addEventListener('click', async () => {
 $('#cd-delete').addEventListener('click', async () => {
   if (!confirm('Delete this whole course, including all units, items, and grades?')) return;
   await api(`/api/courses/${currentCourseId}`, { method: 'DELETE' });
+  msg('Course deleted.');
   currentCourseId = null;
   showPanel('courses');
 });
@@ -300,6 +312,7 @@ $('#add-unit-form').addEventListener('submit', async (e) => {
   if (!name) return;
   await api('/api/units', { method: 'POST', body: { courseId: currentCourseId, name } });
   $('#new-unit-name').value = '';
+  msg('Unit added.');
   openCourseDetail(currentCourseId);
 });
 
@@ -359,6 +372,7 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-delete').onclick = async () => {
       if (!confirm('Delete this item and any grades for it?')) return;
       await api(`/api/items/${itemId}`, { method: 'DELETE' });
+      msg('Item deleted.');
       showPanel('course-detail');
     };
   } else {
@@ -702,6 +716,7 @@ function addDays(dateStr, n) {
 }
 
 let plannerWeekStart = mondayOf(new Date());
+let plannerQueue = [];
 let plannerStudentId = null;
 let plannerCoursesCache = [];
 let plannerMode = 'week'; // 'week' | 'month'
@@ -750,6 +765,8 @@ $('#auto-schedule-btn').addEventListener('click', async () => {
 });
 
 $('#planner-student').addEventListener('change', () => {
+  plannerQueue = [];
+  updatePlannerSaveBtn();
   plannerStudentId = Number($('#planner-student').value);
   renderPlanner();
 });
@@ -942,17 +959,51 @@ function toggleAddTaskForm(date) {
     }
   })();
 
-  box.querySelector('.task-save-btn').addEventListener('click', async () => {
+  box.querySelector('.task-save-btn').addEventListener('click', () => {
     const itemId = courseSelect.value;
     const title = box.querySelector('.task-offline-input').value.trim();
     if (!itemId && !title) return;
-    await api('/api/schedule', {
-      method: 'POST',
-      body: { studentId: plannerStudentId, date, itemId: itemId || null, title },
-    });
-    renderPlanner();
+    const label = itemId
+      ? courseSelect.options[courseSelect.selectedIndex].textContent
+      : `📌 ${title}`;
+    plannerQueue.push({ date, itemId: itemId || null, title, label });
+    updatePlannerSaveBtn();
+    // Show as pending in the day cell without a full re-render
+    const tasksEl = document.querySelector(`.planner-tasks[data-drop-date="${date}"]`);
+    if (tasksEl) {
+      const hint = tasksEl.querySelector('.hint.tiny');
+      if (hint) hint.remove();
+      const el = document.createElement('div');
+      el.className = 'planner-task planner-pending';
+      el.textContent = label;
+      tasksEl.appendChild(el);
+    }
+    courseSelect.value = '';
+    box.querySelector('.task-offline-input').value = '';
   });
 }
+
+function updatePlannerSaveBtn() {
+  const btn = $('#planner-save-all');
+  const n = plannerQueue.length;
+  btn.hidden = n === 0;
+  btn.textContent = `💾 Save ${n} item${n === 1 ? '' : 's'}`;
+}
+
+$('#planner-save-all').addEventListener('click', async () => {
+  const count = plannerQueue.length;
+  if (!count) return;
+  for (const item of plannerQueue) {
+    await api('/api/schedule', {
+      method: 'POST',
+      body: { studentId: plannerStudentId, date: item.date, itemId: item.itemId, title: item.title },
+    });
+  }
+  plannerQueue = [];
+  updatePlannerSaveBtn();
+  msg(`${count} item${count === 1 ? '' : 's'} added to planner.`);
+  renderPlanner();
+});
 
 function renderPrintTaskBlock(t) {
   const title = t.itemTitle || t.offlineTitle;
@@ -1207,6 +1258,7 @@ async function loadGrading() {
         method: 'PUT',
         body: { score: Number(input.value), parentComment: commentInput?.value || '' },
       });
+      msg('Grade saved.');
       loadGrading();
       loadGradingBadge();
     });
@@ -1453,6 +1505,7 @@ function renderLists(lists, filterText = '') {
     btn.addEventListener('click', async () => {
       if (!confirm('Delete this list?')) return;
       await api(`/api/lists/${btn.dataset.delList}`, { method: 'DELETE' });
+      msg('List deleted.');
       loadSpelling();
     })
   );
@@ -1585,6 +1638,7 @@ $('#list-bulk-save').addEventListener('click', async () => {
     statusEl.textContent = `Imported ${done} of ${sections.length}…`;
   }
   statusEl.textContent = `Done! ${done} list(s) imported.`;
+  msg(`${done} list${done === 1 ? '' : 's'} imported.`);
   $('#list-bulk-text').value = '';
   loadSpelling();
 });
@@ -1693,6 +1747,7 @@ function renderDecks(decks, filterText = '') {
     btn.addEventListener('click', async () => {
       if (!confirm('Delete this deck?')) return;
       await api(`/api/decks/${btn.dataset.delDeck}`, { method: 'DELETE' });
+      msg('Deck deleted.');
       loadDecks();
     })
   );
@@ -1758,6 +1813,7 @@ $('#deck-bulk-save').addEventListener('click', async () => {
     statusEl.textContent = `Imported ${done} of ${sections.length}…`;
   }
   statusEl.textContent = `Done! ${done} deck(s) imported.`;
+  msg(`${done} deck${done === 1 ? '' : 's'} imported.`);
   $('#deck-bulk-text').value = '';
   loadDecks();
 });

@@ -732,3 +732,17 @@ body.theme-pink   { --accent: #d45d8a; --accent-dark: #b4487a; --bg: #fff0f5; }
 .thr-date { color: var(--muted); min-width: 6rem; flex-shrink: 0; }
 .thr-list { flex: 1; min-width: 8rem; }
 .thr-score { margin-left: auto; font-weight: 600; white-space: nowrap; }
+
+/* ---------- toast notification ---------- */
+#toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+  background: var(--good); color: #fff;
+  padding: 0.7rem 1.2rem; border-radius: 12px;
+  font-weight: 600; font-size: 0.95rem;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+  transition: opacity 0.35s, transform 0.35s;
+  opacity: 1; transform: translateY(0);
+}
+#toast.toast-error { background: var(--bad); }
+#toast.toast-out { opacity: 0; transform: translateY(0.5rem); }
+.planner-pending { border: 2px dashed var(--accent) !important; background: color-mix(in srgb, var(--accent) 10%, var(--card)) !important; color: var(--accent) !important; opacity: 0.85; cursor: default; }

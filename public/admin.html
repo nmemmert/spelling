@@ -244,6 +244,7 @@
           <button id="planner-next" class="secondary">Next →</button>
           <button id="planner-copy" class="secondary">Copy last week</button>
           <button id="planner-print">🖨 Print</button>
+          <button id="planner-save-all" hidden>💾 Save 0 items</button>
         </div>
 
         <details id="auto-schedule-details" class="admin-card" style="margin-bottom:1rem">
@@ -448,7 +449,6 @@
         </form>
       </section>
 
-      <p id="admin-msg" class="hint"></p>
     </main>
   </div>
 
@@ -457,6 +457,8 @@
     <p class="assign-popup-label">Assign to…</p>
     <div id="assign-popup-students"></div>
   </div>
+
+  <div id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="admin.js"></script>
 </body>
