@@ -445,11 +445,6 @@ app.get('/api/overview', requirePin, (req, res) => {
         WHERE w.list_id = ?
       `).get(s.id, s.assignment.id);
     }
-    s.tests = db.prepare(`
-      SELECT t.id, t.score, t.total, t.at, l.name AS list
-      FROM tests t JOIN lists l ON l.id = t.list_id
-      WHERE t.student_id = ? ORDER BY t.at DESC LIMIT 20
-    `).all(s.id);
   }
   res.json({ students });
 });
@@ -970,15 +965,59 @@ app.get('/api/gradebook/:courseId/csv', requirePin, (req, res) => {
 
 // All standalone spelling test results grouped by student
 app.get('/api/spelling-tests', requirePin, (req, res) => {
+  const days = parseInt(req.query.since) || null;
+  const cutoff = days ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10) : null;
   const students = db.prepare(`SELECT id, name, emoji FROM students ORDER BY name`).all();
   for (const s of students) {
-    s.tests = db.prepare(`
-      SELECT t.id, t.score, t.total, t.at, l.name AS list
-      FROM tests t JOIN lists l ON l.id = t.list_id
-      WHERE t.student_id = ? ORDER BY t.at DESC LIMIT 20
-    `).all(s.id);
+    s.tests = cutoff
+      ? db.prepare(`SELECT t.id, t.score, t.total, t.at, l.name AS list FROM tests t JOIN lists l ON l.id = t.list_id WHERE t.student_id = ? AND date(t.at) >= ? ORDER BY t.at DESC LIMIT 20`).all(s.id, cutoff)
+      : db.prepare(`SELECT t.id, t.score, t.total, t.at, l.name AS list FROM tests t JOIN lists l ON l.id = t.list_id WHERE t.student_id = ? ORDER BY t.at DESC LIMIT 20`).all(s.id);
   }
   res.json({ students });
+});
+
+app.get('/api/spelling-tests/csv', requirePin, (req, res) => {
+  const days = parseInt(req.query.since) || null;
+  const cutoff = days ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10) : null;
+  const rows = db.prepare(`
+    SELECT s.emoji, s.name AS student, l.name AS list, t.score, t.total, t.at
+    FROM tests t JOIN students s ON s.id = t.student_id JOIN lists l ON l.id = t.list_id
+    ${cutoff ? 'WHERE date(t.at) >= ?' : ''} ORDER BY t.at DESC
+  `).all(...(cutoff ? [cutoff] : []));
+  const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const header = 'Date,Student,List,Score,Total,%';
+  const data = rows.map((r) => [
+    q(new Date(r.at + 'Z').toLocaleDateString()),
+    q(`${r.emoji} ${r.student}`),
+    q(r.list), r.score, r.total,
+    Math.round((r.score / r.total) * 100) + '%',
+  ].join(',')).join('\n');
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="spelling-test-history.csv"');
+  res.send(header + '\n' + data);
+});
+
+// Student-facing: recent tests for the spelling tab (no PIN — student portal)
+app.get('/api/students/:id/tests', (req, res) => {
+  const tests = db.prepare(`
+    SELECT t.id, t.score, t.total, t.at, l.name AS list
+    FROM tests t JOIN lists l ON l.id = t.list_id
+    WHERE t.student_id = ? ORDER BY t.at DESC LIMIT 10
+  `).all(req.params.id);
+  res.json({ tests });
+});
+
+// Admin: tests within a date range for a single student (used by planner)
+app.get('/api/admin/students/:id/tests-range', requirePin, (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+  const tests = db.prepare(`
+    SELECT t.id, t.score, t.total, t.at, date(t.at) AS date, l.name AS list
+    FROM tests t JOIN lists l ON l.id = t.list_id
+    WHERE t.student_id = ? AND date(t.at) BETWEEN ? AND ?
+    ORDER BY t.at
+  `).all(req.params.id, from, to);
+  res.json({ tests });
 });
 
 // Full evidence for a submission (photo can be large, not included in queue list)

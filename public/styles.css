@@ -487,6 +487,7 @@ button.tiny { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
 .planner-task[draggable] { cursor: grab; }
 .planner-task[draggable]:active { cursor: grabbing; }
 .planner-task.dragging { opacity: 0.35; }
+.planner-test-badge { background: color-mix(in srgb, var(--accent) 18%, var(--card)); border-left: 3px solid var(--accent); font-size: 0.78rem; cursor: default; pointer-events: none; }
 .planner-tasks.drop-target {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-radius: 8px;
@@ -724,3 +725,10 @@ body.theme-pink   { --accent: #d45d8a; --accent-dark: #b4487a; --bg: #fff0f5; }
 .theme-swatch.theme-purple { background: #7c5cbf; }
 .theme-swatch.theme-orange { background: #e8802a; }
 .theme-swatch.theme-pink   { background: #d45d8a; }
+
+/* ---------- student portal: test history ---------- */
+.thr-heading { margin: 1.5rem 0 0.5rem; font-size: 1rem; }
+.test-history-row { display: flex; gap: 0.75rem; align-items: baseline; padding: 0.35rem 0; border-bottom: 1px solid var(--muted); font-size: 0.9rem; flex-wrap: wrap; }
+.thr-date { color: var(--muted); min-width: 6rem; flex-shrink: 0; }
+.thr-list { flex: 1; min-width: 8rem; }
+.thr-score { margin-left: auto; font-weight: 600; white-space: nowrap; }

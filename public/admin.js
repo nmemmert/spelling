@@ -844,15 +844,21 @@ function attachPlannerEvents() {
   );
 }
 
-function renderDayCell(day, tasks, compact = false) {
+function renderDayCell(day, tasks, compact = false, spellingTests = []) {
   const dayTasks = tasks.filter((t) => t.date === day.date);
+  const dayTests = spellingTests.filter((t) => t.date === day.date);
+  const testBadges = dayTests.map((t) => {
+    const pct = Math.round((t.score / t.total) * 100);
+    return `<div class="planner-task planner-test-badge" title="${esc(t.list)}">⭐ Spelling ${t.score}/${t.total} (${pct}%)</div>`;
+  }).join('');
   return `<div class="planner-day${compact ? ' planner-day-compact' : ''}" data-drop-date="${day.date}">
     <h3>${compact ? day.name.slice(0,3) : day.name}<small>${compact ? day.date.slice(5) : day.date}</small></h3>
     <div class="planner-tasks" data-drop-date="${day.date}">
+      ${testBadges}
       ${dayTasks.map((t) => `<div class="planner-task ${t.done ? 'done' : ''}" draggable="true" data-task-id="${t.id}">
         <span>${t.itemId ? TYPE_ICON[t.type] : '📌'} ${esc(t.itemTitle || t.offlineTitle)}</span>
         <button class="danger tiny" data-del-schedule="${t.id}">✕</button>
-      </div>`).join('') || `<p class="hint tiny">—</p>`}
+      </div>`).join('') || (!testBadges ? `<p class="hint tiny">—</p>` : '')}
     </div>
     <button class="secondary small" data-add-task="${day.date}">+ Add</button>
     <div class="add-task-form" data-form-for="${day.date}" hidden></div>
@@ -878,22 +884,28 @@ async function renderPlanner() {
     }
     const rangeStart = weeks[0][0].date;
     const rangeEnd = weeks[weeks.length - 1][4].date;
-    const { tasks } = await api(`/api/schedule-range/${plannerStudentId}?start=${rangeStart}&end=${rangeEnd}`);
+    const [{ tasks }, { tests: spellingTests }] = await Promise.all([
+      api(`/api/schedule-range/${plannerStudentId}?start=${rangeStart}&end=${rangeEnd}`),
+      api(`/api/admin/students/${plannerStudentId}/tests-range?from=${rangeStart}&to=${rangeEnd}`),
+    ]);
 
     $('#planner-week-label').textContent = monthLabel(plannerMonthRef);
     $('#planner-grid').className = 'planner-grid planner-month';
     $('#planner-grid').innerHTML =
       `<div class="planner-month-header">${DAY_NAMES.map((d) => `<div>${d.slice(0,3)}</div>`).join('')}</div>` +
       weeks.map((week) =>
-        `<div class="planner-month-row">${week.map((day) => renderDayCell(day, tasks, true)).join('')}</div>`
+        `<div class="planner-month-row">${week.map((day) => renderDayCell(day, tasks, true, spellingTests)).join('')}</div>`
       ).join('');
   } else {
     const end = addDays(plannerWeekStart, 4);
     $('#planner-week-label').textContent = `${plannerWeekStart} → ${end}`;
-    const { tasks } = await api(`/api/schedule-week/${plannerStudentId}?start=${plannerWeekStart}`);
+    const [{ tasks }, { tests: spellingTests }] = await Promise.all([
+      api(`/api/schedule-week/${plannerStudentId}?start=${plannerWeekStart}`),
+      api(`/api/admin/students/${plannerStudentId}/tests-range?from=${plannerWeekStart}&to=${end}`),
+    ]);
     const days = DAY_NAMES.map((name, i) => ({ name, date: addDays(plannerWeekStart, i) }));
     $('#planner-grid').className = 'planner-grid';
-    $('#planner-grid').innerHTML = days.map((day) => renderDayCell(day, tasks)).join('');
+    $('#planner-grid').innerHTML = days.map((day) => renderDayCell(day, tasks, false, spellingTests)).join('');
   }
 
   attachPlannerEvents();
@@ -1215,7 +1227,8 @@ async function loadGradebookPanel() {
 }
 
 async function loadSpellingTests() {
-  const { students } = await api('/api/spelling-tests');
+  const since = $('#spelling-tests-since').value;
+  const { students } = await api(since ? `/api/spelling-tests?since=${since}` : '/api/spelling-tests');
   const container = $('#spelling-tests-table');
   const active = students.filter((s) => s.tests.length > 0);
   if (!active.length) {
@@ -1247,6 +1260,11 @@ $('#gradebook-course').addEventListener('change', () => renderGradebook($('#grad
 $('#gradebook-csv-btn').addEventListener('click', () => {
   if (!gradebookCourseId) return;
   window.location.href = `/api/gradebook/${gradebookCourseId}/csv`;
+});
+$('#spelling-tests-since').addEventListener('change', loadSpellingTests);
+$('#spelling-tests-csv-btn').addEventListener('click', () => {
+  const since = $('#spelling-tests-since').value;
+  window.location.href = `/api/spelling-tests/csv${since ? '?since=' + since : ''}`;
 });
 $('#history-modal-close').addEventListener('click', () => { $('#history-modal').hidden = true; });
 

@@ -238,10 +238,11 @@ function switchTab(name) {
 }
 
 async function openKid(id, tab = 'today') {
-  const [state, agenda, courses] = await Promise.all([
+  const [state, agenda, courses, { tests: recentTests }] = await Promise.all([
     api(`/api/state/${id}`),
     api(`/api/schedule/${id}?date=${todayStr()}`),
     api(`/api/courses/mine/${id}`),
+    api(`/api/students/${id}/tests`),
   ]);
   currentStudent = state.student;
   applyTheme(currentStudent.theme || 'blue');
@@ -261,7 +262,7 @@ async function openKid(id, tab = 'today') {
 
   renderToday(agenda.tasks);
   renderCourseCards(courses);
-  renderSpellingTab(state);
+  renderSpellingTab(state, recentTests);
 
   show('kid');
   switchTab(tab);
@@ -433,7 +434,7 @@ function renderCourseCards(courses) {
 let currentSpellingListId = null;
 let currentSpellingListName = '';
 
-function renderSpellingTab(state) {
+function renderSpellingTab(state, tests = []) {
   let html;
   if (state.assignment) {
     const { mastered, total } = state.listProgress;
@@ -452,6 +453,21 @@ function renderSpellingTab(state) {
   $('#kid-week').innerHTML = html;
   $('#btn-test').disabled = !state.assignment;
   $('#btn-print-list').disabled = !state.assignment;
+
+  const histEl = $('#kid-test-history');
+  if (!tests.length) {
+    histEl.innerHTML = '';
+  } else {
+    const rows = tests.map((t) => {
+      const pct = Math.round((t.score / t.total) * 100);
+      return `<div class="test-history-row">
+        <span class="thr-date">${new Date(t.at + 'Z').toLocaleDateString()}</span>
+        <span class="thr-list">${esc(t.list)}</span>
+        <span class="thr-score ${pct >= 80 ? 'score-good' : 'score-bad'}">${t.score}/${t.total} (${pct}%)</span>
+      </div>`;
+    }).join('');
+    histEl.innerHTML = `<h3 class="thr-heading">Recent Tests</h3>${rows}`;
+  }
 }
 
 $('#btn-print-list').addEventListener('click', async () => {
