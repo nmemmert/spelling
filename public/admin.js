@@ -6,6 +6,7 @@ const esc = (s) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
 
+sessionStorage.removeItem('pin');
 let parentPin = null;
 
 async function api(path, opts = {}) {
