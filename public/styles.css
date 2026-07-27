@@ -355,14 +355,27 @@ table.results tr:nth-child(even) td { background: #faf7ee; }
 .archived-badge { background: #e8e2d0; color: var(--muted); font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 999px; }
 
 /* ---------- list/deck groups ---------- */
-.list-group { margin-bottom: 0.75rem; }
+.list-group { margin-bottom: 1rem; }
 .list-group-header {
-  font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.06em; color: var(--muted);
-  padding: 0.5rem 0.25rem 0.2rem;
-  border-bottom: 1.5px solid #e8e2d0;
-  margin-bottom: 0.25rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: #5a5240;
+  background: #e8e2d0;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  margin-bottom: 0.4rem;
+  cursor: pointer; user-select: none; list-style: none;
+  transition: background 0.15s;
 }
+.list-group-header:hover { background: #ddd7c6; }
+.list-group-header::-webkit-details-marker { display: none; }
+.list-group-header::before {
+  content: '▼';
+  font-size: 0.75rem;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.list-group:not([open]) .list-group-header::before { transform: rotate(-90deg); }
 
 /* ---------- roster chips ---------- */
 #cd-roster { display: flex; flex-wrap: wrap; gap: 0.5rem; }

@@ -1324,10 +1324,12 @@ function renderGroupSections(groups, renderItem) {
   const ungrouped = groups[''] || [];
   let html = '';
   for (const g of named) {
-    html += `<div class="list-group"><div class="list-group-header">${esc(g)}</div>${groups[g].map(renderItem).join('')}</div>`;
+    html += `<details class="list-group" open><summary class="list-group-header">${esc(g)}</summary>${groups[g].map(renderItem).join('')}</details>`;
   }
   if (ungrouped.length) {
-    html += `<div class="list-group">${named.length ? '<div class="list-group-header">Ungrouped</div>' : ''}${ungrouped.map(renderItem).join('')}</div>`;
+    html += named.length
+      ? `<details class="list-group" open><summary class="list-group-header">Ungrouped</summary>${ungrouped.map(renderItem).join('')}</details>`
+      : ungrouped.map(renderItem).join('');
   }
   return html || '<p class="hint">None yet.</p>';
 }
