@@ -300,6 +300,10 @@
             <h2>This week's list per kid</h2>
             <div id="assign-rows"></div>
             <h2>Word lists</h2>
+            <div class="filter-bar">
+              <input id="list-filter" type="search" placeholder="Filter lists…" aria-label="Filter lists">
+              <button type="button" id="list-show-hidden" class="secondary small" hidden>Show hidden</button>
+            </div>
             <div id="list-rows"></div>
             <h2>Test results</h2>
             <div id="results-area"></div>
@@ -347,6 +351,9 @@
         <h1>Flashcard Decks</h1>
         <div class="panel-cols">
           <div class="panel-col">
+            <div class="filter-bar">
+              <input id="deck-filter" type="search" placeholder="Filter decks…" aria-label="Filter decks">
+            </div>
             <div id="deck-rows"></div>
           </div>
           <div class="panel-col">
@@ -435,6 +442,12 @@
 
       <p id="admin-msg" class="hint"></p>
     </main>
+  </div>
+
+  <!-- Floating assign popup -->
+  <div id="assign-popup" hidden>
+    <p class="assign-popup-label">Assign to…</p>
+    <div id="assign-popup-students"></div>
   </div>
 
   <script src="admin.js"></script>

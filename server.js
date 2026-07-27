@@ -436,6 +436,15 @@ app.get('/api/overview', requirePin, (req, res) => {
     s.mastered = db.prepare(
       `SELECT COUNT(*) AS n FROM progress WHERE student_id = ? AND box >= ${MASTERED_BOX}`
     ).get(s.id).n;
+    if (s.assignment) {
+      s.listProgress = db.prepare(`
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN COALESCE(p.box, 0) >= ${MASTERED_BOX} THEN 1 ELSE 0 END) AS mastered
+        FROM words w
+        LEFT JOIN progress p ON p.word_id = w.id AND p.student_id = ?
+        WHERE w.list_id = ?
+      `).get(s.id, s.assignment.id);
+    }
     s.tests = db.prepare(`
       SELECT t.id, t.score, t.total, t.at, l.name AS list
       FROM tests t JOIN lists l ON l.id = t.list_id

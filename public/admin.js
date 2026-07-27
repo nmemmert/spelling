@@ -1274,9 +1274,11 @@ async function renderGradebook(courseId) {
 // Spelling (word lists + weekly assignment + results)
 // ============================================================
 
+let cachedStudents = [];
 async function loadSpelling() {
   const [overview, lists] = await Promise.all([api('/api/overview'), api('/api/lists')]);
   cachedLists = lists;
+  cachedStudents = overview.students;
   renderAssignRows(overview.students);
   renderLists(lists);
   renderResults(overview.students);
@@ -1287,16 +1289,20 @@ function renderAssignRows(students) {
     `<option value="">— no list —</option>` +
     cachedLists.map((l) => `<option value="${l.id}" ${sel === l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
   $('#assign-rows').innerHTML = students.length
-    ? students
-        .map(
-          (s) => `<div class="item-row">
-            <span>${esc(s.emoji)}</span>
-            <strong class="grow">${esc(s.name)}</strong>
-            <span>🌟 ${s.mastered} mastered</span>
-            <label>This week: <select data-assign="${s.id}">${options(s.assignment?.id)}</select></label>
-          </div>`
-        )
-        .join('')
+    ? students.map((s) => {
+        const lp = s.listProgress;
+        const progressHtml = lp
+          ? `<span class="mastery-stat">${lp.mastered}/${lp.total} mastered
+              <span class="mastery-bar"><span class="mastery-fill" style="width:${lp.total ? Math.round((lp.mastered/lp.total)*100) : 0}%"></span></span>
+             </span>`
+          : `<span class="mastery-stat">No list assigned</span>`;
+        return `<div class="item-row">
+          <span>${esc(s.emoji)}</span>
+          <strong class="grow">${esc(s.name)}</strong>
+          ${progressHtml}
+          <label>This week: <select data-assign="${s.id}">${options(s.assignment?.id)}</select></label>
+        </div>`;
+      }).join('')
     : `<p class="hint">No kids yet.</p>`;
 
   document.querySelectorAll('[data-assign]').forEach((sel) =>
@@ -1334,28 +1340,51 @@ function renderGroupSections(groups, renderItem) {
   return html || '<p class="hint">None yet.</p>';
 }
 
-function renderLists(lists) {
-  const groups = groupByName(lists);
+const hiddenLists = new Set(JSON.parse(localStorage.getItem('hiddenLists') || '[]'));
+function saveHiddenLists() { localStorage.setItem('hiddenLists', JSON.stringify([...hiddenLists])); }
+
+function renderLists(lists, filterText = '') {
+  const q = filterText.toLowerCase();
+  const visible = lists.filter((l) => !hiddenLists.has(l.id) && (!q || l.name.toLowerCase().includes(q)));
+  const hidden  = lists.filter((l) => hiddenLists.has(l.id) && (!q || l.name.toLowerCase().includes(q)));
+
+  const showHiddenBtn = $('#list-show-hidden');
+  showHiddenBtn.hidden = hidden.length === 0;
+  showHiddenBtn.textContent = showHiddenBtn.dataset.showing === '1'
+    ? `Hide hidden (${hidden.length})`
+    : `Show hidden (${hidden.length})`;
+
+  const displayList = showHiddenBtn.dataset.showing === '1' ? [...visible, ...hidden] : visible;
+
+  const groups = groupByName(displayList);
   const groupNames = Object.keys(groups).filter((k) => k).sort();
   $('#list-groups-datalist').innerHTML = groupNames.map((g) => `<option value="${esc(g)}">`).join('');
 
-  const renderItem = (l) => `<div class="item-row">
-        <strong class="grow">${esc(l.name)}</strong>
-        <span>${l.wordCount} words${l.builtin ? ' · built-in' : ''}</span>
-        <button class="secondary small" data-print-list="${l.id}">🖨 Worksheet</button>
-        <button data-edit-list="${l.id}">${l.builtin ? 'Copy & edit' : 'Edit'}</button>
-        <button class="danger" data-del-list="${l.id}">Delete</button>
-      </div>`;
+  const renderItem = (l) => {
+    const isHidden = hiddenLists.has(l.id);
+    return `<div class="item-row${isHidden ? ' list-hidden-item' : ''}">
+      <strong class="grow">${esc(l.name)}</strong>
+      <span class="muted-label">${l.wordCount} words${l.builtin ? ' · built-in' : ''}</span>
+      <button class="secondary small" data-assign-list="${l.id}">Assign →</button>
+      ${l.builtin ? '' : `<button class="secondary small" data-print-list="${l.id}">🖨 Worksheet</button>`}
+      <button class="small" data-edit-list="${l.id}">${l.builtin ? 'Copy & edit' : 'Edit'}</button>
+      ${l.builtin
+        ? `<button class="secondary small" data-hide-list="${l.id}">${isHidden ? 'Unhide' : 'Hide'}</button>`
+        : `<button class="danger small" data-del-list="${l.id}">Delete</button>`}
+    </div>`;
+  };
 
   $('#list-rows').innerHTML = renderGroupSections(groups, renderItem);
 
+  document.querySelectorAll('[data-assign-list]').forEach((btn) =>
+    btn.addEventListener('click', (e) => openAssignPopup(e, Number(btn.dataset.assignList)))
+  );
   document.querySelectorAll('[data-print-list]').forEach((btn) =>
     btn.addEventListener('click', async () => {
       const list = await api(`/api/lists/${btn.dataset.printList}`);
       printSpellingWorksheet(list.name, list.words);
     })
   );
-
   document.querySelectorAll('[data-edit-list]').forEach((btn) =>
     btn.addEventListener('click', async () => {
       const list = await api(`/api/lists/${btn.dataset.editList}`);
@@ -1379,7 +1408,47 @@ function renderLists(lists) {
       loadSpelling();
     })
   );
+  document.querySelectorAll('[data-hide-list]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const id = Number(btn.dataset.hideList);
+      if (hiddenLists.has(id)) hiddenLists.delete(id); else hiddenLists.add(id);
+      saveHiddenLists();
+      renderLists(cachedLists, $('#list-filter').value);
+    })
+  );
 }
+
+// Filter input
+$('#list-filter').addEventListener('input', () => renderLists(cachedLists, $('#list-filter').value));
+$('#list-show-hidden').addEventListener('click', () => {
+  const btn = $('#list-show-hidden');
+  btn.dataset.showing = btn.dataset.showing === '1' ? '0' : '1';
+  renderLists(cachedLists, $('#list-filter').value);
+});
+
+// ---- Assign popup ----
+function openAssignPopup(e, listId) {
+  const popup = $('#assign-popup');
+  $('#assign-popup-students').innerHTML = cachedStudents.map((s) =>
+    `<button class="assign-popup-student" data-sid="${s.id}" data-lid="${listId}">${esc(s.emoji)} ${esc(s.name)}</button>`
+  ).join('');
+  document.querySelectorAll('.assign-popup-student').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      await api('/api/assign', { method: 'POST', body: { studentId: Number(btn.dataset.sid), listId: Number(btn.dataset.lid) } });
+      popup.hidden = true;
+      msg(`Assigned!`);
+      loadSpelling();
+    })
+  );
+  const rect = e.target.getBoundingClientRect();
+  popup.style.top = `${rect.bottom + window.scrollY + 4}px`;
+  popup.style.left = `${rect.left + window.scrollX}px`;
+  popup.hidden = false;
+}
+document.addEventListener('click', (e) => {
+  if (!$('#assign-popup').hidden && !e.target.closest('#assign-popup') && !e.target.dataset.assignList)
+    $('#assign-popup').hidden = true;
+});
 
 $('#list-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -1563,7 +1632,13 @@ async function printSpellingReport(testId) {
 async function loadDecks() {
   const decks = await api('/api/decks');
   cachedDecks = decks;
-  const groups = groupByName(decks);
+  renderDecks(decks, $('#deck-filter').value);
+}
+
+function renderDecks(decks, filterText = '') {
+  const q = filterText.toLowerCase();
+  const visible = decks.filter((d) => !q || d.name.toLowerCase().includes(q));
+  const groups = groupByName(visible);
   const groupNames = Object.keys(groups).filter((k) => k).sort();
   $('#deck-groups-datalist').innerHTML = groupNames.map((g) => `<option value="${esc(g)}">`).join('');
 
@@ -1596,6 +1671,8 @@ async function loadDecks() {
     })
   );
 }
+
+$('#deck-filter').addEventListener('input', () => renderDecks(cachedDecks, $('#deck-filter').value));
 
 $('#deck-form').addEventListener('submit', async (e) => {
   e.preventDefault();

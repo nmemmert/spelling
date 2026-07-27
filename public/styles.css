@@ -220,6 +220,7 @@ button.danger { background: var(--bad); }
   flex-wrap: wrap;
 }
 .item-row .grow { flex: 1; min-width: 120px; }
+.muted-label { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
 .item-row select { padding: 0.4rem; border-radius: 8px; border: 2px solid #d8d2c0; font-family: inherit; }
 .item-row button {
   font-size: 0.9rem; font-family: inherit; border: none; border-radius: 8px;
@@ -337,6 +338,37 @@ table.results tr:nth-child(even) td { background: #faf7ee; }
 .admin-main h1 { margin-bottom: 1rem; clear: both; }
 .admin-main h2 { margin: 1.5rem 0 0.5rem; font-size: 1.15rem; }
 .panel { text-align: left; }
+
+/* ---------- filter bar ---------- */
+.filter-bar { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.filter-bar input[type="search"] {
+  flex: 1; font-family: inherit; font-size: 0.95rem;
+  padding: 0.4rem 0.7rem; border: 2px solid #d8d2c0; border-radius: 10px;
+}
+
+/* ---------- mastery progress ---------- */
+.mastery-stat { font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.mastery-bar { display: inline-block; width: 70px; height: 7px; background: #e8e2d0; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+.mastery-fill { display: block; height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
+
+/* ---------- assign popup ---------- */
+#assign-popup {
+  position: absolute; z-index: 200;
+  background: var(--card); border: 2px solid #d8d2c0; border-radius: 12px;
+  padding: 0.6rem; box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+  min-width: 160px;
+}
+.assign-popup-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 0.4rem; }
+#assign-popup-students { display: flex; flex-direction: column; gap: 0.3rem; }
+.assign-popup-student {
+  font-size: 0.95rem; font-family: inherit; font-weight: 600;
+  background: #f5f1e8; color: var(--ink); border: none;
+  border-radius: 8px; padding: 0.45rem 0.8rem; cursor: pointer; text-align: left;
+}
+.assign-popup-student:hover { background: var(--accent); color: #fff; }
+
+/* ---------- hidden list items ---------- */
+.list-hidden-item { opacity: 0.45; }
 
 /* ---------- toggle button rows (new/bulk import) ---------- */
 .toggle-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
