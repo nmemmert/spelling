@@ -298,6 +298,21 @@
           </form>
         </details>
 
+        <details id="list-bulk-details">
+          <summary>Bulk import lists</summary>
+          <div class="admin-card">
+            <p class="hint" style="margin:0 0 0.5rem">Start each list with <strong># List name</strong> on its own line, then words below it. Optional group applies to all imported lists.</p>
+            <input id="list-bulk-group" placeholder="Group (e.g. Bible 6) — optional" aria-label="Group for bulk import" list="list-groups-datalist">
+            <textarea id="list-bulk-text" rows="12"
+              placeholder="# Week 1&#10;because&#10;enough&#10;friend&#10;&#10;# Week 2&#10;receive | Did you receive my letter?&#10;achieve&#10;believe"></textarea>
+            <div class="row-actions">
+              <button type="button" id="list-bulk-save">Import all lists</button>
+              <button type="button" id="list-bulk-clear" class="secondary">Clear</button>
+            </div>
+            <p id="list-bulk-status" class="hint" style="margin:0.4rem 0 0"></p>
+          </div>
+        </details>
+
         <h2>Test results</h2>
         <div id="results-area"></div>
       </section>
@@ -320,6 +335,21 @@
               <button type="button" id="deck-cancel" class="secondary">Clear</button>
             </div>
           </form>
+        </details>
+
+        <details id="deck-bulk-details">
+          <summary>Bulk import decks</summary>
+          <div class="admin-card">
+            <p class="hint" style="margin:0 0 0.5rem">Start each deck with <strong># Deck name</strong> on its own line, then cards below as <strong>front | back</strong>. Optional group applies to all imported decks.</p>
+            <input id="deck-bulk-group" placeholder="Group (e.g. Bible 6) — optional" aria-label="Group for bulk import" list="deck-groups-datalist">
+            <textarea id="deck-bulk-text" rows="12"
+              placeholder="# Chapter 1 Vocab&#10;What is photosynthesis? | The process plants use to make food&#10;What does chlorophyll do? | Absorbs light&#10;&#10;# Chapter 2 Vocab&#10;What is mitosis? | Cell division producing identical cells"></textarea>
+            <div class="row-actions">
+              <button type="button" id="deck-bulk-save">Import all decks</button>
+              <button type="button" id="deck-bulk-clear" class="secondary">Clear</button>
+            </div>
+            <p id="deck-bulk-status" class="hint" style="margin:0.4rem 0 0"></p>
+          </div>
         </details>
       </section>
 

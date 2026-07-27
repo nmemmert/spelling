@@ -1410,6 +1410,49 @@ function clearListForm() {
   $('#list-editor-title').textContent = 'New list';
 }
 
+function parseBulkSections(text) {
+  const sections = [];
+  let current = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (line.startsWith('#')) {
+      if (current) sections.push(current);
+      current = { name: line.replace(/^#+\s*/, ''), lines: [] };
+    } else if (current && line) {
+      current.lines.push(line);
+    }
+  }
+  if (current) sections.push(current);
+  return sections;
+}
+
+$('#list-bulk-save').addEventListener('click', async () => {
+  const groupName = $('#list-bulk-group').value.trim();
+  const sections = parseBulkSections($('#list-bulk-text').value);
+  if (sections.length === 0) return ($('#list-bulk-status').textContent = 'Paste at least one # Section with words below it.');
+  const statusEl = $('#list-bulk-status');
+  statusEl.textContent = `Importing ${sections.length} list(s)…`;
+  let done = 0;
+  for (const sec of sections) {
+    const words = sec.lines.map((line) => {
+      const [word, sentence = ''] = line.split('|').map((p) => p.trim());
+      return { word, sentence };
+    }).filter((w) => w.word);
+    if (!words.length) continue;
+    await api('/api/lists', { method: 'POST', body: { name: sec.name, words, groupName } });
+    done++;
+    statusEl.textContent = `Imported ${done} of ${sections.length}…`;
+  }
+  statusEl.textContent = `Done! ${done} list(s) imported.`;
+  $('#list-bulk-text').value = '';
+  loadSpelling();
+});
+$('#list-bulk-clear').addEventListener('click', () => {
+  $('#list-bulk-text').value = '';
+  $('#list-bulk-group').value = '';
+  $('#list-bulk-status').textContent = '';
+});
+
 function renderResults(students) {
   $('#results-area').innerHTML = students
     .map((s) => {
@@ -1558,6 +1601,33 @@ function clearDeckForm() {
   $('#deck-cards').value = '';
   $('#deck-editor-title').textContent = 'New deck';
 }
+
+$('#deck-bulk-save').addEventListener('click', async () => {
+  const groupName = $('#deck-bulk-group').value.trim();
+  const sections = parseBulkSections($('#deck-bulk-text').value);
+  if (sections.length === 0) return ($('#deck-bulk-status').textContent = 'Paste at least one # Section with cards below it.');
+  const statusEl = $('#deck-bulk-status');
+  statusEl.textContent = `Importing ${sections.length} deck(s)…`;
+  let done = 0;
+  for (const sec of sections) {
+    const cards = sec.lines.map((line) => {
+      const [front, back = ''] = line.split('|').map((p) => p.trim());
+      return { front, back };
+    }).filter((c) => c.front);
+    if (!cards.length) continue;
+    await api('/api/decks', { method: 'POST', body: { name: sec.name, cards, groupName } });
+    done++;
+    statusEl.textContent = `Imported ${done} of ${sections.length}…`;
+  }
+  statusEl.textContent = `Done! ${done} deck(s) imported.`;
+  $('#deck-bulk-text').value = '';
+  loadDecks();
+});
+$('#deck-bulk-clear').addEventListener('click', () => {
+  $('#deck-bulk-text').value = '';
+  $('#deck-bulk-group').value = '';
+  $('#deck-bulk-status').textContent = '';
+});
 
 // ============================================================
 // Settings
