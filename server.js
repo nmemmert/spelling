@@ -968,6 +968,19 @@ app.get('/api/gradebook/:courseId/csv', requirePin, (req, res) => {
   res.send([header, ...rows].map((r) => r.join(',')).join('\n'));
 });
 
+// All standalone spelling test results grouped by student
+app.get('/api/spelling-tests', requirePin, (req, res) => {
+  const students = db.prepare(`SELECT id, name, emoji FROM students ORDER BY name`).all();
+  for (const s of students) {
+    s.tests = db.prepare(`
+      SELECT t.id, t.score, t.total, t.at, l.name AS list
+      FROM tests t JOIN lists l ON l.id = t.list_id
+      WHERE t.student_id = ? ORDER BY t.at DESC LIMIT 20
+    `).all(s.id);
+  }
+  res.json({ students });
+});
+
 // Full evidence for a submission (photo can be large, not included in queue list)
 app.get('/api/grading-queue/:id/evidence', requirePin, (req, res) => {
   const row = db.prepare(`SELECT evidence_notes, evidence_photo FROM submissions WHERE id = ?`).get(req.params.id);

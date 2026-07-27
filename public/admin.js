@@ -1211,6 +1211,37 @@ async function loadGradebookPanel() {
   const courses = await api('/api/admin/courses');
   $('#gradebook-course').innerHTML = courses.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   if (courses.length) renderGradebook(courses[0].id);
+  loadSpellingTests();
+}
+
+async function loadSpellingTests() {
+  const { students } = await api('/api/spelling-tests');
+  const container = $('#spelling-tests-table');
+  const active = students.filter((s) => s.tests.length > 0);
+  if (!active.length) {
+    container.innerHTML = `<p class="hint">No spelling tests recorded yet.</p>`;
+    return;
+  }
+  container.innerHTML = active
+    .map((s) => {
+      const rows = s.tests
+        .map((t) => {
+          const pct = Math.round((t.score / t.total) * 100);
+          return `<tr>
+            <td>${new Date(t.at + 'Z').toLocaleDateString()}</td>
+            <td>${esc(t.list)}</td>
+            <td class="${pct >= 80 ? 'score-good' : 'score-bad'}">${t.score}/${t.total} (${pct}%)</td>
+            <td><button data-print="${t.id}">🖨 Print</button></td>
+          </tr>`;
+        })
+        .join('');
+      return `<div class="results-student"><h3>${esc(s.emoji)} ${esc(s.name)}</h3>
+        <table class="results"><tr><th>Date</th><th>List</th><th>Score</th><th></th></tr>${rows}</table></div>`;
+    })
+    .join('');
+  container.querySelectorAll('[data-print]').forEach((btn) =>
+    btn.addEventListener('click', () => printSpellingReport(btn.dataset.print))
+  );
 }
 $('#gradebook-course').addEventListener('change', () => renderGradebook($('#gradebook-course').value));
 $('#gradebook-csv-btn').addEventListener('click', () => {
@@ -1281,7 +1312,6 @@ async function loadSpelling() {
   cachedStudents = overview.students;
   renderAssignRows(overview.students);
   renderLists(lists);
-  renderResults(overview.students);
 }
 
 function renderAssignRows(students) {
@@ -1546,28 +1576,6 @@ $('#list-bulk-clear').addEventListener('click', () => {
   $('#list-bulk-status').textContent = '';
 });
 
-function renderResults(students) {
-  $('#results-area').innerHTML = students
-    .map((s) => {
-      if (s.tests.length === 0) return `<div class="results-student"><h3>${esc(s.emoji)} ${esc(s.name)}</h3><p class="hint">No tests yet.</p></div>`;
-      const rows = s.tests
-        .map((t) => {
-          const pct = Math.round((t.score / t.total) * 100);
-          return `<tr>
-            <td>${new Date(t.at + 'Z').toLocaleDateString()}</td>
-            <td>${esc(t.list)}</td>
-            <td class="${pct >= 80 ? 'score-good' : 'score-bad'}">${t.score}/${t.total} (${pct}%)</td>
-            <td><button data-print="${t.id}">🖨 Print</button></td>
-          </tr>`;
-        })
-        .join('');
-      return `<div class="results-student"><h3>${esc(s.emoji)} ${esc(s.name)}</h3>
-        <table class="results"><tr><th>Date</th><th>List</th><th>Score</th><th></th></tr>${rows}</table></div>`;
-    })
-    .join('');
-
-  document.querySelectorAll('[data-print]').forEach((btn) => btn.addEventListener('click', () => printSpellingReport(btn.dataset.print)));
-}
 
 function printSpellingWorksheet(name, words) {
   const rows = words
