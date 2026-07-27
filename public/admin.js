@@ -6,7 +6,7 @@ const esc = (s) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
 
-let parentPin = sessionStorage.getItem('pin') || null;
+let parentPin = null;
 
 async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -51,7 +51,6 @@ $('#pin-form').addEventListener('submit', async (e) => {
   const { ok } = await api('/api/parent/verify', { method: 'POST', body: { pin } });
   if (!ok) return ($('#pin-error').hidden = false);
   parentPin = pin;
-  sessionStorage.setItem('pin', pin);
   $('#pin-error').hidden = true;
   unlock();
 });
@@ -1833,7 +1832,6 @@ $('#pin-change-form').addEventListener('submit', async (e) => {
   try {
     await api('/api/parent/pin', { method: 'POST', body: { newPin } });
     parentPin = newPin;
-    sessionStorage.setItem('pin', newPin);
     $('#new-pin').value = '';
     msg('PIN changed.');
   } catch (err) {
