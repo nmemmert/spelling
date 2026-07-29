@@ -611,7 +611,12 @@ $('#import-go-btn').addEventListener('click', async () => {
   $('#import-status').textContent = '🔍 Extracting content… this may take a minute.';
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 8192, bytes.length)));
+    }
+    const base64 = btoa(binary);
     const result = await api('/api/admin/import-docx', { method: 'POST', body: { base64, mode } });
     if (!$('#ie-title').value && result.title) $('#ie-title').value = result.title;
     if (mode === 'quiz' && result.questions) {
