@@ -508,34 +508,82 @@ function printSpellingWorksheet(name, words) {
 
 // ---------- course detail ----------
 
+function activeUnitIndex(units) {
+  const today = new Date().toISOString().slice(0, 10);
+  const dated = units.map((u, i) => {
+    const dates = u.items.map((it) => it.due_date).filter(Boolean).sort();
+    return { i, earliest: dates[0] || null, latest: dates[dates.length - 1] || null };
+  }).filter((x) => x.earliest);
+
+  if (dated.length) {
+    const spanning = dated.find((x) => x.earliest <= today && x.latest >= today);
+    if (spanning) return spanning.i;
+    const past = dated.filter((x) => x.latest < today).sort((a, b) => b.latest.localeCompare(a.latest));
+    if (past.length) return past[0].i;
+    const future = dated.filter((x) => x.earliest > today).sort((a, b) => a.earliest.localeCompare(b.earliest));
+    if (future.length) return future[0].i;
+  }
+  const fallback = units.findIndex((u) => u.items.some((it) => it.status === 'not_started' && !it.locked));
+  return fallback >= 0 ? fallback : 0;
+}
+
 async function openCourse(courseId) {
   const course = await api(`/api/courses/${courseId}/detail?studentId=${currentStudent.id}`);
   $('#course-title').textContent = course.name;
+  const activeIdx = activeUnitIndex(course.units);
   $('#course-units').innerHTML = course.units
-    .map(
-      (u) => `<div class="unit-block">
-        <h2>${esc(u.name)}</h2>
-        ${u.items
-          .map((it) => {
-            if (it.locked) {
-              return `<div class="today-row locked">
-                <span class="row-check">🔒</span>
-                <span class="row-title">${esc(it.title)}<small>${TYPE_LABEL[it.type]}</small></span>
-                <span class="row-badge hint">Complete previous item first</span>
-              </div>`;
-            }
-            const badge = statusBadge(it.type, it.status, it.score, it.points_possible, it.status !== 'not_started');
-            const due = it.due_date ? `<small class="due-date">Due ${it.due_date}</small>` : '';
-            return `<button class="today-row" data-item-id="${it.id}" data-item-type="${it.type}">
-              <span class="row-check">${it.status === 'not_started' ? TYPE_ICON[it.type] : '✅'}</span>
-              <span class="row-title">${esc(it.title)}${due}<small>${TYPE_LABEL[it.type]}</small></span>
-              <span class="row-badge">${badge}</span>
-            </button>`;
-          })
-          .join('')}
-      </div>`
-    )
+    .map((u, uIdx) => {
+      const total = u.items.length;
+      const done = u.items.filter((it) => it.status !== 'not_started').length;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      const isOpen = uIdx === activeIdx;
+
+      const itemsHtml = u.items
+        .map((it) => {
+          if (it.locked) {
+            return `<div class="today-row locked">
+              <span class="row-check">🔒</span>
+              <span class="row-title">${esc(it.title)}<small>${TYPE_LABEL[it.type]}</small></span>
+              <span class="row-badge hint">Complete previous item first</span>
+            </div>`;
+          }
+          const badge = statusBadge(it.type, it.status, it.score, it.points_possible, it.status !== 'not_started');
+          const due = it.due_date ? `<small class="due-date">Due ${it.due_date}</small>` : '';
+          return `<button class="today-row" data-item-id="${it.id}" data-item-type="${it.type}">
+            <span class="row-check">${it.status === 'not_started' ? TYPE_ICON[it.type] : '✅'}</span>
+            <span class="row-title">${esc(it.title)}${due}<small>${TYPE_LABEL[it.type]}</small></span>
+            <span class="row-badge">${badge}</span>
+          </button>`;
+        })
+        .join('');
+
+      return `<div class="unit-block${isOpen ? ' open' : ''}">
+        <button class="unit-toggle" type="button" aria-expanded="${isOpen}">
+          <div class="unit-toggle-left">
+            <span class="unit-num-badge">Unit ${uIdx + 1}</span>
+            <span class="unit-title-text">${esc(u.name)}</span>
+          </div>
+          <div class="unit-toggle-right">
+            <span class="unit-done-count">${done}/${total}</span>
+            <div class="progress-track small unit-mini-progress">
+              <div class="progress-fill" style="width:${pct}%"></div>
+            </div>
+            <span class="unit-chevron" aria-hidden="true">▾</span>
+          </div>
+        </button>
+        <div class="unit-items-list">${itemsHtml}</div>
+      </div>`;
+    })
     .join('');
+
+  document.querySelectorAll('#course-units .unit-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const block = btn.closest('.unit-block');
+      const nowOpen = block.classList.toggle('open');
+      btn.setAttribute('aria-expanded', String(nowOpen));
+    });
+  });
+
   document.querySelectorAll('#course-units .today-row:not(.locked)').forEach((row) =>
     row.addEventListener('click', () => {
       backTarget = () => openCourse(courseId);

@@ -235,25 +235,42 @@ async function openCourseDetail(id) {
 
   $('#cd-units').innerHTML = course.units
     .map(
-      (u) => `<div class="unit-block">
-        <div class="unit-header">
-          <h3>${esc(u.name)}</h3>
-          <button class="danger small" data-del-unit="${u.id}">Delete unit</button>
+      (u, uIdx) => `<div class="unit-block open">
+        <div class="unit-toggle">
+          <div class="unit-toggle-left">
+            <span class="unit-num-badge">Unit ${uIdx + 1}</span>
+            <span class="unit-title-text">${esc(u.name)}</span>
+          </div>
+          <div class="unit-toggle-right">
+            <span class="unit-item-count">${u.items.length} item${u.items.length !== 1 ? 's' : ''}</span>
+            <span class="unit-chevron" aria-hidden="true">▾</span>
+            <button class="danger small" data-del-unit="${u.id}">Delete unit</button>
+          </div>
         </div>
-        ${u.items
-          .map(
-            (it) => `<div class="item-row">
-              <span>${TYPE_ICON[it.type]}</span>
-              <span class="grow">${esc(it.title)}</span>
-              <span>${TYPE_LABEL[it.type]}</span>
-              <button data-edit-item="${it.id}" data-unit-id="${u.id}">Edit</button>
-            </div>`
-          )
-          .join('')}
-        <button class="secondary small" data-add-item="${u.id}">+ Add item to this unit</button>
+        <div class="unit-items-list">
+          ${u.items
+            .map(
+              (it) => `<div class="item-row">
+                <span>${TYPE_ICON[it.type]}</span>
+                <span class="grow">${esc(it.title)}</span>
+                <span>${TYPE_LABEL[it.type]}</span>
+                <button data-edit-item="${it.id}" data-unit-id="${u.id}">Edit</button>
+              </div>`
+            )
+            .join('')}
+          <button class="secondary small" data-add-item="${u.id}">+ Add item to this unit</button>
+        </div>
       </div>`
     )
     .join('') || `<p class="hint">No units yet — add one below.</p>`;
+
+  document.querySelectorAll('#cd-units .unit-toggle').forEach((hdr) => {
+    hdr.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      const block = hdr.closest('.unit-block');
+      block.classList.toggle('open');
+    });
+  });
 
   document.querySelectorAll('[data-del-unit]').forEach((btn) =>
     btn.addEventListener('click', async () => {
