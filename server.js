@@ -884,7 +884,8 @@ app.get('/api/gradebook/:courseId', requirePin, (req, res) => {
   if (!course) return res.status(404).json({ error: 'No such course' });
 
   const gradableItems = db.prepare(`
-    SELECT i.id, i.title, i.type, i.points, i.due_date, i.retake_policy
+    SELECT i.id, i.title, i.type, i.points, i.due_date, i.retake_policy,
+           u.id AS unit_id, u.name AS unit_name, u.sort AS unit_sort
     FROM items i JOIN units u ON u.id = i.unit_id
     WHERE u.course_id = ? AND i.type IN (${GRADABLE_TYPES.map(() => '?').join(',')})
     ORDER BY u.sort, i.sort, i.id

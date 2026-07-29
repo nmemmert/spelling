@@ -208,6 +208,14 @@ $('#add-course-form').addEventListener('submit', async (e) => {
 
 async function openCourseDetail(id) {
   if (!id) return showPanel('courses');
+
+  // Preserve unit open/collapsed states and scroll position before re-rendering
+  const existingBlocks = document.querySelectorAll('#cd-units .unit-block');
+  const savedOpen = Array.from(existingBlocks).map((b) => b.classList.contains('open'));
+  const panelVisible = !document.getElementById('panel-course-detail').hidden;
+  const savedScroll = panelVisible && existingBlocks.length ? window.scrollY : 0;
+  const sameCoursePrev = existingBlocks.length > 0 && id === currentCourseId;
+
   const [course, roster] = await Promise.all([
     api(`/api/admin/courses/${id}`),
     api(`/api/courses/${id}/roster`),
@@ -288,6 +296,18 @@ async function openCourseDetail(id) {
   );
 
   $('#cd-print').onclick = () => printCourse(id);
+
+  // Restore which units were open and the scroll position
+  if (sameCoursePrev && savedOpen.length) {
+    document.querySelectorAll('#cd-units .unit-block').forEach((block, i) => {
+      if (i < savedOpen.length) {
+        block.classList.toggle('open', savedOpen[i]);
+        const btn = block.querySelector('.unit-toggle');
+        if (btn) btn.setAttribute('aria-expanded', String(savedOpen[i]));
+      }
+    });
+  }
+  if (savedScroll > 0) requestAnimationFrame(() => window.scrollTo(0, savedScroll));
 
   document.querySelectorAll('.panel').forEach((p) => (p.hidden = p.id !== 'panel-course-detail'));
   document.querySelectorAll('.admin-nav .nav-pill').forEach((p) => p.classList.remove('active'));
@@ -1361,27 +1381,71 @@ async function renderGradebook(courseId) {
     $('#gradebook-table').innerHTML = `<p class="hint">Need at least one enrolled kid and one graded item (assignment, quiz, or spelling test) to show a gradebook.</p>`;
     return;
   }
-  const header = gb.gradableItems.map((it) => {
-    const due = it.due_date ? `<br><small class="hint">due ${it.due_date}</small>` : '';
-    return `<th>${esc(it.title)}<br><small>${it.points} pts</small>${due}</th>`;
+
+  // Group items by unit (preserving unit order from the API)
+  const unitMap = new Map();
+  for (const it of gb.gradableItems) {
+    if (!unitMap.has(it.unit_id)) unitMap.set(it.unit_id, { id: it.unit_id, name: it.unit_name, items: [] });
+    unitMap.get(it.unit_id).items.push(it);
+  }
+  const units = Array.from(unitMap.values());
+
+  const unitBlocks = units.map((u, uIdx) => {
+    const header = u.items.map((it) => {
+      const due = it.due_date ? `<br><small class="hint">due ${it.due_date}</small>` : '';
+      return `<th>${esc(it.title)}<br><small>${it.points} pts</small>${due}</th>`;
+    }).join('');
+
+    const rows = gb.students.map((s) => {
+      const cells = u.items.map((it) => {
+        const sc = s.scores[it.id];
+        const overdueClass = sc?.overdue ? ' overdue' : '';
+        if (!sc || (!sc.status && !sc.overdue)) return `<td class="hint">—</td>`;
+        if (sc.overdue && !sc.status) return `<td class="hint overdue" title="Overdue">⚠️</td>`;
+        if (sc.status !== 'graded') return `<td class="hint${overdueClass}">${sc.overdue ? '⚠️ ' : ''}⏳</td>`;
+        return `<td class="${sc.score / sc.points_possible >= 0.8 ? 'score-good' : 'score-bad'}${overdueClass}" style="cursor:pointer" data-history-student="${s.id}" data-history-item="${it.id}" data-history-label="${esc(it.title)} — ${esc(s.name)}">${sc.score}/${sc.points_possible}</td>`;
+      }).join('');
+      return `<tr><td>${esc(s.emoji)} ${esc(s.name)}</td>${cells}</tr>`;
+    }).join('');
+
+    return `<div class="unit-block open">
+      <button class="unit-toggle" type="button" aria-expanded="true">
+        <div class="unit-toggle-left">
+          <span class="unit-num-badge">Unit ${uIdx + 1}</span>
+          <span class="unit-title-text">${esc(u.name)}</span>
+        </div>
+        <div class="unit-toggle-right">
+          <span class="unit-item-count">${u.items.length} item${u.items.length !== 1 ? 's' : ''}</span>
+          <span class="unit-chevron" aria-hidden="true">▾</span>
+        </div>
+      </button>
+      <div class="unit-items-list">
+        <div style="overflow-x:auto">
+          <table class="results"><tr><th>Kid</th>${header}</tr>${rows}</table>
+        </div>
+      </div>
+    </div>`;
   }).join('');
-  const rows = gb.students
-    .map((s) => {
-      const cells = gb.gradableItems
-        .map((it) => {
-          const sc = s.scores[it.id];
-          const overdueClass = sc?.overdue ? ' overdue' : '';
-          if (!sc || (!sc.status && !sc.overdue)) return `<td class="hint">—</td>`;
-          if (sc.overdue && !sc.status) return `<td class="hint overdue" title="Overdue">⚠️</td>`;
-          if (sc.status !== 'graded') return `<td class="hint${overdueClass}">${sc.overdue ? '⚠️ ' : ''}⏳</td>`;
-          return `<td class="${sc.score / sc.points_possible >= 0.8 ? 'score-good' : 'score-bad'}${overdueClass}" style="cursor:pointer" data-history-student="${s.id}" data-history-item="${it.id}" data-history-label="${esc(it.title)} — ${esc(s.name)}">${sc.score}/${sc.points_possible}</td>`;
-        })
-        .join('');
-      const pctClass = s.percent === null ? '' : s.percent >= 80 ? 'score-good' : 'score-bad';
-      return `<tr><td>${esc(s.emoji)} ${esc(s.name)}</td>${cells}<td class="${pctClass}">${s.percent === null ? '—' : s.percent + '%'}</td></tr>`;
-    })
-    .join('');
-  $('#gradebook-table').innerHTML = `<table class="results"><tr><th>Kid</th>${header}<th>Overall</th></tr>${rows}</table>`;
+
+  // Overall course summary
+  const overallRows = gb.students.map((s) => {
+    const pctClass = s.percent === null ? '' : s.percent >= 80 ? 'score-good' : 'score-bad';
+    return `<tr><td>${esc(s.emoji)} ${esc(s.name)}</td><td class="${pctClass}">${s.percent === null ? '—' : s.percent + '%'}</td></tr>`;
+  }).join('');
+
+  $('#gradebook-table').innerHTML = `<div class="gb-units">${unitBlocks}</div>
+    <div class="gb-overall">
+      <strong>Course overall</strong>
+      <table class="results"><tr><th>Kid</th><th>%</th></tr>${overallRows}</table>
+    </div>`;
+
+  document.querySelectorAll('#gradebook-table .unit-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const block = btn.closest('.unit-block');
+      const nowOpen = block.classList.toggle('open');
+      btn.setAttribute('aria-expanded', String(nowOpen));
+    });
+  });
 
   document.querySelectorAll('[data-history-student]').forEach((td) =>
     td.addEventListener('click', () => showHistory(td.dataset.historyStudent, td.dataset.historyItem, td.dataset.historyLabel))
