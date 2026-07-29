@@ -504,7 +504,8 @@ $('#rte-youtube-btn').addEventListener('click', () => {
 let scanImageBase64 = null;
 
 function resetImportSection() {
-  $('#import-file-select').innerHTML = '<option value="">— choose a file —</option>';
+  $('#import-local-input').value = '';
+  $('#import-local-name').textContent = '';
   $('#import-go-btn').disabled = true;
   $('#import-status').textContent = '';
 }
@@ -590,41 +591,28 @@ $('#scan-go-btn').addEventListener('click', async () => {
   }
 });
 
-// ---------- import from Homeschool folder ----------
+// ---------- import from local .docx file ----------
 
-$('#import-load-btn').addEventListener('click', async () => {
-  $('#import-status').textContent = 'Loading files…';
-  $('#import-file-select').innerHTML = '<option value="">— loading… —</option>';
-  try {
-    const { files } = await api('/api/admin/homeschool-files');
-    if (!files.length) {
-      $('#import-file-select').innerHTML = '<option value="">No .docx files found</option>';
-      $('#import-status').textContent = '';
-      return;
-    }
-    $('#import-file-select').innerHTML =
-      '<option value="">— choose a file —</option>' +
-      files.map((f) => `<option value="${esc(f.path)}">${esc(f.path)}</option>`).join('');
-    $('#import-go-btn').disabled = false;
-    $('#import-status').textContent = `${files.length} file(s) found.`;
-  } catch (err) {
-    $('#import-status').textContent = `❌ ${err.message}`;
-  }
-});
+$('#import-browse-btn').addEventListener('click', () => $('#import-local-input').click());
 
-$('#import-file-select').addEventListener('change', () => {
-  $('#import-go-btn').disabled = !$('#import-file-select').value;
+$('#import-local-input').addEventListener('change', () => {
+  const file = $('#import-local-input').files[0];
+  $('#import-local-name').textContent = file ? file.name : '';
+  $('#import-go-btn').disabled = !file;
+  $('#import-status').textContent = '';
 });
 
 $('#import-go-btn').addEventListener('click', async () => {
-  const path = $('#import-file-select').value;
-  if (!path) return;
+  const file = $('#import-local-input').files[0];
+  if (!file) return;
   const type = $('#ie-type').value;
-  const mode = type === 'quiz' ? 'quiz' : type === 'lesson' ? 'lesson' : 'lesson';
+  const mode = type === 'quiz' ? 'quiz' : 'lesson';
   $('#import-go-btn').disabled = true;
   $('#import-status').textContent = '🔍 Extracting content… this may take a minute.';
   try {
-    const result = await api('/api/admin/import-docx', { method: 'POST', body: { path, mode } });
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const result = await api('/api/admin/import-docx', { method: 'POST', body: { base64, mode } });
     if (!$('#ie-title').value && result.title) $('#ie-title').value = result.title;
     if (mode === 'quiz' && result.questions) {
       $('#ie-questions').innerHTML = '';

@@ -169,12 +169,13 @@
             <p id="scan-status" class="hint"></p>
           </div>
 
-          <!-- Import from Homeschool folder: visible for lesson, assignment, quiz types -->
+          <!-- Import from .docx file: visible for lesson, assignment, quiz types -->
           <div id="ie-import-section" class="scan-card" hidden>
-            <strong>📂 Import from Homeschool folder</strong>
+            <strong>📂 Import from .docx</strong>
+            <input type="file" id="import-local-input" accept=".docx" hidden>
             <div class="scan-controls">
-              <select id="import-file-select" style="flex:1"><option value="">— choose a file —</option></select>
-              <button type="button" id="import-load-btn" class="secondary">↓ Load files</button>
+              <button type="button" id="import-browse-btn" class="secondary">📂 Choose file…</button>
+              <span id="import-local-name" class="hint" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
               <button type="button" id="import-go-btn" class="secondary" disabled>📥 Import</button>
             </div>
             <p id="import-status" class="hint"></p>

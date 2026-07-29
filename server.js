@@ -1538,18 +1538,22 @@ Respond with ONLY a JSON object in exactly this shape, nothing else, no markdown
 };
 
 app.post('/api/admin/import-docx', requirePin, async (req, res) => {
-  const { path: relPath, mode } = req.body;
-  if (!relPath || !TEXT_SCAN_PROMPTS[mode]) {
-    return res.status(400).json({ error: 'path and mode (lesson or quiz) required' });
-  }
-  const fullPath = join(HOMESCHOOL_DIR, relPath);
-  if (!fullPath.startsWith(HOMESCHOOL_DIR)) {
-    return res.status(403).json({ error: 'Access denied' });
+  const { path: relPath, base64: b64, mode } = req.body;
+  if (!TEXT_SCAN_PROMPTS[mode] || (!relPath && !b64)) {
+    return res.status(400).json({ error: 'mode and either path or base64 required' });
   }
 
   let buffer;
-  try { buffer = await readFile(fullPath); }
-  catch (err) { return res.status(404).json({ error: `Could not read file: ${err.message}` }); }
+  if (b64) {
+    buffer = Buffer.from(b64, 'base64');
+  } else {
+    const fullPath = join(HOMESCHOOL_DIR, relPath);
+    if (!fullPath.startsWith(HOMESCHOOL_DIR)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    try { buffer = await readFile(fullPath); }
+    catch (err) { return res.status(404).json({ error: `Could not read file: ${err.message}` }); }
+  }
 
   let docText;
   try {
