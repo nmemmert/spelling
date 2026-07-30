@@ -620,13 +620,15 @@ $('#import-go-btn').addEventListener('click', async () => {
       method: 'POST',
       body: { base64, originalName: file.name },
     });
-    const link = `<a href="${result.url}" target="_blank">📄 ${result.originalName}</a>`;
+    const embed = result.htmlUrl
+      ? `<iframe src="${result.htmlUrl}" style="width:100%;height:600px;border:1px solid #ccc;border-radius:4px;"></iframe>\n<p><a href="${result.url}" download="${result.originalName}">⬇️ Download ${result.originalName}</a></p>`
+      : `<a href="${result.url}" target="_blank">📄 ${result.originalName}</a>`;
     if (type === 'assignment') {
-      $('#ie-body-assignment').value = link;
+      $('#ie-body-assignment').value = embed;
     } else {
-      $('#ie-body-lesson').innerHTML = link;
+      $('#ie-body-lesson').innerHTML = embed;
     }
-    $('#import-status').textContent = '✅ File uploaded. Link inserted into body.';
+    $('#import-status').textContent = '✅ File uploaded. Document embedded in body.';
   } catch (err) {
     $('#import-status').textContent = `❌ ${err.message}`;
   } finally {

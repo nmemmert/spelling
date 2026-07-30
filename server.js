@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
+import mammoth from 'mammoth';
 import { db, sha256 } from './db.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -1539,14 +1540,30 @@ app.post('/api/admin/upload-attachment', requirePin, async (req, res) => {
   catch (err) { return res.status(400).json({ error: 'Invalid base64' }); }
 
   const ext = extname(originalName).toLowerCase() || '.docx';
-  const filename = `${randomUUID()}${ext}`;
+  const uuid = randomUUID();
+  const filename = `${uuid}${ext}`;
   try {
     await writeFile(join(ATTACHMENTS_DIR, filename), buffer);
   } catch (err) {
     return res.status(500).json({ error: `Could not save file: ${err.message}` });
   }
 
-  return res.json({ url: `/api/attachments/${filename}`, originalName });
+  // Convert to HTML so it can be shown in an iframe
+  let htmlUrl = null;
+  try {
+    const { value: bodyHtml } = await mammoth.convertToHtml({ buffer });
+    const htmlFilename = `${uuid}.html`;
+    const page = `<!doctype html><html><head><meta charset="utf-8">
+<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6}
+img{max-width:100%}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:.4em .6em}</style>
+</head><body>${bodyHtml}</body></html>`;
+    await writeFile(join(ATTACHMENTS_DIR, htmlFilename), page);
+    htmlUrl = `/api/attachments/${htmlFilename}`;
+  } catch (_) {
+    // HTML preview generation failed — download link still works
+  }
+
+  return res.json({ url: `/api/attachments/${filename}`, htmlUrl, originalName });
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
