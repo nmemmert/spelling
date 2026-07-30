@@ -395,7 +395,7 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-type').value = item.type;
     $('#ie-title').value = item.title;
     $('#ie-body-lesson').innerHTML = item.body || '';
-    $('#ie-body-assignment').value = item.body;
+    $('#ie-body-assignment').innerHTML = item.body || '';
     $('#ie-points').value = item.points || 10;
     $('#ie-due-date').value = item.due_date || '';
     $('#ie-allow-retakes').checked = !!item.allow_retakes;
@@ -417,7 +417,7 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-type').value = 'lesson';
     $('#ie-title').value = '';
     $('#ie-body-lesson').innerHTML = '';
-    $('#ie-body-assignment').value = '';
+    $('#ie-body-assignment').innerHTML = '';
     $('#ie-points').value = 10;
     $('#ie-due-date').value = '';
     $('#ie-allow-retakes').checked = false;
@@ -446,57 +446,60 @@ $('#ie-type').addEventListener('change', updateItemFieldVisibility);
 
 // ---------- rich text editor (lesson body) ----------
 
-function getLessonBody() {
-  const html = $('#ie-body-lesson').innerHTML.trim();
+function getRteBody(el) {
+  const html = el.innerHTML.trim();
   return html === '<br>' ? '' : html;
 }
+function getLessonBody() { return getRteBody($('#ie-body-lesson')); }
+function getAssignmentBody() { return getRteBody($('#ie-body-assignment')); }
 
-let rtesavedRange = null;
-
-// Save selection whenever the editor loses focus (e.g. when clicking a toolbar button)
-$('#ie-body-lesson').addEventListener('blur', () => {
-  const sel = window.getSelection();
-  rtesavedRange = sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
-});
-
-function rteRestoreAndExec(cmd, val = null) {
-  $('#ie-body-lesson').focus();
-  if (rtesavedRange) {
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(rtesavedRange);
-  }
-  document.execCommand(cmd, false, val);
-}
-
-// Format buttons (bold, italic, heading, lists, etc.)
+// Format buttons — mousedown+preventDefault keeps focus/selection in the editor
 document.querySelectorAll('.rte-btn[data-cmd]').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    rteRestoreAndExec(btn.dataset.cmd, btn.dataset.val || null);
+  btn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const editor = btn.closest('.rte-group').querySelector('.rte-editor');
+    editor.focus();
+    document.execCommand(btn.dataset.cmd, false, btn.dataset.val || null);
   });
 });
 
-// Link button
-$('#rte-link-btn').addEventListener('click', () => {
-  const savedRange = rtesavedRange;
-  const url = prompt('Enter URL (e.g. https://example.com):');
-  if (url) {
-    rteRestoreAndExec('createLink', url);
-  }
+// Link buttons
+document.querySelectorAll('.rte-link-btn').forEach((btn) => {
+  btn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const editor = btn.closest('.rte-group').querySelector('.rte-editor');
+    editor.focus();
+    const sel = window.getSelection();
+    const savedRange = sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+    const url = prompt('Enter URL (e.g. https://example.com):');
+    if (url) {
+      editor.focus();
+      if (savedRange) { sel.removeAllRanges(); sel.addRange(savedRange); }
+      document.execCommand('createLink', false, url);
+    }
+  });
 });
 
-// YouTube embed button
-$('#rte-youtube-btn').addEventListener('click', () => {
-  const input = prompt('YouTube URL or video ID:');
-  if (!input) return;
-  const match = input.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([a-zA-Z0-9_-]{11})/);
-  const id = match ? match[1] : input.trim();
-  if (id) {
-    rteRestoreAndExec(
-      'insertHTML',
-      `<br><iframe width="560" height="315" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen style="max-width:100%;border-radius:10px"></iframe><br>`
-    );
-  }
+// YouTube embed buttons
+document.querySelectorAll('.rte-youtube-btn').forEach((btn) => {
+  btn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const editor = btn.closest('.rte-group').querySelector('.rte-editor');
+    editor.focus();
+    const sel = window.getSelection();
+    const savedRange = sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+    const input = prompt('YouTube URL or video ID:');
+    if (!input) return;
+    const match = input.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([a-zA-Z0-9_-]{11})/);
+    const id = match ? match[1] : input.trim();
+    if (id) {
+      editor.focus();
+      if (savedRange) { sel.removeAllRanges(); sel.addRange(savedRange); }
+      document.execCommand('insertHTML', false,
+        `<br><iframe width="560" height="315" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen style="max-width:100%;border-radius:10px"></iframe><br>`
+      );
+    }
+  });
 });
 
 // ---------- scan a page (photo -> lesson/quiz content via local Ollama) ----------
@@ -624,8 +627,7 @@ $('#import-go-btn').addEventListener('click', async () => {
       ? `<details><summary>📄 ${result.originalName}</summary><iframe src="${result.htmlUrl}" style="width:100%;border:1px solid #ccc;border-radius:4px;margin-top:.5em;display:block;" onload="try{this.style.height=this.contentDocument.documentElement.scrollHeight+32+'px'}catch(e){this.style.height='500px'}"></iframe><p><a href="${result.url}" download="${result.originalName}">⬇️ Download ${result.originalName}</a></p></details>`
       : `<a href="${result.url}" target="_blank">📄 ${result.originalName}</a>`;
     if (type === 'assignment') {
-      const cur = $('#ie-body-assignment').value;
-      $('#ie-body-assignment').value = cur ? cur + '\n\n' + embed : embed;
+      $('#ie-body-assignment').innerHTML += embed;
     } else {
       $('#ie-body-lesson').innerHTML += embed;
     }
@@ -691,7 +693,7 @@ $('#item-form').addEventListener('submit', async (e) => {
     unitId: Number($('#ie-unit-id').value),
     type,
     title,
-    body: type === 'lesson' ? getLessonBody() : type === 'assignment' ? $('#ie-body-assignment').value : '',
+    body: type === 'lesson' ? getLessonBody() : type === 'assignment' ? getAssignmentBody() : '',
     points: type === 'assignment' ? Number($('#ie-points').value) || 0 : 0,
     refId: type === 'spelling_practice' || type === 'spelling_test' ? Number($('#ie-list').value)
          : type === 'flashcards' ? Number($('#ie-deck').value) : null,
