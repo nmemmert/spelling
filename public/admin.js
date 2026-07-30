@@ -624,9 +624,10 @@ $('#import-go-btn').addEventListener('click', async () => {
       ? `<iframe src="${result.htmlUrl}" style="width:100%;height:600px;border:1px solid #ccc;border-radius:4px;"></iframe>\n<p><a href="${result.url}" download="${result.originalName}">⬇️ Download ${result.originalName}</a></p>`
       : `<a href="${result.url}" target="_blank">📄 ${result.originalName}</a>`;
     if (type === 'assignment') {
-      $('#ie-body-assignment').value = embed;
+      const cur = $('#ie-body-assignment').value;
+      $('#ie-body-assignment').value = cur ? cur + '\n\n' + embed : embed;
     } else {
-      $('#ie-body-lesson').innerHTML = embed;
+      $('#ie-body-lesson').innerHTML += embed;
     }
     $('#import-status').textContent = '✅ File uploaded. Document embedded in body.';
   } catch (err) {
