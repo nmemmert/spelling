@@ -1518,6 +1518,63 @@ app.get('/api/admin/homeschool-files', requirePin, (req, res) => {
   res.json({ files: files.map(({ name, path }) => ({ name, path })) });
 });
 
+async function callOllamaTextLocal(fullPrompt) {
+  const host = (getSetting('ollama_host') || 'http://localhost:11434').replace(/\/+$/, '');
+  const model = getSetting('ollama_model') || 'llava';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 180_000);
+  let r;
+  try {
+    r = await fetch(`${host}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, prompt: fullPrompt, stream: false, format: 'json' }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('Ollama timed out (3 min).');
+    throw new Error(`Couldn't reach Ollama at ${host} — is it running? (${err.message})`);
+  } finally { clearTimeout(timer); }
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    if (r.status === 404) throw new Error(`Model "${model}" not found on Ollama. Run: ollama pull ${model}`);
+    throw new Error(`Ollama error (${r.status}): ${t.slice(0, 200)}`);
+  }
+  const data = await r.json();
+  return parseVisionJson(data.response);
+}
+
+async function callOllamaTextCloud(fullPrompt) {
+  const apiKey = getSetting('ollama_cloud_api_key') || '';
+  if (!apiKey) throw new Error('Ollama Cloud API key not set — add it in Settings.');
+  const host = (getSetting('ollama_host') || 'http://localhost:11434').replace(/\/+$/, '');
+  const baseModel = (getSetting('ollama_cloud_model') || 'gemma4').replace(/:cloud$/, '');
+  const model = `${baseModel}:cloud`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 180_000);
+  let r;
+  try {
+    r = await fetch(`${host}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: fullPrompt }], stream: false }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('Ollama Cloud timed out (3 min).');
+    throw new Error(`Couldn't reach local Ollama at ${host} — is it running? (${err.message})`);
+  } finally { clearTimeout(timer); }
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    if (r.status === 404) throw new Error(`Cloud model "${model}" not found. Run: ollama pull ${model}`);
+    throw new Error(`Ollama Cloud error (${r.status}): ${t.slice(0, 300)}`);
+  }
+  const data = await r.json();
+  const content = data.message?.content;
+  if (!content) throw new Error('Ollama Cloud returned an empty response.');
+  return parseVisionJson(content);
+}
+
 const TEXT_SCAN_PROMPTS = {
   lesson: `You are given the text content of a homeschool lesson or assignment document. Extract it as structured content.
 
@@ -1564,32 +1621,24 @@ app.post('/api/admin/import-docx', requirePin, async (req, res) => {
   }
   if (!docText) return res.status(400).json({ error: 'Document appears to be empty' });
 
-  const host = (getSetting('ollama_host') || 'http://localhost:11434').replace(/\/+$/, '');
-  const model = getSetting('ollama_model') || 'llava';
-  const prompt = TEXT_SCAN_PROMPTS[mode] + '\n\nDOCUMENT TEXT:\n' + docText;
+  const fullPrompt = TEXT_SCAN_PROMPTS[mode] + '\n\nDOCUMENT TEXT:\n' + docText;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 180_000);
-  try {
-    const r = await fetch(`${host}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt, stream: false, format: 'json' }),
-      signal: controller.signal,
-    });
-    if (!r.ok) {
-      const t = await r.text().catch(() => '');
-      throw new Error(`Ollama error (${r.status}): ${t.slice(0, 200)}`);
+  const primary = getSetting('scan_primary') || 'local';
+  const providerFns = { local: callOllamaTextLocal, ollama_cloud: callOllamaTextCloud };
+  const order = primary === 'ollama_cloud' ? ['ollama_cloud', 'local'] : ['local', 'ollama_cloud'];
+  const isConfigured = { local: true, ollama_cloud: !!getSetting('ollama_cloud_api_key') };
+
+  const errors = [];
+  for (const provider of order) {
+    if (!isConfigured[provider]) continue;
+    try {
+      const result = await providerFns[provider](fullPrompt);
+      return res.json(result);
+    } catch (err) {
+      errors.push(`${provider}: ${err.message}`);
     }
-    const data = await r.json();
-    const parsed = parseVisionJson(data.response);
-    return res.json(parsed);
-  } catch (err) {
-    if (err.name === 'AbortError') return res.status(504).json({ error: 'Ollama timed out.' });
-    return res.status(502).json({ error: err.message });
-  } finally {
-    clearTimeout(timer);
   }
+  return res.status(502).json({ error: errors.join(' | ') || 'No AI providers configured.' });
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
