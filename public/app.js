@@ -636,7 +636,7 @@ async function openAssignment(itemId) {
   $('#assignment-kicker').textContent = `${item.course_name} · ${item.unit_name}`;
   $('#assignment-title').textContent = item.title;
   $('#assignment-points').textContent = item.points ? `Worth ${item.points} points` : '';
-  $('#assignment-body').innerHTML = esc(item.body).replace(/\n/g, '<br>');
+  $('#assignment-body').innerHTML = item.body || '';
 
   const btn = $('#assignment-done-btn');
   const status = $('#assignment-status');
