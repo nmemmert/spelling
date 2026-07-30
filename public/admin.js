@@ -607,7 +607,7 @@ $('#import-go-btn').addEventListener('click', async () => {
   if (!file) return;
   const type = $('#ie-type').value;
   $('#import-go-btn').disabled = true;
-  $('#import-status').textContent = '📄 Extracting text…';
+  $('#import-status').textContent = '📤 Uploading…';
   try {
     const arrayBuffer = await file.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
@@ -616,20 +616,17 @@ $('#import-go-btn').addEventListener('click', async () => {
       binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 8192, bytes.length)));
     }
     const base64 = btoa(binary);
-    const result = await api('/api/admin/import-docx', { method: 'POST', body: { base64 } });
-    if (!$('#ie-title').value && result.title) $('#ie-title').value = result.title;
-    if (result.body) {
-      if (type === 'assignment') {
-        const tmp = document.createElement('div');
-        tmp.innerHTML = result.body;
-        $('#ie-body-assignment').value = tmp.textContent || tmp.innerText || '';
-      } else if (type === 'lesson') {
-        $('#ie-body-lesson').innerHTML = result.body;
-      }
-      $('#import-status').textContent = '✅ Text extracted. Review and edit before saving.';
+    const result = await api('/api/admin/upload-attachment', {
+      method: 'POST',
+      body: { base64, originalName: file.name },
+    });
+    const link = `<a href="${result.url}" target="_blank">📄 ${result.originalName}</a>`;
+    if (type === 'assignment') {
+      $('#ie-body-assignment').value = link;
     } else {
-      $('#import-status').textContent = '⚠️ File imported but no content was found.';
+      $('#ie-body-lesson').innerHTML = link;
     }
+    $('#import-status').textContent = '✅ File uploaded. Link inserted into body.';
   } catch (err) {
     $('#import-status').textContent = `❌ ${err.message}`;
   } finally {

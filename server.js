@@ -1,17 +1,18 @@
 import express from 'express';
-import { join, dirname } from 'node:path';
+import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
-import mammoth from 'mammoth';
+import { readFile, writeFile } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
 import { db, sha256 } from './db.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.DATA_DIR || join(ROOT, 'data');
 const TTS_CACHE = join(DATA_DIR, 'tts-cache');
 mkdirSync(TTS_CACHE, { recursive: true });
+const ATTACHMENTS_DIR = join(DATA_DIR, 'attachments');
+mkdirSync(ATTACHMENTS_DIR, { recursive: true });
 const PIPER_BIN = process.env.PIPER_BIN || 'piper';
 const PIPER_MODEL = process.env.PIPER_MODEL || join(ROOT, 'voices', 'en_US-lessac-medium.onnx');
 const PIPER_OK = existsSync(PIPER_MODEL);
@@ -1519,30 +1520,33 @@ app.get('/api/admin/homeschool-files', requirePin, (req, res) => {
 });
 
 
-app.post('/api/admin/import-docx', requirePin, async (req, res) => {
-  const { base64: b64 } = req.body;
-  if (!b64) return res.status(400).json({ error: 'base64 required' });
+// Public: students need to open attachments without a PIN
+app.get('/api/attachments/:filename', (req, res) => {
+  const filename = req.params.filename;
+  // Only allow safe filenames (UUID + extension)
+  if (!/^[\w-]+\.\w+$/.test(filename)) return res.status(400).json({ error: 'Invalid filename' });
+  const filePath = join(ATTACHMENTS_DIR, filename);
+  if (!existsSync(filePath)) return res.status(404).json({ error: 'Not found' });
+  res.sendFile(filePath);
+});
+
+app.post('/api/admin/upload-attachment', requirePin, async (req, res) => {
+  const { base64: b64, originalName } = req.body;
+  if (!b64 || !originalName) return res.status(400).json({ error: 'base64 and originalName required' });
 
   let buffer;
   try { buffer = Buffer.from(b64, 'base64'); }
   catch (err) { return res.status(400).json({ error: 'Invalid base64' }); }
 
-  let html, rawText;
+  const ext = extname(originalName).toLowerCase() || '.docx';
+  const filename = `${randomUUID()}${ext}`;
   try {
-    const [htmlResult, textResult] = await Promise.all([
-      mammoth.convertToHtml({ buffer }),
-      mammoth.extractRawText({ buffer }),
-    ]);
-    html = htmlResult.value.trim();
-    rawText = textResult.value.trim();
+    await writeFile(join(ATTACHMENTS_DIR, filename), buffer);
   } catch (err) {
-    return res.status(500).json({ error: `Could not parse docx: ${err.message}` });
+    return res.status(500).json({ error: `Could not save file: ${err.message}` });
   }
-  if (!rawText) return res.status(400).json({ error: 'Document appears to be empty' });
 
-  // Use first non-empty line of raw text as the title
-  const firstLine = rawText.split('\n').map(l => l.trim()).find(Boolean) || '';
-  return res.json({ title: firstLine, body: html });
+  return res.json({ url: `/api/attachments/${filename}`, originalName });
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
