@@ -606,9 +606,8 @@ $('#import-go-btn').addEventListener('click', async () => {
   const file = $('#import-local-input').files[0];
   if (!file) return;
   const type = $('#ie-type').value;
-  const mode = type === 'quiz' ? 'quiz' : 'lesson';
   $('#import-go-btn').disabled = true;
-  $('#import-status').textContent = '🔍 Extracting content… this may take a minute.';
+  $('#import-status').textContent = '📄 Extracting text…';
   try {
     const arrayBuffer = await file.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
@@ -617,21 +616,17 @@ $('#import-go-btn').addEventListener('click', async () => {
       binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 8192, bytes.length)));
     }
     const base64 = btoa(binary);
-    const result = await api('/api/admin/import-docx', { method: 'POST', body: { base64, mode } });
+    const result = await api('/api/admin/import-docx', { method: 'POST', body: { base64 } });
     if (!$('#ie-title').value && result.title) $('#ie-title').value = result.title;
-    if (mode === 'quiz' && result.questions) {
-      $('#ie-questions').innerHTML = '';
-      questionCount = 0;
-      const normalized = result.questions.map((q) => ({
-        ...q,
-        correct_answer: q.correctAnswer ?? q.correct_answer ?? '',
-      }));
-      normalized.forEach(addQuestionRow);
-      $('#import-status').textContent = `✅ Imported ${result.questions.length} question(s). Review before saving.`;
-    } else if (result.body) {
+    if (result.body) {
       const bodyField = type === 'assignment' ? '#ie-body-assignment' : '#ie-body-lesson';
-      $(bodyField).value = result.body;
-      $('#import-status').textContent = '✅ Content imported. Review before saving.';
+      const bodyEl = $(bodyField);
+      if (bodyEl) {
+        bodyEl.value = result.body;
+        $('#import-status').textContent = '✅ Text extracted. Review and edit before saving.';
+      } else {
+        $('#import-status').textContent = '✅ Title set. Paste content from your doc manually for quiz questions.';
+      }
     } else {
       $('#import-status').textContent = '⚠️ File imported but no content was found.';
     }

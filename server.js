@@ -1518,127 +1518,31 @@ app.get('/api/admin/homeschool-files', requirePin, (req, res) => {
   res.json({ files: files.map(({ name, path }) => ({ name, path })) });
 });
 
-async function callOllamaTextLocal(fullPrompt) {
-  const host = (getSetting('ollama_host') || 'http://localhost:11434').replace(/\/+$/, '');
-  const model = getSetting('ollama_model') || 'llava';
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 180_000);
-  let r;
-  try {
-    r = await fetch(`${host}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt: fullPrompt, stream: false, format: 'json' }),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    if (err.name === 'AbortError') throw new Error('Ollama timed out (3 min).');
-    throw new Error(`Couldn't reach Ollama at ${host} — is it running? (${err.message})`);
-  } finally { clearTimeout(timer); }
-  if (!r.ok) {
-    const t = await r.text().catch(() => '');
-    if (r.status === 404) throw new Error(`Model "${model}" not found on Ollama. Run: ollama pull ${model}`);
-    throw new Error(`Ollama error (${r.status}): ${t.slice(0, 200)}`);
-  }
-  const data = await r.json();
-  return parseVisionJson(data.response);
-}
-
-async function callOllamaTextCloud(fullPrompt) {
-  const apiKey = getSetting('ollama_cloud_api_key') || '';
-  if (!apiKey) throw new Error('Ollama Cloud API key not set — add it in Settings.');
-  const host = (getSetting('ollama_host') || 'http://localhost:11434').replace(/\/+$/, '');
-  const baseModel = (getSetting('ollama_cloud_model') || 'gemma4').replace(/:cloud$/, '');
-  const model = `${baseModel}:cloud`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 180_000);
-  let r;
-  try {
-    r = await fetch(`${host}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: fullPrompt }], stream: false }),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    if (err.name === 'AbortError') throw new Error('Ollama Cloud timed out (3 min).');
-    throw new Error(`Couldn't reach local Ollama at ${host} — is it running? (${err.message})`);
-  } finally { clearTimeout(timer); }
-  if (!r.ok) {
-    const t = await r.text().catch(() => '');
-    if (r.status === 404) throw new Error(`Cloud model "${model}" not found. Run: ollama pull ${model}`);
-    throw new Error(`Ollama Cloud error (${r.status}): ${t.slice(0, 300)}`);
-  }
-  const data = await r.json();
-  const content = data.message?.content;
-  if (!content) throw new Error('Ollama Cloud returned an empty response.');
-  return parseVisionJson(content);
-}
-
-const TEXT_SCAN_PROMPTS = {
-  lesson: `You are given the text content of a homeschool lesson or assignment document. Extract it as structured content.
-
-Respond with ONLY a JSON object in exactly this shape, nothing else, no markdown fences:
-{"title": "the document title or heading", "body": "the full text content, paragraphs separated by a blank line"}`,
-
-  quiz: `You are given the text content of a homeschool quiz or test document. Extract every question exactly as written.
-
-For each question determine:
-- "type": "mc" if it has lettered/numbered answer choices, "tf" if it is true/false, "short" if it expects a written answer
-- "prompt": the exact question text
-- "choices": for "mc", an array of the exact answer choice texts (empty array for "tf" or "short")
-- "correctAnswer": the marked answer if clearly indicated; for "tf" use exactly "true" or "false"; otherwise use ""
-- "points": 1 unless the document states a different value
-
-Respond with ONLY a JSON object in exactly this shape, nothing else, no markdown fences:
-{"title": "the quiz/test title", "questions": [{"type": "mc", "prompt": "...", "choices": ["...", "..."], "correctAnswer": "...", "points": 1}]}`,
-};
 
 app.post('/api/admin/import-docx', requirePin, async (req, res) => {
-  const { path: relPath, base64: b64, mode } = req.body;
-  if (!TEXT_SCAN_PROMPTS[mode] || (!relPath && !b64)) {
-    return res.status(400).json({ error: 'mode and either path or base64 required' });
-  }
+  const { base64: b64 } = req.body;
+  if (!b64) return res.status(400).json({ error: 'base64 required' });
 
   let buffer;
-  if (b64) {
-    buffer = Buffer.from(b64, 'base64');
-  } else {
-    const fullPath = join(HOMESCHOOL_DIR, relPath);
-    if (!fullPath.startsWith(HOMESCHOOL_DIR)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    try { buffer = await readFile(fullPath); }
-    catch (err) { return res.status(404).json({ error: `Could not read file: ${err.message}` }); }
-  }
+  try { buffer = Buffer.from(b64, 'base64'); }
+  catch (err) { return res.status(400).json({ error: 'Invalid base64' }); }
 
-  let docText;
+  let html, rawText;
   try {
-    const result = await mammoth.extractRawText({ buffer });
-    docText = result.value.trim();
+    const [htmlResult, textResult] = await Promise.all([
+      mammoth.convertToHtml({ buffer }),
+      mammoth.extractRawText({ buffer }),
+    ]);
+    html = htmlResult.value.trim();
+    rawText = textResult.value.trim();
   } catch (err) {
     return res.status(500).json({ error: `Could not parse docx: ${err.message}` });
   }
-  if (!docText) return res.status(400).json({ error: 'Document appears to be empty' });
+  if (!rawText) return res.status(400).json({ error: 'Document appears to be empty' });
 
-  const fullPrompt = TEXT_SCAN_PROMPTS[mode] + '\n\nDOCUMENT TEXT:\n' + docText;
-
-  const primary = getSetting('scan_primary') || 'local';
-  const providerFns = { local: callOllamaTextLocal, ollama_cloud: callOllamaTextCloud };
-  const order = primary === 'ollama_cloud' ? ['ollama_cloud', 'local'] : ['local', 'ollama_cloud'];
-  const isConfigured = { local: true, ollama_cloud: !!getSetting('ollama_cloud_api_key') };
-
-  const errors = [];
-  for (const provider of order) {
-    if (!isConfigured[provider]) continue;
-    try {
-      const result = await providerFns[provider](fullPrompt);
-      return res.json(result);
-    } catch (err) {
-      errors.push(`${provider}: ${err.message}`);
-    }
-  }
-  return res.status(502).json({ error: errors.join(' | ') || 'No AI providers configured.' });
+  // Use first non-empty line of raw text as the title
+  const firstLine = rawText.split('\n').map(l => l.trim()).find(Boolean) || '';
+  return res.json({ title: firstLine, body: html });
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
