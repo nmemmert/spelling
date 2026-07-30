@@ -621,7 +621,7 @@ $('#import-go-btn').addEventListener('click', async () => {
       body: { base64, originalName: file.name },
     });
     const embed = result.htmlUrl
-      ? `<iframe src="${result.htmlUrl}" style="width:100%;height:600px;border:1px solid #ccc;border-radius:4px;"></iframe>\n<p><a href="${result.url}" download="${result.originalName}">⬇️ Download ${result.originalName}</a></p>`
+      ? `<details><summary>📄 ${result.originalName}</summary><iframe src="${result.htmlUrl}" style="width:100%;height:600px;border:1px solid #ccc;border-radius:4px;margin-top:.5em;"></iframe><p><a href="${result.url}" download="${result.originalName}">⬇️ Download ${result.originalName}</a></p></details>`
       : `<a href="${result.url}" target="_blank">📄 ${result.originalName}</a>`;
     if (type === 'assignment') {
       const cur = $('#ie-body-assignment').value;
