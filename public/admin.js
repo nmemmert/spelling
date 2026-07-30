@@ -623,15 +623,13 @@ $('#import-go-btn').addEventListener('click', async () => {
       method: 'POST',
       body: { base64, originalName: file.name },
     });
-    const embed = result.htmlUrl
-      ? `<details><summary>📄 ${result.originalName}</summary><iframe src="${result.htmlUrl}" style="width:100%;border:1px solid #ccc;border-radius:4px;margin-top:.5em;display:block;" onload="try{this.style.height=this.contentDocument.documentElement.scrollHeight+32+'px'}catch(e){this.style.height='500px'}"></iframe><p><a href="${result.url}" download="${result.originalName}">⬇️ Download ${result.originalName}</a></p></details>`
-      : `<a href="${result.url}" target="_blank">📄 ${result.originalName}</a>`;
-    if (type === 'assignment') {
-      $('#ie-body-assignment').innerHTML += embed;
-    } else {
-      $('#ie-body-lesson').innerHTML += embed;
-    }
-    $('#import-status').textContent = '✅ File uploaded. Document embedded in body.';
+    const downloadLink = `<p><a href="${result.url}" download="${result.originalName}">⬇️ ${result.originalName}</a></p>`;
+    const content = result.htmlBody
+      ? downloadLink + result.htmlBody
+      : `<p><a href="${result.url}" target="_blank">📄 ${result.originalName}</a></p>`;
+    const editor = type === 'assignment' ? $('#ie-body-assignment') : $('#ie-body-lesson');
+    editor.innerHTML += content;
+    $('#import-status').textContent = '✅ Imported — content is now editable above.';
   } catch (err) {
     $('#import-status').textContent = `❌ ${err.message}`;
   } finally {

@@ -1548,33 +1548,16 @@ app.post('/api/admin/upload-attachment', requirePin, async (req, res) => {
     return res.status(500).json({ error: `Could not save file: ${err.message}` });
   }
 
-  // Convert to HTML for the iframe viewer
-  let htmlUrl = null;
+  // Convert to HTML for inline editing in the RTE
+  let htmlBody = null;
   try {
-    const { value: bodyHtml } = await mammoth.convertToHtml({ buffer });
-    const htmlFilename = `${uuid}.html`;
-    const page = `<!doctype html><html><head><meta charset="utf-8">
-<style>
-*{box-sizing:border-box}
-body{font-family:Georgia,serif;margin:0;padding:1rem 1.5rem;line-height:1.7;font-size:15px;font-weight:normal;color:#111}
-p{margin:.6em 0;font-weight:normal}
-strong,b{font-weight:bold}
-h1{font-size:1.5em;margin:1em 0 .3em}
-h2{font-size:1.25em;margin:.9em 0 .3em}
-h3{font-size:1.1em;margin:.8em 0 .2em}
-img{max-width:100%}
-table{border-collapse:collapse;width:100%}
-td,th{border:1px solid #ccc;padding:.4em .6em}
-ul,ol{padding-left:1.5em}
-</style>
-</head><body>${bodyHtml}</body></html>`;
-    await writeFile(join(ATTACHMENTS_DIR, htmlFilename), page);
-    htmlUrl = `/api/attachments/${htmlFilename}`;
+    const { value } = await mammoth.convertToHtml({ buffer });
+    htmlBody = value || null;
   } catch (_) {
-    // preview failed — download link still works
+    // conversion failed — download link still available
   }
 
-  return res.json({ url: `/api/attachments/${filename}`, htmlUrl, originalName });
+  return res.json({ url: `/api/attachments/${filename}`, htmlBody, originalName });
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
