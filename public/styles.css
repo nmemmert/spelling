@@ -30,6 +30,13 @@ body {
   text-align: center;
 }
 
+#view-course,
+#view-lesson,
+#view-assignment {
+  max-width: 960px;
+  text-align: left;
+}
+
 .app-title { font-size: 2.4rem; margin-bottom: 0.5rem; }
 .subtitle { font-size: 1.25rem; color: var(--muted); margin-bottom: 2rem; }
 .hint { color: var(--muted); margin: 1rem 0; }
