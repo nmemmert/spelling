@@ -619,14 +619,14 @@ $('#import-go-btn').addEventListener('click', async () => {
     const result = await api('/api/admin/import-docx', { method: 'POST', body: { base64 } });
     if (!$('#ie-title').value && result.title) $('#ie-title').value = result.title;
     if (result.body) {
-      const bodyField = type === 'assignment' ? '#ie-body-assignment' : '#ie-body-lesson';
-      const bodyEl = $(bodyField);
-      if (bodyEl) {
-        bodyEl.value = result.body;
-        $('#import-status').textContent = '✅ Text extracted. Review and edit before saving.';
-      } else {
-        $('#import-status').textContent = '✅ Title set. Paste content from your doc manually for quiz questions.';
+      if (type === 'assignment') {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = result.body;
+        $('#ie-body-assignment').value = tmp.textContent || tmp.innerText || '';
+      } else if (type === 'lesson') {
+        $('#ie-body-lesson').innerHTML = result.body;
       }
+      $('#import-status').textContent = '✅ Text extracted. Review and edit before saving.';
     } else {
       $('#import-status').textContent = '⚠️ File imported but no content was found.';
     }
