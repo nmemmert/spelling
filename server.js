@@ -79,8 +79,116 @@ const markScheduleDone = db.prepare(`
   WHERE student_id = ? AND item_id = ? AND date = ?
 `);
 
-const ITEM_TYPES = ['lesson', 'assignment', 'quiz', 'matching', 'spelling_practice', 'spelling_test', 'flashcards'];
-const GRADABLE_TYPES = ['assignment', 'quiz', 'matching', 'spelling_test'];
+// ---------- crossword generator ----------
+
+function generateCrossword(acrossEntries, downEntries) {
+  const allEntries = [
+    ...acrossEntries.map(e => ({ word: String(e.word || '').toUpperCase().replace(/[^A-Z]/g, ''), clue: e.clue, preferDir: 'across' })),
+    ...downEntries.map(e => ({ word: String(e.word || '').toUpperCase().replace(/[^A-Z]/g, ''), clue: e.clue, preferDir: 'down' })),
+  ].filter(e => e.word.length > 1);
+  if (allEntries.length === 0) return null;
+  allEntries.sort((a, b) => b.word.length - a.word.length);
+
+  const cells = new Map(); // 'r,c' -> letter
+  const placed = [];
+
+  const dr = (dir) => dir === 'down' ? 1 : 0;
+  const dc = (dir) => dir === 'across' ? 1 : 0;
+
+  function placeWord(word, r, c, dir) {
+    for (let i = 0; i < word.length; i++) cells.set(`${r + i * dr(dir)},${c + i * dc(dir)}`, word[i]);
+  }
+
+  function canPlace(word, r, c, dir) {
+    if (cells.has(`${r - dr(dir)},${c - dc(dir)}`)) return false;
+    if (cells.has(`${r + word.length * dr(dir)},${c + word.length * dc(dir)}`)) return false;
+    let intersects = false;
+    for (let i = 0; i < word.length; i++) {
+      const cr = r + i * dr(dir), cc = c + i * dc(dir);
+      const existing = cells.get(`${cr},${cc}`);
+      if (existing !== undefined) {
+        if (existing !== word[i]) return false;
+        intersects = true;
+      } else {
+        if (cells.has(`${cr - dc(dir)},${cc - dr(dir)}`)) return false;
+        if (cells.has(`${cr + dc(dir)},${cc + dr(dir)}`)) return false;
+      }
+    }
+    return intersects;
+  }
+
+  function countIntersections(word, r, c, dir) {
+    let n = 0;
+    for (let i = 0; i < word.length; i++) if (cells.has(`${r + i * dr(dir)},${c + i * dc(dir)}`)) n++;
+    return n;
+  }
+
+  const first = allEntries[0];
+  placeWord(first.word, 0, 0, first.preferDir);
+  placed.push({ ...first, dir: first.preferDir, row: 0, col: 0 });
+
+  for (let i = 1; i < allEntries.length; i++) {
+    const entry = allEntries[i];
+    const { word, preferDir } = entry;
+    const dirs = [preferDir, preferDir === 'across' ? 'down' : 'across'];
+    let best = null, bestScore = -1;
+    for (const dir of dirs) {
+      for (let wi = 0; wi < word.length; wi++) {
+        for (const [key, letter] of cells) {
+          if (letter !== word[wi]) continue;
+          const [er, ec] = key.split(',').map(Number);
+          const r = er - wi * dr(dir), c = ec - wi * dc(dir);
+          if (canPlace(word, r, c, dir)) {
+            const score = countIntersections(word, r, c, dir);
+            if (score > bestScore) { bestScore = score; best = { r, c, dir }; }
+          }
+        }
+      }
+      if (best) break;
+    }
+    if (best) {
+      placeWord(word, best.r, best.c, best.dir);
+      placed.push({ ...entry, dir: best.dir, row: best.r, col: best.c });
+    }
+  }
+  if (placed.length === 0) return null;
+
+  let minR = Infinity, minC = Infinity, maxR = -Infinity, maxC = -Infinity;
+  for (const k of cells.keys()) {
+    const [r, c] = k.split(',').map(Number);
+    if (r < minR) minR = r; if (r > maxR) maxR = r;
+    if (c < minC) minC = c; if (c > maxC) maxC = c;
+  }
+  for (const p of placed) { p.row -= minR; p.col -= minC; }
+  const rows = maxR - minR + 1, cols = maxC - minC + 1;
+
+  const grid = Array.from({ length: rows }, () => Array(cols).fill(null));
+  for (const [k, letter] of cells) {
+    const [r, c] = k.split(',').map(Number);
+    grid[r - minR][c - minC] = letter;
+  }
+
+  let num = 1;
+  const cellNum = {};
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!grid[r][c]) continue;
+      const sa = (c === 0 || !grid[r][c - 1]) && c + 1 < cols && grid[r][c + 1];
+      const sd = (r === 0 || !grid[r - 1][c]) && r + 1 < rows && grid[r + 1][c];
+      if (sa || sd) cellNum[`${r},${c}`] = num++;
+    }
+  }
+  for (const p of placed) p.num = cellNum[`${p.row},${p.col}`] || null;
+
+  const mkList = (dir) => placed.filter(p => p.dir === dir && p.num)
+    .map(p => ({ num: p.num, clue: p.clue, row: p.row, col: p.col, len: p.word.length, answer: p.word }))
+    .sort((a, b) => a.num - b.num);
+
+  return { rows, cols, grid, across: mkList('across'), down: mkList('down'), placed: placed.length, total: allEntries.length };
+}
+
+const ITEM_TYPES = ['lesson', 'assignment', 'quiz', 'matching', 'crossword', 'spelling_practice', 'spelling_test', 'flashcards'];
+const GRADABLE_TYPES = ['assignment', 'quiz', 'matching', 'crossword', 'spelling_test'];
 
 // ---------- kid picker ----------
 
@@ -572,6 +680,9 @@ app.get('/api/admin/items/:id', requirePin, (req, res) => {
       SELECT id, type, prompt, choices, correct_answer, points FROM quiz_questions WHERE item_id = ? ORDER BY sort, id
     `).all(req.params.id).map((q) => ({ ...q, choices: JSON.parse(q.choices) }));
   }
+  if (item.type === 'crossword' && item.body) {
+    try { item.crosswordData = JSON.parse(item.body); } catch { item.crosswordData = null; }
+  }
   res.json(item);
 });
 
@@ -608,6 +719,14 @@ app.delete('/api/units/:id', requirePin, (req, res) => {
 
 // ---------- items (admin) ----------
 
+app.post('/api/crossword/generate', requirePin, (req, res) => {
+  const { across, down } = req.body;
+  if (!Array.isArray(across) && !Array.isArray(down)) return res.status(400).json({ error: 'across and/or down arrays required' });
+  const result = generateCrossword(across || [], down || []);
+  if (!result) return res.status(400).json({ error: 'Could not place any words — check that words share common letters' });
+  res.json(result);
+});
+
 function validateItemBody(body) {
   const { type, title, refId } = body;
   if (!ITEM_TYPES.includes(type)) return 'Invalid item type';
@@ -621,6 +740,7 @@ function validateItemBody(body) {
   if (type === 'quiz' && (!Array.isArray(body.questions) || body.questions.length === 0)) {
     return 'Quiz needs at least one question';
   }
+  if (type === 'crossword' && !body.crosswordData) return 'Generate the crossword first';
   return null;
 }
 
@@ -660,6 +780,12 @@ app.post('/api/items', requirePin, (req, res) => {
     const totalPoints = req.body.questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0);
     db.prepare(`UPDATE items SET points = ? WHERE id = ?`).run(totalPoints, id);
   }
+  if (type === 'crossword' && req.body.crosswordData) {
+    const cw = req.body.crosswordData;
+    const totalPoints = (cw.across || []).length + (cw.down || []).length;
+    const bodyJson = JSON.stringify(cw);
+    db.prepare(`UPDATE items SET body = ?, points = ? WHERE id = ?`).run(bodyJson, totalPoints, id);
+  }
   res.json({ id });
 });
 
@@ -679,6 +805,12 @@ app.put('/api/items/:id', requirePin, (req, res) => {
          dueDate || null, allowRetakes ? 1 : 0, prereqItemId || null,
          evidenceMode || 'none', retakePolicy || 'latest', req.params.id);
   if (type === 'quiz' || type === 'matching') saveQuizQuestions(req.params.id, req.body.questions);
+  if (type === 'crossword' && req.body.crosswordData) {
+    const cw = req.body.crosswordData;
+    const totalPoints = (cw.across || []).length + (cw.down || []).length;
+    const bodyJson = JSON.stringify(cw);
+    db.prepare(`UPDATE items SET body = ?, points = ? WHERE id = ?`).run(bodyJson, totalPoints, req.params.id);
+  }
   res.json({ ok: true });
 });
 
@@ -790,6 +922,23 @@ app.get('/api/items/:id', (req, res) => {
       correctLetter: graded ? wordToLetter[q.correct_answer] : undefined,
       correctWord: graded ? q.correct_answer : undefined,
     }));
+  } else if (item.type === 'crossword' && item.body) {
+    try {
+      const cw = JSON.parse(item.body);
+      const graded = item.submission && item.submission.status === 'graded';
+      const savedAnswers = graded && item.submission.answers ? JSON.parse(item.submission.answers) : null;
+      // Strip answers from grid for students unless graded
+      const safeGrid = cw.grid.map(row => row.map(cell => cell !== null ? '' : null));
+      const safeAcross = cw.across.map(({ num, clue, row, col, len }) => ({ num, clue, row, col, len }));
+      const safeDown = cw.down.map(({ num, clue, row, col, len }) => ({ num, clue, row, col, len }));
+      item.crosswordData = {
+        rows: cw.rows, cols: cw.cols,
+        grid: safeGrid,
+        across: graded ? cw.across : safeAcross,
+        down: graded ? cw.down : safeDown,
+        savedAnswers,
+      };
+    } catch { item.crosswordData = null; }
   } else if (item.type === 'flashcards') {
     item.deck = db.prepare(`SELECT id, name FROM decks WHERE id = ?`).get(item.ref_id);
   } else if (item.type === 'spelling_practice' || item.type === 'spelling_test') {
@@ -872,6 +1021,46 @@ app.post('/api/items/:id/quiz-submit', (req, res) => {
 
   db.prepare(`INSERT INTO submission_history (student_id, item_id, score, points_possible, answers) VALUES (?, ?, ?, ?, ?)`)
     .run(studentId, req.params.id, earned, possible, JSON.stringify(record));
+
+  markScheduleDone.run(studentId, req.params.id, isDateStr(date) ? date : today());
+  res.json({ score: earned, total: possible });
+});
+
+// Auto-graded crossword submission
+app.post('/api/items/:id/crossword-submit', (req, res) => {
+  const { studentId, answers, date } = req.body; // answers: {'r,c': 'LETTER'}
+  const item = db.prepare(`SELECT body, points FROM items WHERE id = ?`).get(req.params.id);
+  if (!item || !item.body) return res.status(404).json({ error: 'No such crossword' });
+  let cw;
+  try { cw = JSON.parse(item.body); } catch { return res.status(400).json({ error: 'Invalid crossword data' }); }
+
+  const allWords = [...(cw.across || []), ...(cw.down || [])];
+  const isDown = (w) => cw.down.some(d => d.num === w.num && d.row === w.row && d.col === w.col);
+
+  let earned = 0;
+  const possible = allWords.length;
+  for (const w of allWords) {
+    const dir = cw.across.includes(w) ? 'across' : 'down';
+    let wordCorrect = true;
+    for (let i = 0; i < w.len; i++) {
+      const r = w.row + (dir === 'down' ? i : 0);
+      const c = w.col + (dir === 'across' ? i : 0);
+      const given = (answers && answers[`${r},${c}`]) ? String(answers[`${r},${c}`]).toUpperCase() : '';
+      if (given !== w.answer[i]) { wordCorrect = false; break; }
+    }
+    if (wordCorrect) earned++;
+  }
+
+  db.prepare(`
+    INSERT INTO submissions (student_id, item_id, status, score, points_possible, answers, completed_at, graded_at)
+    VALUES (?, ?, 'graded', ?, ?, ?, datetime('now'), datetime('now'))
+    ON CONFLICT (student_id, item_id) DO UPDATE SET
+      status = 'graded', score = excluded.score, points_possible = excluded.points_possible,
+      answers = excluded.answers, completed_at = datetime('now'), graded_at = datetime('now')
+  `).run(studentId, req.params.id, earned, possible, JSON.stringify(answers || {}));
+
+  db.prepare(`INSERT INTO submission_history (student_id, item_id, score, points_possible, answers) VALUES (?, ?, ?, ?, ?)`)
+    .run(studentId, req.params.id, earned, possible, JSON.stringify(answers || {}));
 
   markScheduleDone.run(studentId, req.params.id, isDateStr(date) ? date : today());
   res.json({ score: earned, total: possible });

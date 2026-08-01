@@ -130,6 +130,7 @@
               <option value="spelling_practice">✏️ Spelling Practice</option>
               <option value="spelling_test">⭐ Spelling Test</option>
               <option value="matching">🔤 Matching</option>
+              <option value="crossword">⬛ Crossword</option>
               <option value="flashcards">🗂️ Flashcards</option>
             </select>
           </label>
@@ -245,6 +246,26 @@
             <p class="hint" style="margin:.5rem 0">Enter word-clue pairs. Words are shown as A, B, C… (alphabetical order) in the word bank.</p>
             <div id="ie-pairs"></div>
             <button type="button" id="ie-add-pair" class="secondary">+ Add pair</button>
+          </div>
+
+          <div id="ie-field-crossword" class="ie-field" hidden>
+            <div class="cw-entry-cols">
+              <div>
+                <h3 style="margin-bottom:.5rem">Across clues</h3>
+                <div id="ie-across-clues"></div>
+                <button type="button" id="ie-add-across" class="secondary small">+ Add across clue</button>
+              </div>
+              <div>
+                <h3 style="margin-bottom:.5rem">Down clues</h3>
+                <div id="ie-down-clues"></div>
+                <button type="button" id="ie-add-down" class="secondary small">+ Add down clue</button>
+              </div>
+            </div>
+            <div style="margin-top:1rem;display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+              <button type="button" id="ie-crossword-generate" class="secondary">⚡ Generate crossword</button>
+              <span id="ie-crossword-status" class="hint"></span>
+            </div>
+            <div id="ie-crossword-preview" style="margin-top:.75rem;overflow-x:auto"></div>
           </div>
 
           <div id="ie-field-spelling" class="ie-field">

@@ -27,11 +27,11 @@ const esc = (s) =>
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const TYPE_ICON = {
-  lesson: '📖', assignment: '📝', quiz: '❓', matching: '🔤',
+  lesson: '📖', assignment: '📝', quiz: '❓', matching: '🔤', crossword: '⬛',
   spelling_practice: '✏️', spelling_test: '⭐', flashcards: '🗂️',
 };
 const TYPE_LABEL = {
-  lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz', matching: 'Matching',
+  lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz', matching: 'Matching', crossword: 'Crossword',
   spelling_practice: 'Spelling Practice', spelling_test: 'Spelling Test', flashcards: 'Flashcards',
 };
 
@@ -671,6 +671,7 @@ async function openItem(itemId, type) {
   if (type === 'assignment') return openAssignment(itemId);
   if (type === 'quiz') return openQuiz(itemId, false);
   if (type === 'matching') return openMatching(itemId, false);
+  if (type === 'crossword') return openCrossword(itemId);
   const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
   if (type === 'spelling_practice') return startPractice({ listId: item.list.id, itemId });
   if (type === 'spelling_test') return startTest({ listId: item.list.id, itemId, allowRetakes: item.allow_retakes });
@@ -948,6 +949,294 @@ async function openMatching(itemId, forceRetake = false) {
     };
   }
   show('quiz');
+}
+
+// ---------- crossword ----------
+
+async function openCrossword(itemId) {
+  const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
+  const cw = item.crosswordData;
+  if (!cw) return;
+
+  const view = $('#view-crossword');
+  view.querySelector('.cw-kicker').textContent = `${item.course_name} · ${item.unit_name}`;
+  view.querySelector('.cw-title').textContent = item.title;
+
+  const graded = item.submission && item.submission.status === 'graded';
+  const CELL = 34;
+
+  // Clue number map: 'r,c' -> num
+  const numMap = {};
+  for (const w of [...(cw.across||[]), ...(cw.down||[])]) if (w.num) numMap[`${w.row},${w.col}`] = w.num;
+
+  // Word membership map: 'r,c' -> {across: wordObj|null, down: wordObj|null}
+  const wordMap = {};
+  for (let r = 0; r < cw.rows; r++)
+    for (let c = 0; c < cw.cols; c++)
+      if (cw.grid[r][c] !== null) wordMap[`${r},${c}`] = { across: null, down: null };
+  for (const w of (cw.across||[])) for (let i = 0; i < w.len; i++) wordMap[`${w.row},${w.col+i}`].across = w;
+  for (const w of (cw.down||[]))   for (let i = 0; i < w.len; i++) wordMap[`${w.row+i},${w.col}`].down = w;
+
+  // Build grid DOM
+  const gridEl = view.querySelector('.cw-grid');
+  gridEl.style.gridTemplateColumns = `repeat(${cw.cols}, ${CELL}px)`;
+  gridEl.style.gridTemplateRows    = `repeat(${cw.rows}, ${CELL}px)`;
+  gridEl.innerHTML = '';
+
+  const cells = {};
+  for (let r = 0; r < cw.rows; r++) {
+    for (let c = 0; c < cw.cols; c++) {
+      const key = `${r},${c}`;
+      const div = document.createElement('div');
+      div.className = cw.grid[r][c] === null ? 'cw-cell black' : 'cw-cell';
+      div.dataset.r = r; div.dataset.c = c;
+      if (cw.grid[r][c] !== null) {
+        if (numMap[key]) {
+          const span = document.createElement('span');
+          span.className = 'cw-num';
+          span.textContent = numMap[key];
+          div.appendChild(span);
+        }
+        const inp = document.createElement('input');
+        inp.type = 'text'; inp.className = 'cw-input';
+        inp.maxLength = 1; inp.readOnly = graded;
+        inp.setAttribute('autocomplete', 'off');
+        inp.setAttribute('autocapitalize', 'characters');
+        if (graded && cw.savedAnswers && cw.savedAnswers[key]) inp.value = cw.savedAnswers[key];
+        div.appendChild(inp);
+        cells[key] = { el: div, input: inp };
+      }
+      gridEl.appendChild(div);
+    }
+  }
+
+  // Build clue lists
+  const acrossListEl = $('#cw-across-list');
+  const downListEl   = $('#cw-down-list');
+  acrossListEl.innerHTML = '';
+  downListEl.innerHTML   = '';
+  for (const w of (cw.across||[])) {
+    const li = document.createElement('li');
+    li.dataset.num = w.num; li.dataset.dir = 'across';
+    li.textContent = `${w.num}. ${w.clue}`;
+    acrossListEl.appendChild(li);
+  }
+  for (const w of (cw.down||[])) {
+    const li = document.createElement('li');
+    li.dataset.num = w.num; li.dataset.dir = 'down';
+    li.textContent = `${w.num}. ${w.clue}`;
+    downListEl.appendChild(li);
+  }
+
+  const resultEl = $('#cw-result');
+
+  if (graded) {
+    // Color cells by word correctness
+    const cellStatus = {};
+    for (const key of Object.keys(cells)) cellStatus[key] = 'correct';
+    for (const [words, dir] of [[(cw.across||[]), 'across'], [(cw.down||[]), 'down']]) {
+      for (const w of words) {
+        let ok = !!(w.answer);
+        for (let i = 0; i < w.len; i++) {
+          const r = w.row + (dir === 'down' ? i : 0);
+          const c = w.col + (dir === 'across' ? i : 0);
+          const given = (cw.savedAnswers || {})[`${r},${c}`] || '';
+          if (!given || given !== (w.answer||'')[i]) ok = false;
+        }
+        if (!ok) for (let i = 0; i < w.len; i++) {
+          const r = w.row + (dir === 'down' ? i : 0);
+          const c = w.col + (dir === 'across' ? i : 0);
+          cellStatus[`${r},${c}`] = 'wrong';
+        }
+      }
+    }
+    for (const [key, status] of Object.entries(cellStatus)) {
+      if (cells[key]) cells[key].el.classList.add(status === 'correct' ? 'correct-word' : 'wrong-word');
+    }
+    const score = item.submission.score, total = item.submission.points_possible;
+    const pct = total ? Math.round((score / total) * 100) : 0;
+    resultEl.className = 'status-banner good';
+    resultEl.textContent = `🌟 Score: ${score} / ${total} (${pct}%)`;
+    resultEl.hidden = false;
+    $('#cw-actions').hidden = true;
+    $('#cw-hint').hidden = true;
+    backTarget = () => openKid(currentStudent.id);
+    show('crossword');
+    return;
+  }
+
+  // Interactive (unanswered) mode
+  resultEl.hidden = true;
+  $('#cw-actions').hidden = false;
+  $('#cw-hint').hidden = false;
+
+  let selectedDir = 'across';
+
+  function clearHighlights() {
+    for (const { el } of Object.values(cells)) el.classList.remove('selected', 'word-hi');
+    acrossListEl.querySelectorAll('li').forEach((li) => li.classList.remove('selected-clue', 'word-hi'));
+    downListEl.querySelectorAll('li').forEach((li)   => li.classList.remove('selected-clue', 'word-hi'));
+  }
+
+  let selectedWord = null;
+  function selectWord(word, dir) {
+    clearHighlights();
+    selectedWord = word;
+    if (!word) return;
+    for (let i = 0; i < word.len; i++) {
+      const r = word.row + (dir === 'down' ? i : 0);
+      const c = word.col + (dir === 'across' ? i : 0);
+      if (cells[`${r},${c}`]) cells[`${r},${c}`].el.classList.add('word-hi');
+    }
+    const listEl = dir === 'across' ? acrossListEl : downListEl;
+    const li = listEl.querySelector(`[data-num="${word.num}"]`);
+    if (li) { li.classList.add('selected-clue'); li.scrollIntoView({ block: 'nearest' }); }
+  }
+
+  function pickWord(key) {
+    const wm = wordMap[key];
+    if (!wm) return null;
+    return wm[selectedDir] || wm.across || wm.down;
+  }
+
+  function selectCell(key) {
+    const { el } = cells[key] || {};
+    if (!el) return;
+    clearHighlights();
+    const word = pickWord(key);
+    if (word) {
+      const dir = wordMap[key][selectedDir] === word ? selectedDir : (wordMap[key].across === word ? 'across' : 'down');
+      selectedDir = dir;
+      selectWord(word, dir);
+      el.classList.remove('word-hi');
+    }
+    el.classList.add('selected');
+  }
+
+  function selectAndFocus(r, c) {
+    const key = `${r},${c}`;
+    if (!cells[key]) return;
+    selectCell(key);
+    cells[key].input.focus();
+  }
+
+  // Wire up cells
+  for (const [key, { el, input }] of Object.entries(cells)) {
+    const [r, c] = key.split(',').map(Number);
+
+    input.addEventListener('focus', () => selectCell(key));
+
+    input.addEventListener('click', () => {
+      if (el.classList.contains('selected')) {
+        const wm = wordMap[key];
+        if (wm && wm.across && wm.down) {
+          selectedDir = selectedDir === 'across' ? 'down' : 'across';
+          selectCell(key);
+        }
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        if (input.value) { input.value = ''; return; }
+        if (selectedDir === 'across' && c > 0) selectAndFocus(r, c - 1);
+        else if (selectedDir === 'down'  && r > 0) selectAndFocus(r - 1, c);
+        return;
+      }
+      if (e.key === 'ArrowRight') { e.preventDefault(); selectAndFocus(r, c + 1); return; }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); selectAndFocus(r, c - 1); return; }
+      if (e.key === 'ArrowDown')  { e.preventDefault(); selectAndFocus(r + 1, c); return; }
+      if (e.key === 'ArrowUp')    { e.preventDefault(); selectAndFocus(r - 1, c); return; }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const words = [...(cw.across||[]), ...(cw.down||[])];
+        const cur = words.indexOf(selectedWord);
+        const next = words[(cur + 1) % words.length];
+        if (next) {
+          selectedDir = (cw.across||[]).includes(next) ? 'across' : 'down';
+          selectAndFocus(next.row, next.col);
+        }
+      }
+    });
+
+    input.addEventListener('input', () => {
+      const v = input.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
+      input.value = v.slice(-1);
+      if (!input.value) return;
+      if (selectedDir === 'across') {
+        const nk = `${r},${c + 1}`;
+        if (cells[nk] && wordMap[key]?.across && wordMap[nk]?.across === wordMap[key]?.across)
+          selectAndFocus(r, c + 1);
+      } else {
+        const nk = `${r + 1},${c}`;
+        if (cells[nk] && wordMap[key]?.down && wordMap[nk]?.down === wordMap[key]?.down)
+          selectAndFocus(r + 1, c);
+      }
+    });
+  }
+
+  // Clue list clicks
+  for (const w of (cw.across||[])) {
+    const li = acrossListEl.querySelector(`[data-num="${w.num}"]`);
+    if (li) li.addEventListener('click', () => { selectedDir = 'across'; selectAndFocus(w.row, w.col); });
+  }
+  for (const w of (cw.down||[])) {
+    const li = downListEl.querySelector(`[data-num="${w.num}"]`);
+    if (li) li.addEventListener('click', () => { selectedDir = 'down'; selectAndFocus(w.row, w.col); });
+  }
+
+  // Submit
+  $('#cw-check-btn').onclick = async () => {
+    const answers = {};
+    for (const [key, { input }] of Object.entries(cells)) {
+      if (input.value) answers[key] = input.value.toUpperCase();
+    }
+    await api(`/api/items/${itemId}/crossword-submit`, {
+      method: 'POST',
+      body: { studentId: currentStudent.id, answers, date: todayStr() },
+    });
+    openCrossword(itemId);
+  };
+
+  $('#cw-print-btn').onclick = () => printCrosswordWorksheet(item.title, cw);
+
+  backTarget = () => openKid(currentStudent.id);
+  show('crossword');
+}
+
+function printCrosswordWorksheet(title, cw) {
+  const CELL = 28;
+  const numMap = {};
+  for (const w of [...(cw.across||[]), ...(cw.down||[])]) if (w.num) numMap[`${w.row},${w.col}`] = w.num;
+  let svg = `<svg width="${cw.cols * CELL}" height="${cw.rows * CELL}" style="display:block;margin-bottom:1.5rem">`;
+  for (let r = 0; r < cw.rows; r++) {
+    for (let c = 0; c < cw.cols; c++) {
+      const x = c * CELL, y = r * CELL;
+      if (cw.grid[r][c] === null) {
+        svg += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="#222"/>`;
+      } else {
+        svg += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="#fff" stroke="#999" stroke-width="0.5"/>`;
+        const key = `${r},${c}`;
+        if (numMap[key]) svg += `<text x="${x+2}" y="${y+9}" font-size="6" font-family="sans-serif">${numMap[key]}</text>`;
+      }
+    }
+  }
+  svg += '</svg>';
+  const acrossHtml = (cw.across||[]).map((w) => `<li><strong>${w.num}.</strong> ${esc(w.clue)}</li>`).join('');
+  const downHtml   = (cw.down||[]).map((w)   => `<li><strong>${w.num}.</strong> ${esc(w.clue)}</li>`).join('');
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>${esc(title)}</title>
+<style>body{font-family:sans-serif;padding:1.5rem}h1{margin-bottom:1rem}.cols{display:flex;gap:2rem}ol{list-style:none;padding:0}li{margin:.2rem 0;font-size:.9rem}@media print{body{padding:.5rem}}</style>
+</head><body>
+<h1>${esc(title)}</h1>${svg}
+<div class="cols">
+  <div><h3>Across</h3><ol>${acrossHtml}</ol></div>
+  <div><h3>Down</h3><ol>${downHtml}</ol></div>
+</div>
+<script>window.print();<\/script>
+</body></html>`);
+  win.document.close();
 }
 
 // ---------- flashcards ----------

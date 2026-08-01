@@ -202,6 +202,36 @@
     <div id="test-done" class="done-card" hidden></div>
   </section>
 
+  <!-- Crossword -->
+  <section id="view-crossword" class="view" hidden>
+    <button class="back-btn" data-back="crossword">← Back</button>
+    <div class="item-card">
+      <p class="item-kicker cw-kicker"></p>
+      <h1 class="cw-title"></h1>
+      <p id="cw-hint" class="hint" hidden>Click a square to start — click the same square again to switch Across ↔ Down. Use arrow keys to move and Tab to jump to the next word.</p>
+      <div class="cw-layout">
+        <div class="cw-grid-wrap">
+          <div class="cw-grid"></div>
+        </div>
+        <div class="cw-sidebar">
+          <div class="cw-clues">
+            <h3>Across</h3>
+            <ol class="cw-clue-list" id="cw-across-list"></ol>
+          </div>
+          <div class="cw-clues">
+            <h3>Down</h3>
+            <ol class="cw-clue-list" id="cw-down-list"></ol>
+          </div>
+        </div>
+      </div>
+      <div class="cw-actions" id="cw-actions" hidden>
+        <button id="cw-check-btn" class="check-btn">Check answers ✓</button>
+        <button id="cw-print-btn" class="secondary" style="margin-left:.5rem">🖨 Print worksheet</button>
+      </div>
+      <div id="cw-result" class="status-banner" hidden></div>
+    </div>
+  </section>
+
   <script src="app.js"></script>
 </body>
 </html>

@@ -36,11 +36,11 @@ function msg(text, type = 'success') {
 }
 
 const TYPE_ICON = {
-  lesson: '📖', assignment: '📝', quiz: '❓', matching: '🔤',
+  lesson: '📖', assignment: '📝', quiz: '❓', matching: '🔤', crossword: '⬛',
   spelling_practice: '✏️', spelling_test: '⭐', flashcards: '🗂️',
 };
 const TYPE_LABEL = {
-  lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz', matching: 'Matching',
+  lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz', matching: 'Matching', crossword: 'Crossword',
   spelling_practice: 'Spelling Practice', spelling_test: 'Spelling Test', flashcards: 'Flashcards',
 };
 
@@ -390,6 +390,11 @@ async function openItemEditor(unitId, itemId) {
   questionCount = 0;
   $('#ie-pairs').innerHTML = '';
   pairCount = 0;
+  $('#ie-across-clues').innerHTML = '';
+  $('#ie-down-clues').innerHTML = '';
+  $('#ie-crossword-preview').innerHTML = '';
+  $('#ie-crossword-status').textContent = '';
+  currentCrosswordData = null;
 
   if (itemId) {
     const item = await api(`/api/admin/items/${itemId}`);
@@ -416,6 +421,13 @@ async function openItemEditor(unitId, itemId) {
       pairCount = 0;
       (item.questions || []).forEach(addMatchingRow);
     }
+    if (item.type === 'crossword' && item.crosswordData) {
+      currentCrosswordData = item.crosswordData;
+      (item.crosswordData.across || []).forEach(w => addCrosswordClueRow('across', { word: w.answer, clue: w.clue }));
+      (item.crosswordData.down || []).forEach(w => addCrosswordClueRow('down', { word: w.answer, clue: w.clue }));
+      renderCrosswordPreview(item.crosswordData);
+      $('#ie-crossword-status').textContent = `${item.crosswordData.placed || ''} words placed`;
+    }
     $('#ie-delete').hidden = false;
     $('#ie-delete').onclick = async () => {
       if (!confirm('Delete this item and any grades for it?')) return;
@@ -431,6 +443,7 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-body-assignment').innerHTML = '';
     $('#ie-quiz-instructions').value = '';
     $('#ie-matching-instructions').value = '';
+    currentCrosswordData = null;
     $('#ie-points').value = 10;
     $('#ie-due-date').value = '';
     $('#ie-allow-retakes').checked = false;
@@ -451,6 +464,7 @@ function updateItemFieldVisibility() {
   $('#ie-field-assignment').hidden = type !== 'assignment';
   $('#ie-field-quiz').hidden = type !== 'quiz';
   $('#ie-field-matching').hidden = type !== 'matching';
+  $('#ie-field-crossword').hidden = type !== 'crossword';
   $('#ie-field-spelling').hidden = type !== 'spelling_practice' && type !== 'spelling_test';
   $('#ie-field-flashcards').hidden = type !== 'flashcards';
   $('#ie-scan-section').hidden = type !== 'lesson' && type !== 'quiz';
@@ -686,6 +700,77 @@ function addMatchingRow(pair = {}) {
 }
 $('#ie-add-pair').addEventListener('click', () => addMatchingRow());
 
+// ---------- crossword editor ----------
+
+let currentCrosswordData = null;
+
+function addCrosswordClueRow(dir, entry = {}) {
+  const container = dir === 'across' ? $('#ie-across-clues') : $('#ie-down-clues');
+  const div = document.createElement('div');
+  div.className = 'cw-clue-row';
+  div.innerHTML = `
+    <input class="cw-word" placeholder="WORD" value="${esc(entry.word || '')}" style="text-transform:uppercase;width:7rem">
+    <input class="cw-clue" placeholder="Clue" value="${esc(entry.clue || '')}" style="flex:1">
+    <button type="button" class="danger small cw-remove">✕</button>`;
+  div.querySelector('.cw-word').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
+  div.querySelector('.cw-remove').addEventListener('click', () => div.remove());
+  container.appendChild(div);
+}
+
+$('#ie-add-across').addEventListener('click', () => addCrosswordClueRow('across'));
+$('#ie-add-down').addEventListener('click', () => addCrosswordClueRow('down'));
+
+function renderCrosswordPreview(cw) {
+  const cell = 22;
+  const w = cw.cols * cell, h = cw.rows * cell;
+  let svg = `<svg width="${w}" height="${h}" style="border:1px solid #ccc;display:block">`;
+  for (let r = 0; r < cw.rows; r++) {
+    for (let c = 0; c < cw.cols; c++) {
+      const x = c * cell, y = r * cell;
+      if (cw.grid[r][c] === null) {
+        svg += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="#222"/>`;
+      } else {
+        svg += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="#fff" stroke="#999" stroke-width="0.5"/>`;
+        if (cw.grid[r][c]) {
+          svg += `<text x="${x + cell/2}" y="${y + cell/2 + 5}" text-anchor="middle" font-size="11" font-family="monospace">${esc(cw.grid[r][c])}</text>`;
+        }
+      }
+    }
+  }
+  // Draw numbers
+  const allWords = [...(cw.across||[]), ...(cw.down||[])];
+  const nums = {};
+  for (const w2 of allWords) if (w2.num) nums[`${w2.row},${w2.col}`] = w2.num;
+  for (const [key, n] of Object.entries(nums)) {
+    const [r, c] = key.split(',').map(Number);
+    svg += `<text x="${c * cell + 1}" y="${r * cell + 8}" font-size="6" font-family="sans-serif" fill="#333">${n}</text>`;
+  }
+  svg += '</svg>';
+  $('#ie-crossword-preview').innerHTML = svg;
+}
+
+$('#ie-crossword-generate').addEventListener('click', async () => {
+  const across = Array.from($('#ie-across-clues').querySelectorAll('.cw-clue-row')).map(row => ({
+    word: row.querySelector('.cw-word').value.trim(),
+    clue: row.querySelector('.cw-clue').value.trim(),
+  })).filter(e => e.word && e.clue);
+  const down = Array.from($('#ie-down-clues').querySelectorAll('.cw-clue-row')).map(row => ({
+    word: row.querySelector('.cw-word').value.trim(),
+    clue: row.querySelector('.cw-clue').value.trim(),
+  })).filter(e => e.word && e.clue);
+  if (across.length + down.length < 2) return msg('Add at least 2 words with clues before generating.');
+  $('#ie-crossword-status').textContent = '⚡ Generating…';
+  try {
+    const result = await api('/api/crossword/generate', { method: 'POST', body: { across, down } });
+    currentCrosswordData = result;
+    renderCrosswordPreview(result);
+    const skipped = result.total - result.placed;
+    $('#ie-crossword-status').textContent = `✅ ${result.placed} words placed${skipped ? ` (${skipped} couldn't fit — try sharing more letters)` : ''}`;
+  } catch (err) {
+    $('#ie-crossword-status').textContent = `❌ ${err.message}`;
+  }
+});
+
 $('#ie-load-template').addEventListener('click', async () => {
   const tid = $('#ie-template-select').value;
   if (!tid) return msg('Pick a template first.');
@@ -750,6 +835,14 @@ $('#item-form').addEventListener('submit', async (e) => {
       choices: [],
       points: 1,
     })).filter((q) => q.prompt && q.correctAnswer);
+  }
+  if (type === 'crossword') {
+    if (!currentCrosswordData) {
+      $('#ie-error').textContent = 'Generate the crossword first.';
+      $('#ie-error').hidden = false;
+      return;
+    }
+    body.crosswordData = currentCrosswordData;
   }
 
   const id = $('#ie-id').value;
