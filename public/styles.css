@@ -830,6 +830,14 @@ body.theme-indigo { --accent: #5b6abf; --accent-dark: #4a57a0; --bg: #f4f5ff; }
   font-size: 1.05rem;
 }
 
+/* ---------- quiz / matching instructions ---------- */
+.quiz-instructions {
+  background: var(--bg); border-left: 3px solid var(--accent);
+  border-radius: 6px; padding: 0.55rem 0.9rem;
+  font-size: 0.95rem; color: var(--ink);
+  margin-bottom: 1rem; text-align: left;
+}
+
 /* ---------- matching quiz ---------- */
 .match-word-bank {
   background: var(--bg); border: 2px solid var(--accent);

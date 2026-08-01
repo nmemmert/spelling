@@ -406,8 +406,12 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-retake-policy').value = item.retake_policy || 'latest';
     if (item.type === 'spelling_practice' || item.type === 'spelling_test') $('#ie-list').value = item.ref_id;
     if (item.type === 'flashcards') $('#ie-deck').value = item.ref_id;
-    if (item.type === 'quiz') (item.questions || []).forEach(addQuestionRow);
+    if (item.type === 'quiz') {
+      $('#ie-quiz-instructions').value = item.body || '';
+      (item.questions || []).forEach(addQuestionRow);
+    }
     if (item.type === 'matching') {
+      $('#ie-matching-instructions').value = item.body || '';
       $('#ie-pairs').innerHTML = '';
       pairCount = 0;
       (item.questions || []).forEach(addMatchingRow);
@@ -425,6 +429,8 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-title').value = '';
     $('#ie-body-lesson').innerHTML = '';
     $('#ie-body-assignment').innerHTML = '';
+    $('#ie-quiz-instructions').value = '';
+    $('#ie-matching-instructions').value = '';
     $('#ie-points').value = 10;
     $('#ie-due-date').value = '';
     $('#ie-allow-retakes').checked = false;
@@ -713,7 +719,11 @@ $('#item-form').addEventListener('submit', async (e) => {
     unitId: Number($('#ie-unit-id').value),
     type,
     title,
-    body: type === 'lesson' ? getLessonBody() : type === 'assignment' ? getAssignmentBody() : '',
+    body: type === 'lesson' ? getLessonBody()
+        : type === 'assignment' ? getAssignmentBody()
+        : type === 'quiz' ? $('#ie-quiz-instructions').value.trim()
+        : type === 'matching' ? $('#ie-matching-instructions').value.trim()
+        : '',
     points: type === 'assignment' ? Number($('#ie-points').value) || 0 : 0,
     refId: type === 'spelling_practice' || type === 'spelling_test' ? Number($('#ie-list').value)
          : type === 'flashcards' ? Number($('#ie-deck').value) : null,

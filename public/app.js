@@ -771,6 +771,9 @@ async function openQuiz(itemId, forceRetake = false) {
   const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
   $('#quiz-kicker').textContent = `${item.course_name} · ${item.unit_name}`;
   $('#quiz-title').textContent = item.title;
+  const instrEl = $('#quiz-instructions');
+  if (item.body) { instrEl.textContent = item.body; instrEl.hidden = false; }
+  else instrEl.hidden = true;
   const graded = !forceRetake && item.submission && item.submission.status === 'graded';
   const result = $('#quiz-result');
 
@@ -865,6 +868,9 @@ async function openMatching(itemId, forceRetake = false) {
   const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
   $('#quiz-kicker').textContent = `${item.course_name} · ${item.unit_name}`;
   $('#quiz-title').textContent = item.title;
+  const instrEl = $('#quiz-instructions');
+  if (item.body) { instrEl.textContent = item.body; instrEl.hidden = false; }
+  else instrEl.hidden = true;
   const graded = !forceRetake && item.submission && item.submission.status === 'graded';
   const result = $('#quiz-result');
 

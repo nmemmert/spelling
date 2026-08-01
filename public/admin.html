@@ -226,7 +226,10 @@
           </div>
 
           <div id="ie-field-quiz" class="ie-field">
-            <div class="inline-form" style="margin-bottom:.5rem">
+            <label>Instructions <small style="color:#888">(optional — shown to student before questions)</small>
+              <textarea id="ie-quiz-instructions" rows="2" placeholder="e.g. Choose the best answer for each question." style="width:100%;margin-top:.25rem;resize:vertical"></textarea>
+            </label>
+            <div class="inline-form" style="margin:.5rem 0">
               <select id="ie-template-select"><option value="">— load from template —</option></select>
               <button type="button" id="ie-load-template" class="secondary">Load</button>
               <button type="button" id="ie-save-template" class="secondary">Save as template</button>
@@ -236,7 +239,10 @@
           </div>
 
           <div id="ie-field-matching" class="ie-field">
-            <p class="hint" style="margin-bottom:.5rem">Enter word-clue pairs. Words are shown as A, B, C… (alphabetical order) in the word bank.</p>
+            <label>Instructions <small style="color:#888">(optional — shown to student before the word bank)</small>
+              <textarea id="ie-matching-instructions" rows="2" placeholder="e.g. Match each definition to the correct term." style="width:100%;margin-top:.25rem;resize:vertical"></textarea>
+            </label>
+            <p class="hint" style="margin:.5rem 0">Enter word-clue pairs. Words are shown as A, B, C… (alphabetical order) in the word bank.</p>
             <div id="ie-pairs"></div>
             <button type="button" id="ie-add-pair" class="secondary">+ Add pair</button>
           </div>
