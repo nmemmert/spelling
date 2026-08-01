@@ -740,9 +740,14 @@ body.theme-green  { --accent: #2e9e5b; --accent-dark: #247a47; --bg: #f0faf4; }
 body.theme-purple { --accent: #7c5cbf; --accent-dark: #6245a0; --bg: #f8f4ff; }
 body.theme-orange { --accent: #e8802a; --accent-dark: #c96a1a; --bg: #fff8f0; }
 body.theme-pink   { --accent: #d45d8a; --accent-dark: #b4487a; --bg: #fff0f5; }
+body.theme-red    { --accent: #e84040; --accent-dark: #c42828; --bg: #fff5f5; }
+body.theme-teal   { --accent: #20a8a0; --accent-dark: #178880; --bg: #f0faf9; }
+body.theme-yellow { --accent: #c8960c; --accent-dark: #a87a06; --bg: #fffbf0; }
+body.theme-indigo { --accent: #5b6abf; --accent-dark: #4a57a0; --bg: #f4f5ff; }
 
 /* ---------- kid top bar + theme picker ---------- */
 .kid-topbar { display: flex; justify-content: space-between; align-items: center; }
+.kid-topbar-actions { display: flex; gap: 0.25rem; align-items: center; }
 .theme-picker-btn {
   background: none; border: none; font-size: 1.3rem; cursor: pointer;
   padding: 0.25rem 0.5rem; color: var(--muted); line-height: 1;
@@ -763,6 +768,25 @@ body.theme-pink   { --accent: #d45d8a; --accent-dark: #b4487a; --bg: #fff0f5; }
 .theme-dot.theme-purple { background: #7c5cbf; }
 .theme-dot.theme-orange { background: #e8802a; }
 .theme-dot.theme-pink   { background: #d45d8a; }
+.theme-dot.theme-red    { background: #e84040; }
+.theme-dot.theme-teal   { background: #20a8a0; }
+.theme-dot.theme-yellow { background: #c8960c; }
+.theme-dot.theme-indigo { background: #5b6abf; }
+
+/* ---------- icon / animal picker ---------- */
+.icon-grid {
+  display: grid; grid-template-columns: repeat(8, 1fr);
+  gap: 0.35rem; margin-bottom: 0.75rem;
+  background: var(--card); border-radius: var(--radius);
+  padding: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+.icon-choice {
+  font-size: 1.6rem; background: none; border: 2px solid transparent;
+  border-radius: 0.5rem; cursor: pointer; padding: 0.2rem;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.icon-choice:hover { transform: scale(1.2); }
+.icon-choice.active { border-color: var(--accent); background: var(--bg); }
 
 /* ---------- celebration overlay ---------- */
 #celebration-overlay {
@@ -806,6 +830,46 @@ body.theme-pink   { --accent: #d45d8a; --accent-dark: #b4487a; --bg: #fff0f5; }
   font-size: 1.05rem;
 }
 
+/* ---------- matching quiz ---------- */
+.match-word-bank {
+  background: var(--bg); border: 2px solid var(--accent);
+  border-radius: var(--radius); padding: 0.75rem 1rem;
+  margin-bottom: 1rem; text-align: left;
+}
+.match-bank-list {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem;
+  margin-top: 0.4rem;
+}
+.match-bank-item { font-size: 0.95rem; }
+.match-instructions { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.75rem; }
+.match-row {
+  display: flex; align-items: center; gap: 0.6rem;
+  text-align: left;
+}
+.match-input {
+  width: 2.6rem; text-align: center; font-size: 1.1rem; font-weight: 700;
+  text-transform: uppercase; border: 2px solid var(--accent);
+  border-radius: 8px; padding: 0.3rem; flex-shrink: 0;
+}
+.match-clue { flex: 1; font-size: 0.95rem; }
+.match-review-row {
+  display: flex; align-items: center; gap: 0.6rem;
+  text-align: left; flex-wrap: wrap;
+}
+.match-blank-badge {
+  display: inline-block; width: 2.2rem; text-align: center;
+  font-size: 1rem; font-weight: 700; border-radius: 6px;
+  padding: 0.15rem 0; flex-shrink: 0;
+}
+.match-blank-badge.correct { background: var(--good-bg); color: var(--good); }
+.match-blank-badge.wrong   { background: var(--bad-bg);  color: var(--bad);  }
+
+/* admin matching pair rows */
+.matching-pair-row {
+  display: grid; grid-template-columns: 1fr 2fr auto;
+  gap: 0.4rem; margin-bottom: 0.4rem; align-items: center;
+}
+
 /* ---------- print list button ---------- */
 .big-btn.print-list {
   background: #6b7280; color: #fff; font-size: 1.2rem;
@@ -828,6 +892,10 @@ body.theme-pink   { --accent: #d45d8a; --accent-dark: #b4487a; --bg: #fff0f5; }
 .theme-swatch.theme-purple { background: #7c5cbf; }
 .theme-swatch.theme-orange { background: #e8802a; }
 .theme-swatch.theme-pink   { background: #d45d8a; }
+.theme-swatch.theme-red    { background: #e84040; }
+.theme-swatch.theme-teal   { background: #20a8a0; }
+.theme-swatch.theme-yellow { background: #c8960c; }
+.theme-swatch.theme-indigo { background: #5b6abf; }
 
 /* ---------- student portal: test history ---------- */
 .thr-heading { margin: 1.5rem 0 0.5rem; font-size: 1rem; }

@@ -79,8 +79,8 @@ const markScheduleDone = db.prepare(`
   WHERE student_id = ? AND item_id = ? AND date = ?
 `);
 
-const ITEM_TYPES = ['lesson', 'assignment', 'quiz', 'spelling_practice', 'spelling_test', 'flashcards'];
-const GRADABLE_TYPES = ['assignment', 'quiz', 'spelling_test'];
+const ITEM_TYPES = ['lesson', 'assignment', 'quiz', 'matching', 'spelling_practice', 'spelling_test', 'flashcards'];
+const GRADABLE_TYPES = ['assignment', 'quiz', 'matching', 'spelling_test'];
 
 // ---------- kid picker ----------
 
@@ -88,9 +88,18 @@ app.get('/api/students', (req, res) => {
   res.json(db.prepare(`SELECT id, name, emoji, theme, streak_count, streak_date FROM students ORDER BY name`).all());
 });
 
+const VALID_THEMES = ['blue','green','purple','orange','pink','red','teal','yellow','indigo'];
+
 app.patch('/api/students/:id/theme', (req, res) => {
-  const theme = ['blue','green','purple','orange','pink'].includes(req.body.theme) ? req.body.theme : 'blue';
+  const theme = VALID_THEMES.includes(req.body.theme) ? req.body.theme : 'blue';
   db.prepare(`UPDATE students SET theme = ? WHERE id = ?`).run(theme, req.params.id);
+  res.json({ ok: true });
+});
+
+app.patch('/api/students/:id/emoji', (req, res) => {
+  const emoji = req.body.emoji ? String(req.body.emoji).trim() : null;
+  if (!emoji) return res.status(400).json({ error: 'emoji required' });
+  db.prepare(`UPDATE students SET emoji = ? WHERE id = ?`).run(emoji, req.params.id);
   res.json({ ok: true });
 });
 
@@ -114,7 +123,7 @@ app.post('/api/students/:id/complete-day', (req, res) => {
 // Everything the standalone spelling home screen needs
 app.get('/api/state/:studentId', (req, res) => {
   const id = req.params.studentId;
-  const student = db.prepare(`SELECT id, name, emoji FROM students WHERE id = ?`).get(id);
+  const student = db.prepare(`SELECT id, name, emoji, theme FROM students WHERE id = ?`).get(id);
   if (!student) return res.status(404).json({ error: 'No such student' });
 
   const assignment = db.prepare(`
@@ -409,7 +418,7 @@ app.post('/api/students', requirePin, (req, res) => {
 app.put('/api/students/:id', requirePin, (req, res) => {
   const { emoji, theme } = req.body;
   if (emoji) db.prepare(`UPDATE students SET emoji = ? WHERE id = ?`).run(String(emoji), req.params.id);
-  if (theme && ['blue','green','purple','orange','pink'].includes(theme))
+  if (theme && VALID_THEMES.includes(theme))
     db.prepare(`UPDATE students SET theme = ? WHERE id = ?`).run(theme, req.params.id);
   res.json({ ok: true });
 });
@@ -558,7 +567,7 @@ app.get('/api/admin/courses/:id', requirePin, (req, res) => {
 app.get('/api/admin/items/:id', requirePin, (req, res) => {
   const item = db.prepare(`SELECT id, unit_id, type, title, body, points, ref_id, due_date, allow_retakes, prereq_item_id, evidence_mode, retake_policy FROM items WHERE id = ?`).get(req.params.id);
   if (!item) return res.status(404).json({ error: 'No such item' });
-  if (item.type === 'quiz') {
+  if (item.type === 'quiz' || item.type === 'matching') {
     item.questions = db.prepare(`
       SELECT id, type, prompt, choices, correct_answer, points FROM quiz_questions WHERE item_id = ? ORDER BY sort, id
     `).all(req.params.id).map((q) => ({ ...q, choices: JSON.parse(q.choices) }));
@@ -646,7 +655,7 @@ app.post('/api/items', requirePin, (req, res) => {
          (type === 'flashcards' || type === 'spelling_practice' || type === 'spelling_test') ? refId : null,
          sort, dueDate || null, allowRetakes ? 1 : 0, prereqItemId || null,
          evidenceMode || 'none', retakePolicy || 'latest').lastInsertRowid;
-  if (type === 'quiz') {
+  if (type === 'quiz' || type === 'matching') {
     saveQuizQuestions(id, req.body.questions);
     const totalPoints = req.body.questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0);
     db.prepare(`UPDATE items SET points = ? WHERE id = ?`).run(totalPoints, id);
@@ -661,7 +670,7 @@ app.put('/api/items/:id', requirePin, (req, res) => {
     return res.status(404).json({ error: 'No such item' });
   }
   const { type, title, body, points, refId, dueDate, allowRetakes, prereqItemId, evidenceMode, retakePolicy } = req.body;
-  const finalPoints = type === 'quiz'
+  const finalPoints = (type === 'quiz' || type === 'matching')
     ? req.body.questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0)
     : (Number(points) || 0);
   db.prepare(`UPDATE items SET type = ?, title = ?, body = ?, points = ?, ref_id = ?, due_date = ?, allow_retakes = ?, prereq_item_id = ?, evidence_mode = ?, retake_policy = ? WHERE id = ?`)
@@ -669,7 +678,7 @@ app.put('/api/items/:id', requirePin, (req, res) => {
          (type === 'flashcards' || type === 'spelling_practice' || type === 'spelling_test') ? refId : null,
          dueDate || null, allowRetakes ? 1 : 0, prereqItemId || null,
          evidenceMode || 'none', retakePolicy || 'latest', req.params.id);
-  if (type === 'quiz') saveQuizQuestions(req.params.id, req.body.questions);
+  if (type === 'quiz' || type === 'matching') saveQuizQuestions(req.params.id, req.body.questions);
   res.json({ ok: true });
 });
 
@@ -766,6 +775,21 @@ app.get('/api/items/:id', (req, res) => {
       choices: JSON.parse(q.choices),
       given: savedAnswers ? savedAnswers[q.id] : undefined,
     }));
+  } else if (item.type === 'matching') {
+    const graded = item.submission && item.submission.status === 'graded';
+    const savedAnswers = graded && item.submission.answers ? JSON.parse(item.submission.answers) : null;
+    const qs = db.prepare(`SELECT id, prompt, correct_answer, points FROM quiz_questions WHERE item_id = ? ORDER BY sort, id`).all(req.params.id);
+    const words = [...new Set(qs.map(q => q.correct_answer))].sort((a, b) => a.localeCompare(b));
+    const wordToLetter = Object.fromEntries(words.map((w, i) => [w, String.fromCharCode(65 + i)]));
+    item.wordBank = words;
+    item.questions = qs.map(q => ({
+      id: q.id,
+      prompt: q.prompt,
+      points: q.points,
+      given: savedAnswers ? savedAnswers[q.id] : undefined,
+      correctLetter: graded ? wordToLetter[q.correct_answer] : undefined,
+      correctWord: graded ? q.correct_answer : undefined,
+    }));
   } else if (item.type === 'flashcards') {
     item.deck = db.prepare(`SELECT id, name FROM decks WHERE id = ?`).get(item.ref_id);
   } else if (item.type === 'spelling_practice' || item.type === 'spelling_test') {
@@ -811,15 +835,29 @@ app.post('/api/items/:id/complete', (req, res) => {
 // Auto-graded quiz submission
 app.post('/api/items/:id/quiz-submit', (req, res) => {
   const { studentId, answers, date } = req.body; // answers: { questionId: value }
+  const item = db.prepare(`SELECT type FROM items WHERE id = ?`).get(req.params.id);
   const questions = db.prepare(`SELECT * FROM quiz_questions WHERE item_id = ?`).all(req.params.id);
   if (questions.length === 0) return res.status(404).json({ error: 'No such quiz' });
+
+  // For matching: build letter→word map from alphabetically sorted correct_answers
+  let letterToWord = null;
+  if (item && item.type === 'matching') {
+    const words = [...new Set(questions.map(q => q.correct_answer))].sort((a, b) => a.localeCompare(b));
+    letterToWord = Object.fromEntries(words.map((w, i) => [String.fromCharCode(65 + i), w]));
+  }
 
   let earned = 0, possible = 0;
   const record = {};
   for (const q of questions) {
     possible += q.points;
     const given = answers ? answers[q.id] : undefined;
-    const correct = given !== undefined && normalize(given) === normalize(q.correct_answer);
+    let correct;
+    if (letterToWord) {
+      const mappedWord = given ? (letterToWord[String(given).trim().toUpperCase()] || '') : '';
+      correct = given !== undefined && normalize(mappedWord) === normalize(q.correct_answer);
+    } else {
+      correct = given !== undefined && normalize(given) === normalize(q.correct_answer);
+    }
     if (correct) earned += q.points;
     record[q.id] = given ?? '';
   }

@@ -21,7 +21,10 @@
   <section id="view-kid" class="view" hidden>
     <div class="kid-topbar">
       <button class="back-btn" data-nav="home">← Switch</button>
-      <button id="theme-picker-btn" class="theme-picker-btn" aria-label="Pick my color">🎨</button>
+      <div class="kid-topbar-actions">
+        <button id="icon-picker-btn" class="theme-picker-btn" aria-label="Change my animal">🐾</button>
+        <button id="theme-picker-btn" class="theme-picker-btn" aria-label="Pick my color">🎨</button>
+      </div>
     </div>
     <h1 id="kid-greeting"></h1>
     <div id="theme-dots" class="theme-dots" hidden>
@@ -30,7 +33,12 @@
       <button class="theme-dot theme-purple" data-theme="purple" title="Purple"></button>
       <button class="theme-dot theme-orange" data-theme="orange" title="Orange"></button>
       <button class="theme-dot theme-pink"   data-theme="pink"   title="Pink"></button>
+      <button class="theme-dot theme-red"    data-theme="red"    title="Red"></button>
+      <button class="theme-dot theme-teal"   data-theme="teal"   title="Teal"></button>
+      <button class="theme-dot theme-yellow" data-theme="yellow" title="Yellow"></button>
+      <button class="theme-dot theme-indigo" data-theme="indigo" title="Indigo"></button>
     </div>
+    <div id="icon-grid" class="icon-grid" hidden></div>
 
     <div class="kid-nav">
       <button class="nav-pill active" data-tab="today">📋 Today</button>

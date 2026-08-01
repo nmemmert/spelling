@@ -27,11 +27,11 @@ const esc = (s) =>
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const TYPE_ICON = {
-  lesson: '📖', assignment: '📝', quiz: '❓',
+  lesson: '📖', assignment: '📝', quiz: '❓', matching: '🔤',
   spelling_practice: '✏️', spelling_test: '⭐', flashcards: '🗂️',
 };
 const TYPE_LABEL = {
-  lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz',
+  lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz', matching: 'Matching',
   spelling_practice: 'Spelling Practice', spelling_test: 'Spelling Test', flashcards: 'Flashcards',
 };
 
@@ -191,7 +191,18 @@ const THEMES = {
   purple: { '--accent': '#7c5cbf', '--accent-dark': '#6245a0', '--bg': '#f8f4ff' },
   orange: { '--accent': '#e8802a', '--accent-dark': '#c96a1a', '--bg': '#fff8f0' },
   pink:   { '--accent': '#d45d8a', '--accent-dark': '#b4487a', '--bg': '#fff0f5' },
+  red:    { '--accent': '#e84040', '--accent-dark': '#c42828', '--bg': '#fff5f5' },
+  teal:   { '--accent': '#20a8a0', '--accent-dark': '#178880', '--bg': '#f0faf9' },
+  yellow: { '--accent': '#c8960c', '--accent-dark': '#a87a06', '--bg': '#fffbf0' },
+  indigo: { '--accent': '#5b6abf', '--accent-dark': '#4a57a0', '--bg': '#f4f5ff' },
 };
+
+const ANIMAL_EMOJIS = [
+  '🐶','🐱','🐰','🦊','🐻','🐼','🐨','🐯',
+  '🦁','🐮','🐷','🐸','🐵','🐔','🐧','🦆',
+  '🦉','🦋','🐢','🦄','🐬','🦈','🦖','🦕',
+  '🐺','🦝','🦔','🐿️','🦜','🦩','🦚','🐙',
+];
 const THEME_NAMES = Object.keys(THEMES);
 const DEFAULT_VARS = { '--accent': '#4f86f7', '--accent-dark': '#3a6fd8', '--bg': '#fdf6e3' };
 
@@ -305,6 +316,7 @@ $('#celebration-close').addEventListener('click', () => {
 // Theme picker toggle
 $('#theme-picker-btn').addEventListener('click', () => {
   $('#theme-dots').hidden = !$('#theme-dots').hidden;
+  $('#icon-grid').hidden = true;
 });
 
 document.querySelectorAll('.theme-dot').forEach((btn) =>
@@ -317,6 +329,29 @@ document.querySelectorAll('.theme-dot').forEach((btn) =>
     $('#theme-dots').hidden = true;
   })
 );
+
+// ---------- animal / icon picker ----------
+
+$('#icon-picker-btn').addEventListener('click', () => {
+  const grid = $('#icon-grid');
+  if (grid.hidden) {
+    grid.innerHTML = ANIMAL_EMOJIS.map((e) =>
+      `<button class="icon-choice${currentStudent && currentStudent.emoji === e ? ' active' : ''}" data-emoji="${e}">${e}</button>`
+    ).join('');
+    grid.querySelectorAll('.icon-choice').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        const emoji = btn.dataset.emoji;
+        currentStudent.emoji = emoji;
+        $('#kid-greeting').textContent = `${emoji} Hi, ${currentStudent.name}!`;
+        grid.querySelectorAll('.icon-choice').forEach((b) => b.classList.toggle('active', b.dataset.emoji === emoji));
+        await api(`/api/students/${currentStudent.id}/emoji`, { method: 'PATCH', body: { emoji } });
+        grid.hidden = true;
+      })
+    );
+  }
+  grid.hidden = !grid.hidden;
+  $('#theme-dots').hidden = true;
+});
 
 const OFFLINE_STATUS_ICON = { not_started: '⬜', in_progress: '🔄', done: '✅' };
 
@@ -600,6 +635,7 @@ async function openItem(itemId, type) {
   if (type === 'lesson') return openLesson(itemId);
   if (type === 'assignment') return openAssignment(itemId);
   if (type === 'quiz') return openQuiz(itemId, false);
+  if (type === 'matching') return openMatching(itemId, false);
   const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
   if (type === 'spelling_practice') return startPractice({ listId: item.list.id, itemId });
   if (type === 'spelling_test') return startTest({ listId: item.list.id, itemId, allowRetakes: item.allow_retakes });
@@ -787,6 +823,85 @@ async function openQuiz(itemId, forceRetake = false) {
 }
 
 const normalizeAnswer = (s) => String(s ?? '').trim().toLowerCase();
+
+// ---------- matching ----------
+
+async function openMatching(itemId, forceRetake = false) {
+  const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
+  $('#quiz-kicker').textContent = `${item.course_name} · ${item.unit_name}`;
+  $('#quiz-title').textContent = item.title;
+  const graded = !forceRetake && item.submission && item.submission.status === 'graded';
+  const result = $('#quiz-result');
+
+  const wordBankHtml = (wb) => `
+    <div class="match-word-bank">
+      <strong>Word Bank</strong>
+      <div class="match-bank-list">
+        ${wb.map((w, i) => `<span class="match-bank-item"><strong>${String.fromCharCode(65 + i)}.</strong> ${esc(w)}</span>`).join('')}
+      </div>
+    </div>`;
+
+  if (graded) {
+    result.hidden = false;
+    result.className = 'status-banner good';
+    const pct = item.submission.points_possible
+      ? Math.round((item.submission.score / item.submission.points_possible) * 100) : 0;
+    result.innerHTML = `🌟 Score: ${item.submission.score} / ${item.submission.points_possible} (${pct}%)`;
+
+    let retakeBtn = '';
+    if (item.allow_retakes) retakeBtn = `<button id="quiz-retake-btn" class="check-btn secondary">🔁 Retake</button>`;
+
+    $('#quiz-form').innerHTML = wordBankHtml(item.wordBank) + retakeBtn +
+      item.questions.map((q) => {
+        const correct = q.given && q.given.toUpperCase() === q.correctLetter;
+        return `<div class="quiz-question review match-review-row">
+          <span class="match-blank-badge ${correct ? 'correct' : 'wrong'}">${esc(q.given || '?')}</span>
+          <span class="match-clue">${correct ? '✅' : '❌'} ${esc(q.prompt)}</span>
+          ${correct ? '' : `<span class="q-correct-answer">→ ${esc(q.correctLetter)} (${esc(q.correctWord)})</span>`}
+        </div>`;
+      }).join('');
+
+    if (item.allow_retakes) {
+      $('#quiz-retake-btn').addEventListener('click', () => openMatching(itemId, true));
+    }
+  } else {
+    result.hidden = true;
+    $('#quiz-form').innerHTML = wordBankHtml(item.wordBank) +
+      `<p class="match-instructions">Write the letter from the word bank that matches each clue.</p>` +
+      item.questions.map((q, i) =>
+        `<div class="quiz-question match-row">
+          <input type="text" class="match-input" name="q${q.id}" maxlength="2"
+            placeholder="?" autocomplete="off" autocapitalize="characters">
+          <span class="match-clue">${i + 1}. ${esc(q.prompt)}</span>
+        </div>`
+      ).join('') +
+      `<button type="submit" class="check-btn" disabled>Submit ✓</button>`;
+
+    const submitBtn = $('#quiz-form button[type=submit]');
+    const inputs = Array.from($('#quiz-form').querySelectorAll('.match-input'));
+    const checkAllFilled = () => {
+      submitBtn.disabled = !inputs.every((inp) => inp.value.trim().length > 0);
+    };
+    inputs.forEach((inp) => inp.addEventListener('input', checkAllFilled));
+
+    $('#quiz-form').onsubmit = async (e) => {
+      e.preventDefault();
+      if (submitBtn.disabled) return;
+      submitBtn.disabled = true;
+      const answers = {};
+      for (const q of item.questions) {
+        const field = $('#quiz-form').elements[`q${q.id}`];
+        answers[q.id] = field ? field.value.trim().toUpperCase() : '';
+      }
+      await api(`/api/items/${itemId}/quiz-submit`, {
+        method: 'POST',
+        body: { studentId: currentStudent.id, answers, date: todayStr() },
+      });
+      openMatching(itemId, false);
+    };
+  }
+  show('quiz');
+}
 
 // ---------- flashcards ----------
 

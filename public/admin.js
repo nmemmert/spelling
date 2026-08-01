@@ -104,7 +104,7 @@ function showPanel(name) {
 // Kids
 // ============================================================
 
-const THEME_COLORS = { blue: '#4f86f7', green: '#2e9e5b', purple: '#7c5cbf', orange: '#e8802a', pink: '#d45d8a' };
+const THEME_COLORS = { blue: '#4f86f7', green: '#2e9e5b', purple: '#7c5cbf', orange: '#e8802a', pink: '#d45d8a', red: '#e84040', teal: '#20a8a0', yellow: '#c8960c', indigo: '#5b6abf' };
 
 async function loadKids() {
   const students = await api('/api/students');
@@ -388,6 +388,8 @@ async function openItemEditor(unitId, itemId) {
   $('#ie-error').hidden = true;
   $('#ie-questions').innerHTML = '';
   questionCount = 0;
+  $('#ie-pairs').innerHTML = '';
+  pairCount = 0;
 
   if (itemId) {
     const item = await api(`/api/admin/items/${itemId}`);
@@ -405,6 +407,11 @@ async function openItemEditor(unitId, itemId) {
     if (item.type === 'spelling_practice' || item.type === 'spelling_test') $('#ie-list').value = item.ref_id;
     if (item.type === 'flashcards') $('#ie-deck').value = item.ref_id;
     if (item.type === 'quiz') (item.questions || []).forEach(addQuestionRow);
+    if (item.type === 'matching') {
+      $('#ie-pairs').innerHTML = '';
+      pairCount = 0;
+      (item.questions || []).forEach(addMatchingRow);
+    }
     $('#ie-delete').hidden = false;
     $('#ie-delete').onclick = async () => {
       if (!confirm('Delete this item and any grades for it?')) return;
@@ -437,6 +444,7 @@ function updateItemFieldVisibility() {
   $('#ie-field-lesson').hidden = type !== 'lesson';
   $('#ie-field-assignment').hidden = type !== 'assignment';
   $('#ie-field-quiz').hidden = type !== 'quiz';
+  $('#ie-field-matching').hidden = type !== 'matching';
   $('#ie-field-spelling').hidden = type !== 'spelling_practice' && type !== 'spelling_test';
   $('#ie-field-flashcards').hidden = type !== 'flashcards';
   $('#ie-scan-section').hidden = type !== 'lesson' && type !== 'quiz';
@@ -658,6 +666,20 @@ function addQuestionRow(q = {}) {
 }
 $('#ie-add-question').addEventListener('click', () => addQuestionRow());
 
+let pairCount = 0;
+function addMatchingRow(pair = {}) {
+  const n = pairCount++;
+  const div = document.createElement('div');
+  div.className = 'matching-pair-row';
+  div.innerHTML = `
+    <input class="pair-word" placeholder="Word / term" value="${esc(pair.correct_answer || pair.word || '')}">
+    <input class="pair-clue" placeholder="Clue / definition" value="${esc(pair.prompt || pair.clue || '')}">
+    <button type="button" class="danger small pair-remove">✕</button>`;
+  div.querySelector('.pair-remove').addEventListener('click', () => div.remove());
+  $('#ie-pairs').appendChild(div);
+}
+$('#ie-add-pair').addEventListener('click', () => addMatchingRow());
+
 $('#ie-load-template').addEventListener('click', async () => {
   const tid = $('#ie-template-select').value;
   if (!tid) return msg('Pick a template first.');
@@ -709,6 +731,15 @@ $('#item-form').addEventListener('submit', async (e) => {
       correctAnswer: row.querySelector('.qn-correct').value.trim(),
       points: Number(row.querySelector('.qn-points').value) || 1,
     }));
+  }
+  if (type === 'matching') {
+    body.questions = Array.from(document.querySelectorAll('.matching-pair-row')).map((row) => ({
+      type: 'match',
+      prompt: row.querySelector('.pair-clue').value.trim(),
+      correctAnswer: row.querySelector('.pair-word').value.trim(),
+      choices: [],
+      points: 1,
+    })).filter((q) => q.prompt && q.correctAnswer);
   }
 
   const id = $('#ie-id').value;
