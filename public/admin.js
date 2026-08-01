@@ -709,7 +709,7 @@ function addCrosswordClueRow(dir, entry = {}) {
   const div = document.createElement('div');
   div.className = 'cw-clue-row';
   div.innerHTML = `
-    <input class="cw-word" placeholder="WORD" value="${esc(entry.word || '')}" style="text-transform:uppercase;width:7rem">
+    <input class="cw-word" placeholder="ANSWER" value="${esc(entry.word || '')}" style="text-transform:uppercase;width:7rem">
     <input class="cw-clue" placeholder="Clue" value="${esc(entry.clue || '')}" style="flex:1">
     <button type="button" class="danger small cw-remove">✕</button>`;
   div.querySelector('.cw-word').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
