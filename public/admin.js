@@ -36,11 +36,11 @@ function msg(text, type = 'success') {
 }
 
 const TYPE_ICON = {
-  lesson: '📖', assignment: '📝', quiz: '❓',
+  lesson: '📖', assignment: '📝', quiz: '❓', matching: '🔤',
   spelling_practice: '✏️', spelling_test: '⭐', flashcards: '🗂️',
 };
 const TYPE_LABEL = {
-  lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz',
+  lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz', matching: 'Matching',
   spelling_practice: 'Spelling Practice', spelling_test: 'Spelling Test', flashcards: 'Flashcards',
 };
 

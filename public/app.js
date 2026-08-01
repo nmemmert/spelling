@@ -541,6 +541,41 @@ function printSpellingWorksheet(name, words) {
   win.document.close();
 }
 
+function printMatchingWorksheet(title, wordBank, questions) {
+  const bankHtml = wordBank
+    .map((w, i) => `<span class="bank-item"><strong>${String.fromCharCode(65 + i)}.</strong> ${esc(w)}</span>`)
+    .join('');
+  const clueRows = questions
+    .map((q, i) => `<tr>
+      <td class="blank-cell">___</td>
+      <td class="num-cell">${i + 1}.</td>
+      <td class="clue-cell">${esc(q.prompt)}</td>
+    </tr>`)
+    .join('');
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Matching: ${esc(title)}</title>
+    <style>
+      body { font-family: Georgia, serif; max-width: 700px; margin: 2rem auto; color: #222; }
+      h1 { font-size: 1.4rem; border-bottom: 2px solid #222; padding-bottom: .4rem; margin-bottom: 1rem; }
+      .word-bank { border: 1.5px solid #555; border-radius: 8px; padding: .6rem 1rem; margin-bottom: 1.25rem; }
+      .word-bank strong { display: block; font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: #555; margin-bottom: .4rem; }
+      .bank-item { display: inline-block; margin: .15rem .6rem .15rem 0; font-size: .95rem; }
+      table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+      tr { border-bottom: 1px solid #ddd; }
+      td { padding: .55rem .4rem; vertical-align: top; }
+      .blank-cell { width: 2rem; font-size: 1.1rem; font-weight: 700; text-align: center; padding-top: .6rem; }
+      .num-cell { width: 1.5rem; color: #555; padding-top: .6rem; }
+      .clue-cell { font-size: .97rem; line-height: 1.4; }
+      p.directions { color: #555; font-size: .9em; margin-bottom: .75rem; }
+    </style></head><body>
+    <h1>🔤 Matching: ${esc(title)}</h1>
+    <div class="word-bank"><strong>Word Bank</strong>${bankHtml}</div>
+    <p class="directions">Directions: Write the letter of the matching word from the word bank on the blank next to each clue.</p>
+    <table>${clueRows}</table>
+    <script>window.print()<\/script></body></html>`);
+  win.document.close();
+}
+
 // ---------- course detail ----------
 
 function activeUnitIndex(units) {
@@ -867,7 +902,9 @@ async function openMatching(itemId, forceRetake = false) {
   } else {
     result.hidden = true;
     $('#quiz-form').innerHTML = wordBankHtml(item.wordBank) +
-      `<p class="match-instructions">Write the letter from the word bank that matches each clue.</p>` +
+      `<p class="match-instructions">Write the letter from the word bank that matches each clue.
+        <button type="button" class="print-match-btn secondary small" style="margin-left:.75rem">🖨 Print worksheet</button>
+      </p>` +
       item.questions.map((q, i) =>
         `<div class="quiz-question match-row">
           <input type="text" class="match-input" name="q${q.id}" maxlength="2"
@@ -883,6 +920,10 @@ async function openMatching(itemId, forceRetake = false) {
       submitBtn.disabled = !inputs.every((inp) => inp.value.trim().length > 0);
     };
     inputs.forEach((inp) => inp.addEventListener('input', checkAllFilled));
+
+    $('#quiz-form').querySelector('.print-match-btn').addEventListener('click', () =>
+      printMatchingWorksheet(item.title, item.wordBank, item.questions)
+    );
 
     $('#quiz-form').onsubmit = async (e) => {
       e.preventDefault();
