@@ -32,7 +32,12 @@ body {
 
 #view-course,
 #view-lesson,
-#view-assignment {
+#view-assignment,
+#view-quiz,
+#view-flashcards,
+#view-practice,
+#view-test,
+#view-crossword {
   max-width: 960px;
   text-align: left;
 }
@@ -955,7 +960,7 @@ body.theme-indigo { --accent: #5b6abf; --accent-dark: #4a57a0; --bg: #f4f5ff; }
 .cw-sidebar { flex: 1; min-width: 180px; max-width: 320px; }
 .cw-clues { margin-bottom: 1rem; }
 .cw-clues h3 { font-size: 0.9rem; margin-bottom: 0.35rem; }
-.cw-clue-list { list-style: none; padding: 0; margin: 0; }
+.cw-clue-list { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow-y: auto; }
 .cw-clue-list li {
   padding: 0.2rem 0.35rem; font-size: 0.85rem;
   border-radius: 4px; cursor: pointer; line-height: 1.35;

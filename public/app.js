@@ -1117,7 +1117,7 @@ async function openCrossword(itemId) {
     const key = `${r},${c}`;
     if (!cells[key]) return;
     selectCell(key);
-    cells[key].input.focus();
+    cells[key].input.focus({ preventScroll: true });
   }
 
   // Wire up cells
