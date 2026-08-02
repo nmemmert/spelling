@@ -1090,7 +1090,16 @@ async function openCrossword(itemId) {
     }
     const listEl = dir === 'across' ? acrossListEl : downListEl;
     const li = listEl.querySelector(`[data-num="${word.num}"]`);
-    if (li) { li.classList.add('selected-clue'); li.scrollIntoView({ block: 'nearest' }); }
+    if (li) {
+      li.classList.add('selected-clue');
+      const liTop = li.offsetTop;
+      const liBottom = liTop + li.offsetHeight;
+      if (liBottom > listEl.scrollTop + listEl.clientHeight) {
+        listEl.scrollTop = liBottom - listEl.clientHeight;
+      } else if (liTop < listEl.scrollTop) {
+        listEl.scrollTop = liTop;
+      }
+    }
   }
 
   function pickWord(key) {
