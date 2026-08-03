@@ -44,15 +44,15 @@ async function parseUnitDocxBuffer(buffer, filename) {
 
   // Walk the HTML and collect typed elements
   const elements = [];
-  for (const m of stripped.matchAll(/<(p|ul|ol)(?:\s[^>]*)?>[\s\S]*?<\/\1>/gi)) {
+  for (const m of stripped.matchAll(/<(h[1-6]|p|ul|ol)(?:\s[^>]*)?>[\s\S]*?<\/\1>/gi)) {
     const tag = m[0].match(/^<(\w+)/)[1].toLowerCase();
     const inner = m[0].replace(/^<[^>]+>/, '').replace(/<\/\w+>\s*$/, '');
 
-    if (tag === 'p') {
+    if (tag === 'p' || /^h[1-6]$/.test(tag)) {
       const text = htmlToText(inner);
       if (!text) continue;
-      // A paragraph whose only non-whitespace content is wrapped in <strong> is a heading
-      const isHeading = /^<strong>[^<]+<\/strong>\s*$/.test(inner.trim());
+      // h1-h6 are always headings; <p> is a heading only if its sole content is <strong>
+      const isHeading = /^h[1-6]$/.test(tag) || /^<strong>[^<]+<\/strong>\s*$/.test(inner.trim());
       elements.push({ kind: isHeading ? 'heading' : 'para', text });
     } else {
       const items = [...inner.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
