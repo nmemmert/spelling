@@ -512,32 +512,83 @@ $('#btn-print-list').addEventListener('click', async () => {
 });
 
 function printSpellingWorksheet(name, words) {
-  const rows = words
-    .map((w) => {
-      const sentence = w.sentence ? `<div style="color:#888;font-size:.85em;font-style:italic">${esc(w.sentence)}</div>` : '';
-      return `<tr>
-        <td style="font-weight:700;font-size:1.1em;padding:.6rem .75rem">${esc(w.word)}${sentence}</td>
-        <td style="border-bottom:1.5px solid #aaa;width:35%"></td>
-        <td style="border-bottom:1.5px solid #aaa;width:35%"></td>
-      </tr>`;
-    })
-    .join('');
+  const practiceRows = words.map((w, i) => {
+    const sentence = w.sentence
+      ? `<div class="sentence">${esc(w.sentence)}</div>`
+      : '';
+    return `<tr>
+      <td class="word-cell"><span class="num">${i + 1}.</span> <strong>${esc(w.word)}</strong>${sentence}</td>
+      <td class="write-cell"><div class="write-slot"></div></td>
+      <td class="write-cell"><div class="write-slot"></div></td>
+    </tr>`;
+  }).join('');
+
+  const dictRows = words.map((w, i) =>
+    `<div class="dict-row"><span class="num">${i + 1}.</span><div class="write-slot"></div></div>`
+  ).join('');
+
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head><title>Spelling: ${esc(name)}</title>
-    <style>
-      body { font-family: Georgia, serif; max-width: 680px; margin: 2rem auto; color: #222; }
-      h1 { font-size: 1.4rem; border-bottom: 2px solid #222; padding-bottom: .4rem; }
-      table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-      td { padding: .55rem .75rem; }
-      th { text-align: left; color: #555; font-size: .85rem; font-weight: 600; padding: .4rem .75rem; }
-    </style></head><body>
-    <h1>✏️ Spelling: ${esc(name)}</h1>
-    <p style="color:#555;font-size:.9em">Write each word twice — once to practice, once from memory.</p>
-    <table>
-      <tr><th>Word</th><th>Practice</th><th>From memory</th></tr>
-      ${rows}
-    </table>
-    <script>window.print()<\/script></body></html>`);
+<style>
+* { box-sizing: border-box; }
+body { font-family: Georgia, serif; max-width: 700px; margin: 2rem auto; color: #222; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+h1 { font-size: 1.35rem; margin: 0 0 .75rem; }
+.name-date { display: flex; gap: 3rem; margin-bottom: 1.5rem; }
+.nd-field { display: flex; align-items: flex-end; gap: .4rem; flex: 1; }
+.nd-field label { font-size: .85rem; white-space: nowrap; color: #444; }
+.nd-line { flex: 1; border-bottom: 1.5px solid #444; height: 1.4rem; }
+.directions { font-size: .88rem; color: #555; margin-bottom: .75rem; }
+.picker { display: flex; gap: .6rem; align-items: center; padding: .55rem .75rem; background: #f0f0f0; border-radius: 6px; margin-bottom: 1.25rem; }
+.picker button { padding: .28rem .85rem; border: 1.5px solid #bbb; border-radius: 4px; background: #fff; cursor: pointer; font-size: .88rem; }
+.picker button.active { background: #222; color: #fff; border-color: #222; }
+.picker .print-btn { margin-left: auto; background: #4f86f7; color: #fff; border-color: #4f86f7; font-weight: 600; }
+@media print { .picker { display: none; } }
+table { width: 100%; border-collapse: collapse; }
+th { font-size: .8rem; font-weight: 600; color: #666; text-align: left; padding: .25rem .5rem .4rem; border-bottom: 2px solid #222; }
+td { vertical-align: top; padding: .4rem .5rem; border-bottom: 1px solid #ebebeb; }
+.word-cell { width: 28%; padding-top: .55rem; }
+.num { color: #999; font-size: .82rem; font-style: normal; }
+.sentence { color: #888; font-size: .8em; font-style: italic; margin-top: .15rem; }
+.write-cell { width: 36%; }
+.write-slot { height: 44px; border-bottom: 1.5px solid #888; background: linear-gradient(transparent calc(50% - 0.5px), #d4d4d4 calc(50% - 0.5px), #d4d4d4 calc(50% + 0.5px), transparent calc(50% + 0.5px)); }
+.dict-section { margin-top: .25rem; }
+.dict-row { display: flex; align-items: flex-end; gap: .6rem; margin-bottom: .55rem; }
+.dict-row .num { min-width: 1.6rem; text-align: right; margin-bottom: 5px; white-space: nowrap; }
+.dict-row .write-slot { flex: 1; }
+.dict-section { display: none; }
+body.dictation .practice-section { display: none; }
+body.dictation .dict-section { display: block; }
+</style>
+</head><body>
+<div class="picker">
+  <button class="active" id="btn-p" onclick="setMode('practice')">✏️ Practice</button>
+  <button id="btn-d" onclick="setMode('dictation')">📝 Dictation / Test</button>
+  <button class="print-btn" onclick="window.print()">🖨 Print</button>
+</div>
+<h1>Spelling: ${esc(name)}</h1>
+<div class="name-date">
+  <div class="nd-field"><label>Name</label><div class="nd-line"></div></div>
+  <div class="nd-field"><label>Date</label><div class="nd-line"></div></div>
+</div>
+<div class="practice-section">
+  <p class="directions">Write each word twice — once to practice, once from memory.</p>
+  <table>
+    <tr><th style="width:28%">Word</th><th style="width:36%">Practice</th><th style="width:36%">From memory</th></tr>
+    ${practiceRows}
+  </table>
+</div>
+<div class="dict-section">
+  <p class="directions">Write each spelling word as it is called out.</p>
+  ${dictRows}
+</div>
+<script>
+function setMode(m) {
+  document.body.classList.toggle('dictation', m === 'dictation');
+  document.getElementById('btn-p').classList.toggle('active', m === 'practice');
+  document.getElementById('btn-d').classList.toggle('active', m === 'dictation');
+}
+<\/script>
+</body></html>`);
   win.document.close();
 }
 
