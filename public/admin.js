@@ -261,10 +261,6 @@ $('#import-docx-files').addEventListener('change', () => {
   if (files.length) {
     $('#import-docx-filenames').textContent =
       files.length === 1 ? files[0].name : `${files.length} files selected`;
-    // Pre-fill course name from common filename stem if name field is empty
-    if (!$('#import-docx-name').value.trim() && files.length > 1) {
-      // e.g. "Unit_A_Kitchen_Safety.docx" → try to find a shared prefix word
-    }
   } else {
     $('#import-docx-filenames').textContent = '';
   }
@@ -1224,10 +1220,10 @@ function toggleAddTaskForm(date) {
 
   const courseSelect = box.querySelector('.task-course-select');
   (async () => {
-    for (const c of plannerCoursesCache) {
-      const detail = await api(`/api/admin/courses/${c.id}`);
+    const details = await Promise.all(plannerCoursesCache.map((c) => api(`/api/admin/courses/${c.id}`)));
+    for (const detail of details) {
       const group = document.createElement('optgroup');
-      group.label = c.name;
+      group.label = detail.name;
       for (const u of detail.units) {
         for (const it of u.items) {
           const opt = document.createElement('option');
@@ -1274,12 +1270,12 @@ function updatePlannerSaveBtn() {
 $('#planner-save-all').addEventListener('click', async () => {
   const count = plannerQueue.length;
   if (!count) return;
-  for (const item of plannerQueue) {
-    await api('/api/schedule', {
+  await Promise.all(plannerQueue.map((item) =>
+    api('/api/schedule', {
       method: 'POST',
       body: { studentId: plannerStudentId, date: item.date, itemId: item.itemId, title: item.title },
-    });
-  }
+    })
+  ));
   plannerQueue = [];
   updatePlannerSaveBtn();
   msg(`${count} item${count === 1 ? '' : 's'} added to planner.`);
@@ -1292,7 +1288,12 @@ function renderPrintTaskBlock(t) {
   const status = t.done ? `<span class="done-tag">✓ done</span>` : '';
   const typeTag = t.type ? `<span class="type-tag">${TYPE_LABEL[t.type] || t.type}</span>` : '';
   let body = '';
-  if (t.body) body = `<div class="task-body">${t.body.split(/\n\n+/).map((p) => `<p>${esc(p.trim())}</p>`).join('')}</div>`;
+  if (t.body) {
+    const isHtml = t.body.includes('<');
+    body = isHtml
+      ? `<div class="task-body">${t.body}</div>`
+      : `<div class="task-body">${t.body.split(/\n\n+/).map((p) => `<p>${esc(p.trim()).replace(/\n/g, '<br>')}</p>`).join('')}</div>`;
+  }
   return `<div class="task-block">
     <div class="task-header">${course} ${typeTag} <strong>${esc(title)}</strong> ${status}</div>
     ${body}
@@ -1427,7 +1428,12 @@ async function printCourse(courseId) {
   function renderItemBody(it) {
     let html = '';
     if (it.body) {
-      html += `<div class="item-body">${it.body.split(/\n\n+/).map((p) => `<p>${esc(p.trim())}</p>`).join('')}</div>`;
+      const isHtml = it.body.includes('<');
+      html += `<div class="item-body">${
+        isHtml
+          ? it.body
+          : it.body.split(/\n\n+/).map((p) => `<p>${esc(p.trim()).replace(/\n/g, '<br>')}</p>`).join('')
+      }</div>`;
     }
     if (it.type === 'quiz' && it.questions?.length) {
       html += `<ol class="quiz-qs">${it.questions.map((q, i) => {

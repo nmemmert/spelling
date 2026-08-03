@@ -194,8 +194,9 @@ const updateProgress = leitnerUpdater('progress', 'word_id');
 const updateCardProgress = leitnerUpdater('card_progress', 'card_id');
 
 // Parent-only routes must send the PIN in the x-pin header
+const getStoredPin = db.prepare(`SELECT value FROM settings WHERE key = 'pin'`);
 function requirePin(req, res, next) {
-  const stored = db.prepare(`SELECT value FROM settings WHERE key = 'pin'`).get().value;
+  const stored = getStoredPin.get().value;
   if (sha256(req.get('x-pin') || '') !== stored) {
     return res.status(401).json({ error: 'Wrong PIN' });
   }
@@ -546,11 +547,18 @@ app.put('/api/lists/:id', requirePin, (req, res) => {
   if (!db.prepare(`SELECT id FROM lists WHERE id = ?`).get(id)) {
     return res.status(404).json({ error: 'No such list' });
   }
-  db.prepare(`UPDATE lists SET name = ?, group_name = ? WHERE id = ?`)
-    .run(String(name).trim(), String(groupName || '').trim(), id);
-  db.prepare(`DELETE FROM words WHERE list_id = ?`).run(id);
   const ins = db.prepare(`INSERT INTO words (list_id, word, sentence, definition) VALUES (?, ?, ?, ?)`);
-  for (const w of words) ins.run(id, String(w.word).trim(), String(w.sentence || '').trim(), String(w.definition || '').trim());
+  db.exec('BEGIN');
+  try {
+    db.prepare(`UPDATE lists SET name = ?, group_name = ? WHERE id = ?`)
+      .run(String(name).trim(), String(groupName || '').trim(), id);
+    db.prepare(`DELETE FROM words WHERE list_id = ?`).run(id);
+    for (const w of words) ins.run(id, String(w.word).trim(), String(w.sentence || '').trim(), String(w.definition || '').trim());
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
   res.json({ ok: true });
 });
 
@@ -594,11 +602,18 @@ app.put('/api/decks/:id', requirePin, (req, res) => {
   if (!db.prepare(`SELECT id FROM decks WHERE id = ?`).get(id)) {
     return res.status(404).json({ error: 'No such deck' });
   }
-  db.prepare(`UPDATE decks SET name = ?, group_name = ? WHERE id = ?`)
-    .run(String(name).trim(), String(groupName || '').trim(), id);
-  db.prepare(`DELETE FROM cards WHERE deck_id = ?`).run(id);
   const ins = db.prepare(`INSERT INTO cards (deck_id, front, back) VALUES (?, ?, ?)`);
-  for (const c of cards) ins.run(id, String(c.front).trim(), String(c.back).trim());
+  db.exec('BEGIN');
+  try {
+    db.prepare(`UPDATE decks SET name = ?, group_name = ? WHERE id = ?`)
+      .run(String(name).trim(), String(groupName || '').trim(), id);
+    db.prepare(`DELETE FROM cards WHERE deck_id = ?`).run(id);
+    for (const c of cards) ins.run(id, String(c.front).trim(), String(c.back).trim());
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
   res.json({ ok: true });
 });
 
@@ -1354,7 +1369,6 @@ app.post('/api/items/:id/crossword-submit', (req, res) => {
   try { cw = JSON.parse(item.body); } catch { return res.status(400).json({ error: 'Invalid crossword data' }); }
 
   const allWords = [...(cw.across || []), ...(cw.down || [])];
-  const isDown = (w) => cw.down.some(d => d.num === w.num && d.row === w.row && d.col === w.col);
 
   let earned = 0;
   const possible = allWords.length;
@@ -1444,23 +1458,46 @@ app.get('/api/gradebook/:courseId', requirePin, (req, res) => {
     JOIN enrollments e ON e.student_id = s.id WHERE e.course_id = ? ORDER BY s.name
   `).all(req.params.courseId);
 
-  const scoreStmt = db.prepare(`SELECT score, points_possible, status, parent_comment FROM submissions WHERE student_id = ? AND item_id = ?`);
-  const histBest = db.prepare(`SELECT MAX(score * 1.0 / points_possible) AS ratio, MAX(score) AS score, points_possible FROM submission_history WHERE student_id = ? AND item_id = ? AND points_possible > 0`);
-  const histAvg = db.prepare(`SELECT AVG(score) AS score, points_possible, COUNT(*) AS cnt FROM submission_history WHERE student_id = ? AND item_id = ? AND points_possible > 0`);
+  const studentIds = students.map((s) => s.id);
+  const itemIds = gradableItems.map((i) => i.id);
+  const ph = (arr) => arr.map(() => '?').join(',');
+
+  const allSubs = studentIds.length && itemIds.length
+    ? db.prepare(`
+        SELECT student_id, item_id, score, points_possible, status, parent_comment
+        FROM submissions
+        WHERE student_id IN (${ph(studentIds)}) AND item_id IN (${ph(itemIds)})
+      `).all(...studentIds, ...itemIds)
+    : [];
+  const allHist = studentIds.length && itemIds.length
+    ? db.prepare(`
+        SELECT student_id, item_id,
+               MAX(score) AS best_score, AVG(score) AS avg_score, COUNT(*) AS cnt
+        FROM submission_history
+        WHERE student_id IN (${ph(studentIds)}) AND item_id IN (${ph(itemIds)})
+          AND points_possible > 0
+        GROUP BY student_id, item_id
+      `).all(...studentIds, ...itemIds)
+    : [];
+
+  const subMap = new Map(allSubs.map((r) => [`${r.student_id}:${r.item_id}`, r]));
+  const histMap = new Map(allHist.map((r) => [`${r.student_id}:${r.item_id}`, r]));
+
   const now = today();
   for (const s of students) {
     s.scores = {};
     let earned = 0, possible = 0;
     for (const item of gradableItems) {
-      const row = scoreStmt.get(s.id, item.id);
+      const row = subMap.get(`${s.id}:${item.id}`) || null;
       const overdue = !!(item.due_date && item.due_date < now && (!row || row.status !== 'graded'));
       let effectiveScore = row?.score;
-      if (row?.status === 'graded' && item.retake_policy === 'highest') {
-        const best = histBest.get(s.id, item.id);
-        if (best?.score !== null) effectiveScore = best.score;
-      } else if (row?.status === 'graded' && item.retake_policy === 'average') {
-        const avg = histAvg.get(s.id, item.id);
-        if (avg?.cnt > 0) effectiveScore = Math.round(avg.score * 10) / 10;
+      if (row?.status === 'graded') {
+        const hist = histMap.get(`${s.id}:${item.id}`);
+        if (item.retake_policy === 'highest' && hist?.best_score != null) {
+          effectiveScore = hist.best_score;
+        } else if (item.retake_policy === 'average' && hist?.cnt > 0) {
+          effectiveScore = Math.round(hist.avg_score * 10) / 10;
+        }
       }
       s.scores[item.id] = row ? { ...row, score: effectiveScore, overdue } : (overdue ? { overdue: true } : null);
       if (row && row.status === 'graded' && row.points_possible) {
@@ -2042,7 +2079,7 @@ app.get('/api/tts', (req, res) => {
 
 // ---------- Homeschool folder import ----------
 
-const HOMESCHOOL_DIR = "/Users/nateemmert/Library/CloudStorage/SeaDrive-NateEmmert(seafile.necloud.us)/My Libraries/Homeschool";
+const HOMESCHOOL_DIR = process.env.HOMESCHOOL_DIR || "/Users/nateemmert/Library/CloudStorage/SeaDrive-NateEmmert(seafile.necloud.us)/My Libraries/Homeschool";
 
 function listDocxFiles(dir, base = '') {
   const results = [];
