@@ -36,7 +36,8 @@ body {
 #view-quiz,
 #view-flashcards,
 #view-practice,
-#view-test {
+#view-test,
+#view-worksheet {
   max-width: 960px;
   text-align: left;
 }
@@ -987,4 +988,50 @@ body.theme-indigo { --accent: #5b6abf; --accent-dark: #4a57a0; --bg: #f4f5ff; }
   .cw-cell.word-hi { background: color-mix(in srgb, var(--accent) 25%, #2a2a2a); }
   .cw-cell.correct-word { background: #1a3a1a; }
   .cw-cell.wrong-word   { background: #3a1a1a; }
+}
+
+/* ---------- worksheet ---------- */
+.ws-header {
+  display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;
+  margin-bottom: 1.25rem; font-size: 1rem;
+}
+.ws-name-input { width: 12rem; }
+.ws-date-input { width: 7rem; }
+.ws-section-title {
+  margin: 1.25rem 0 .5rem; font-size: 1rem; font-weight: 700;
+  border-bottom: 1px solid var(--border); padding-bottom: .3rem;
+}
+.ws-question { margin-bottom: 1rem; }
+.ws-fitb { font-size: 1rem; line-height: 1.8; margin: 0; }
+.ws-qnum { font-weight: 700; }
+.ws-blank-input {
+  display: inline-block; width: 7rem; border: none;
+  border-bottom: 2px solid var(--accent); background: transparent;
+  font-size: 1rem; font-family: inherit; padding: 0 .25rem;
+  outline: none; margin: 0 .2rem; vertical-align: baseline;
+}
+.ws-blank-input:focus { border-bottom-color: var(--accent-dark); }
+.ws-blank-input.ws-correct { border-bottom-color: var(--good); color: var(--good); }
+.ws-blank-input.ws-wrong   { border-bottom-color: var(--bad);  color: var(--bad); }
+.ws-correct-answer { font-size: .85rem; color: var(--good); font-style: italic; }
+.ws-tf { display: flex; align-items: center; gap: .5rem; font-size: 1rem; margin: 0; }
+.ws-tf-btn {
+  min-width: 2.2rem; padding: .35rem .6rem; border: 2px solid var(--border);
+  border-radius: 6px; background: transparent; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: all .15s; color: inherit;
+}
+.ws-tf-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ws-tf-btn.selected.ws-correct { background: var(--good); border-color: var(--good); }
+.ws-tf-btn.selected.ws-wrong   { background: var(--bad);  border-color: var(--bad); }
+.ws-tf-stmt { flex: 1; }
+.ws-short { display: block; font-size: 1rem; margin-bottom: 1rem; }
+.ws-short-answer {
+  display: block; width: 100%; margin-top: .4rem; resize: vertical;
+  border: 1px solid var(--border); border-radius: 8px; padding: .5rem .75rem;
+  font-family: inherit; font-size: 1rem; background: var(--input-bg, transparent);
+}
+.ws-actions { display: flex; gap: .75rem; margin-top: 1.25rem; flex-wrap: wrap; }
+
+@media (prefers-color-scheme: dark) {
+  .ws-blank-input { color: #eee; }
 }

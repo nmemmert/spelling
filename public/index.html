@@ -232,6 +232,26 @@
     </div>
   </section>
 
+  <!-- Worksheet -->
+  <section id="view-worksheet" class="view" hidden>
+    <button class="back-btn" data-back="worksheet">← Back</button>
+    <div class="item-card">
+      <p class="item-kicker" id="ws-kicker"></p>
+      <h1 id="ws-title"></h1>
+      <div id="ws-header" class="ws-header" hidden>
+        <span>Name: <input id="ws-name" class="ws-name-input" type="text" autocomplete="name" placeholder="Your name"></span>
+        <span>Date: <input id="ws-date" class="ws-date-input" type="text"></span>
+      </div>
+      <form id="ws-form" autocomplete="off"></form>
+      <div id="ws-result" class="status-banner" hidden></div>
+      <div class="ws-actions" id="ws-actions" hidden>
+        <button id="ws-submit-btn" class="check-btn">Submit ✓</button>
+        <button id="ws-print-btn" class="secondary">🖨 Print blank</button>
+        <button id="ws-paper-btn" class="secondary">📄 I handed in my paper copy</button>
+      </div>
+    </div>
+  </section>
+
   <script src="app.js"></script>
 </body>
 </html>

@@ -317,8 +317,8 @@ function generateCrossword(acrossEntries, downEntries) {
   return { rows, cols, grid, across: mkList('across'), down: mkList('down'), placed: placed.length, total: allEntries.length };
 }
 
-const ITEM_TYPES = ['lesson', 'assignment', 'quiz', 'matching', 'crossword', 'spelling_practice', 'spelling_test', 'flashcards'];
-const GRADABLE_TYPES = ['assignment', 'quiz', 'matching', 'crossword', 'spelling_test'];
+const ITEM_TYPES = ['lesson', 'assignment', 'quiz', 'matching', 'crossword', 'spelling_practice', 'spelling_test', 'flashcards', 'worksheet'];
+const GRADABLE_TYPES = ['assignment', 'quiz', 'matching', 'crossword', 'spelling_test', 'worksheet'];
 
 // ---------- kid picker ----------
 
@@ -1017,6 +1017,9 @@ app.get('/api/admin/items/:id', requirePin, (req, res) => {
   if (item.type === 'crossword' && item.body) {
     try { item.crosswordData = JSON.parse(item.body); } catch { item.crosswordData = null; }
   }
+  if (item.type === 'worksheet' && item.body) {
+    try { item.worksheetData = JSON.parse(item.body); } catch { item.worksheetData = null; }
+  }
   res.json(item);
 });
 
@@ -1075,6 +1078,12 @@ function validateItemBody(body) {
     return 'Quiz needs at least one question';
   }
   if (type === 'crossword' && !body.crosswordData) return 'Generate the crossword first';
+  if (type === 'worksheet') {
+    const wd = body.worksheetData;
+    if (!wd || !Array.isArray(wd.sections) || !wd.sections.some(s => Array.isArray(s.questions) && s.questions.length > 0)) {
+      return 'Parse the worksheet and add at least one question';
+    }
+  }
   return null;
 }
 
@@ -1120,6 +1129,12 @@ app.post('/api/items', requirePin, (req, res) => {
     const bodyJson = JSON.stringify(cw);
     db.prepare(`UPDATE items SET body = ?, points = ? WHERE id = ?`).run(bodyJson, totalPoints, id);
   }
+  if (type === 'worksheet' && req.body.worksheetData) {
+    const wd = req.body.worksheetData;
+    const totalPoints = wd.sections.reduce((sum, s) =>
+      sum + (s.questions || []).reduce((qs, q) => qs + (Number(q.points) || 1), 0), 0);
+    db.prepare(`UPDATE items SET body = ?, points = ? WHERE id = ?`).run(JSON.stringify(wd), totalPoints, id);
+  }
   res.json({ id });
 });
 
@@ -1144,6 +1159,12 @@ app.put('/api/items/:id', requirePin, (req, res) => {
     const totalPoints = (cw.across || []).length + (cw.down || []).length;
     const bodyJson = JSON.stringify(cw);
     db.prepare(`UPDATE items SET body = ?, points = ? WHERE id = ?`).run(bodyJson, totalPoints, req.params.id);
+  }
+  if (type === 'worksheet' && req.body.worksheetData) {
+    const wd = req.body.worksheetData;
+    const totalPoints = wd.sections.reduce((sum, s) =>
+      sum + (s.questions || []).reduce((qs, q) => qs + (Number(q.points) || 1), 0), 0);
+    db.prepare(`UPDATE items SET body = ?, points = ? WHERE id = ?`).run(JSON.stringify(wd), totalPoints, req.params.id);
   }
   res.json({ ok: true });
 });
@@ -1273,6 +1294,43 @@ app.get('/api/items/:id', (req, res) => {
         savedAnswers,
       };
     } catch { item.crosswordData = null; }
+  } else if (item.type === 'worksheet' && item.body) {
+    try {
+      const wd = JSON.parse(item.body);
+      const graded = item.submission && item.submission.status === 'graded';
+      const savedAnswers = item.submission && item.submission.answers
+        ? JSON.parse(item.submission.answers) : null;
+      item.worksheetData = {
+        hasHeader: wd.hasHeader,
+        sections: wd.sections.map((section, si) => ({
+          title: section.title,
+          questions: section.questions.map((q, qi) => {
+            const out = { type: q.type, points: q.points };
+            if (q.num !== undefined) out.num = q.num;
+            if (q.type === 'fitb') {
+              out.template = q.template;
+              out.blankCount = Array.isArray(q.blanks) ? q.blanks.length : 0;
+              if (graded) {
+                out.blanks = q.blanks;
+                out.givenBlanks = Array.from({ length: out.blankCount }, (_, bi) =>
+                  savedAnswers ? (savedAnswers[`${si}:${qi}:${bi}`] ?? '') : '');
+              }
+            } else if (q.type === 'tf') {
+              out.text = q.text;
+              if (graded) {
+                out.correct = q.correct;
+                out.given = savedAnswers ? (savedAnswers[`${si}:${qi}`] ?? '') : '';
+              }
+              if (savedAnswers && !graded) out.given = savedAnswers[`${si}:${qi}`] ?? '';
+            } else if (q.type === 'short') {
+              out.text = q.text;
+              out.given = savedAnswers ? (savedAnswers[`${si}:${qi}`] ?? '') : '';
+            }
+            return out;
+          }),
+        })),
+      };
+    } catch { item.worksheetData = null; }
   } else if (item.type === 'flashcards') {
     item.deck = db.prepare(`SELECT id, name FROM decks WHERE id = ?`).get(item.ref_id);
   } else if (item.type === 'spelling_practice' || item.type === 'spelling_test') {
@@ -1399,13 +1457,67 @@ app.post('/api/items/:id/crossword-submit', (req, res) => {
   res.json({ score: earned, total: possible });
 });
 
+// Auto-grade T/F and FITB; queue short answers for parent grading
+app.post('/api/items/:id/worksheet-submit', (req, res) => {
+  const { studentId, answers, date } = req.body;
+  const item = db.prepare(`SELECT body FROM items WHERE id = ?`).get(req.params.id);
+  if (!item || !item.body) return res.status(404).json({ error: 'No such worksheet' });
+  let wd;
+  try { wd = JSON.parse(item.body); } catch { return res.status(400).json({ error: 'Invalid worksheet data' }); }
+
+  let earned = 0, possible = 0, hasShort = false;
+  wd.sections.forEach((section, si) => {
+    (section.questions || []).forEach((q, qi) => {
+      const pts = Number(q.points) || 1;
+      possible += pts;
+      if (q.type === 'tf') {
+        const given = answers ? answers[`${si}:${qi}`] : undefined;
+        if (given !== undefined && normalize(given) === normalize(q.correct || '')) earned += pts;
+      } else if (q.type === 'fitb') {
+        const blanks = Array.isArray(q.blanks) ? q.blanks : [];
+        const perBlank = blanks.length > 0 ? pts / blanks.length : 0;
+        blanks.forEach((correct, bi) => {
+          const given = answers ? answers[`${si}:${qi}:${bi}`] : undefined;
+          if (given !== undefined && normalize(given) === normalize(correct || '')) earned += perBlank;
+        });
+      } else if (q.type === 'short') {
+        hasShort = true;
+      }
+    });
+  });
+
+  if (hasShort) {
+    db.prepare(`
+      INSERT INTO submissions (student_id, item_id, status, score, points_possible, answers, completed_at)
+      VALUES (?, ?, 'done', ?, ?, ?, datetime('now'))
+      ON CONFLICT (student_id, item_id) DO UPDATE SET
+        status = 'done', score = excluded.score, points_possible = excluded.points_possible,
+        answers = excluded.answers, completed_at = datetime('now'), graded_at = NULL
+    `).run(studentId, req.params.id, earned, possible, JSON.stringify(answers || {}));
+  } else {
+    db.prepare(`
+      INSERT INTO submissions (student_id, item_id, status, score, points_possible, answers, completed_at, graded_at)
+      VALUES (?, ?, 'graded', ?, ?, ?, datetime('now'), datetime('now'))
+      ON CONFLICT (student_id, item_id) DO UPDATE SET
+        status = 'graded', score = excluded.score, points_possible = excluded.points_possible,
+        answers = excluded.answers, completed_at = datetime('now'), graded_at = datetime('now')
+    `).run(studentId, req.params.id, earned, possible, JSON.stringify(answers || {}));
+  }
+
+  db.prepare(`INSERT INTO submission_history (student_id, item_id, score, points_possible, answers) VALUES (?, ?, ?, ?, ?)`)
+    .run(studentId, req.params.id, earned, possible, JSON.stringify(answers || {}));
+
+  markScheduleDone.run(studentId, req.params.id, isDateStr(date) ? date : today());
+  res.json({ score: earned, total: possible, needsGrading: hasShort });
+});
+
 // ---------- grading (parent) ----------
 
 app.get('/api/grading-queue/count', requirePin, (req, res) => {
   const { n } = db.prepare(`
     SELECT COUNT(*) AS n FROM submissions sub
     JOIN items i ON i.id = sub.item_id
-    WHERE sub.status = 'done' AND i.type IN ('assignment', 'lesson', 'spelling_practice', 'flashcards')
+    WHERE sub.status = 'done' AND i.type IN ('assignment', 'lesson', 'spelling_practice', 'flashcards', 'worksheet')
   `).get();
   res.json({ count: n });
 });
@@ -1422,7 +1534,7 @@ app.get('/api/grading-queue', requirePin, (req, res) => {
     JOIN items i ON i.id = sub.item_id
     JOIN units u ON u.id = i.unit_id
     JOIN courses c ON c.id = u.course_id
-    WHERE sub.status = 'done' AND i.type IN ('assignment', 'lesson', 'spelling_practice', 'flashcards')
+    WHERE sub.status = 'done' AND i.type IN ('assignment', 'lesson', 'spelling_practice', 'flashcards', 'worksheet')
     ORDER BY sub.completed_at
   `).all());
 });

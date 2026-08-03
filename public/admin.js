@@ -37,11 +37,12 @@ function msg(text, type = 'success') {
 
 const TYPE_ICON = {
   lesson: '📖', assignment: '📝', quiz: '❓', matching: '🔤', crossword: '⬛',
-  spelling_practice: '✏️', spelling_test: '⭐', flashcards: '🗂️',
+  spelling_practice: '✏️', spelling_test: '⭐', flashcards: '🗂️', worksheet: '📋',
 };
 const TYPE_LABEL = {
   lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz', matching: 'Matching', crossword: 'Crossword',
   spelling_practice: 'Spelling Practice', spelling_test: 'Spelling Test', flashcards: 'Flashcards',
+  worksheet: 'Worksheet',
 };
 
 // ---------- PIN gate ----------
@@ -546,6 +547,10 @@ async function openItemEditor(unitId, itemId) {
       renderCrosswordPreview(item.crosswordData);
       $('#ie-crossword-status').textContent = `${item.crosswordData.placed || ''} words placed`;
     }
+    if (item.type === 'worksheet' && item.worksheetData) {
+      currentWorksheetData = item.worksheetData;
+      renderWorksheetEditor(item.worksheetData);
+    }
     $('#ie-delete').hidden = false;
     $('#ie-delete').onclick = async () => {
       if (!confirm('Delete this item and any grades for it?')) return;
@@ -562,6 +567,10 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-quiz-instructions').value = '';
     $('#ie-matching-instructions').value = '';
     currentCrosswordData = null;
+    currentWorksheetData = null;
+    $('#ie-ws-paste').value = '';
+    $('#ie-ws-editor').innerHTML = '';
+    $('#ie-ws-parse-status').hidden = true;
     $('#ie-points').value = 10;
     $('#ie-due-date').value = '';
     $('#ie-allow-retakes').checked = false;
@@ -585,8 +594,10 @@ function updateItemFieldVisibility() {
   $('#ie-field-crossword').hidden = type !== 'crossword';
   $('#ie-field-spelling').hidden = type !== 'spelling_practice' && type !== 'spelling_test';
   $('#ie-field-flashcards').hidden = type !== 'flashcards';
+  $('#ie-field-worksheet').hidden = type !== 'worksheet';
   $('#ie-scan-section').hidden = type !== 'lesson' && type !== 'quiz';
-  $('#ie-import-section').hidden = type === 'spelling_practice' || type === 'spelling_test' || type === 'flashcards';
+  $('#ie-import-section').hidden = type === 'spelling_practice' || type === 'spelling_test'
+    || type === 'flashcards' || type === 'worksheet';
 }
 $('#ie-type').addEventListener('change', updateItemFieldVisibility);
 
@@ -962,6 +973,15 @@ $('#item-form').addEventListener('submit', async (e) => {
     }
     body.crosswordData = currentCrosswordData;
   }
+  if (type === 'worksheet') {
+    const wd = collectWorksheetAnswers();
+    if (!wd) {
+      $('#ie-error').textContent = 'Parse the worksheet first.';
+      $('#ie-error').hidden = false;
+      return;
+    }
+    body.worksheetData = wd;
+  }
 
   const id = $('#ie-id').value;
   try {
@@ -973,6 +993,236 @@ $('#item-form').addEventListener('submit', async (e) => {
     $('#ie-error').textContent = err.message;
     $('#ie-error').hidden = false;
   }
+});
+
+// ============================================================
+// Worksheet editor
+// ============================================================
+
+let currentWorksheetData = null;
+
+function parseWorksheet(text) {
+  const lines = text.split('\n');
+  const sections = [];
+  let currentSection = null;
+  let hasHeader = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Name/Date header line
+    if (!hasHeader && /name\s*:/i.test(trimmed)) {
+      hasHeader = true;
+      continue;
+    }
+
+    // Section header: "Part 1 —", "Part 1:", "Section 1 —", etc.
+    if (/^(part|section)\s+\d+/i.test(trimmed)) {
+      currentSection = { title: trimmed, questions: [] };
+      sections.push(currentSection);
+      continue;
+    }
+
+    if (!currentSection) {
+      currentSection = { title: '', questions: [] };
+      sections.push(currentSection);
+    }
+
+    // True/False line: starts with T then whitespace then F
+    if (/^T\s+F\b/i.test(trimmed)) {
+      const text = trimmed.replace(/^T\s+F\s*/i, '').trim();
+      if (text) currentSection.questions.push({ type: 'tf', text, correct: '', points: 1 });
+      continue;
+    }
+
+    // Strip optional leading number: "1. " or "1) "
+    const numMatch = trimmed.match(/^(\d+)[.)]\s+(.+)/);
+    const num = numMatch ? Number(numMatch[1]) : undefined;
+    const content = numMatch ? numMatch[2] : trimmed;
+
+    // Fill-in-the-blank: contains 3+ underscores anywhere
+    if (/_{3,}/.test(content)) {
+      const template = content.replace(/_{3,}/g, '___');
+      const blankCount = (template.match(/___/g) || []).length;
+      currentSection.questions.push({
+        type: 'fitb',
+        num,
+        template,
+        blanks: Array(blankCount).fill(''),
+        points: blankCount,
+      });
+      continue;
+    }
+
+    // Short answer (numbered or plain)
+    currentSection.questions.push({ type: 'short', num, text: content, points: 1 });
+  }
+
+  // Drop empty sections
+  return { hasHeader, sections: sections.filter(s => s.questions.length > 0 || s.title) };
+}
+
+function renderWorksheetEditor(wd) {
+  const container = $('#ie-ws-editor');
+  container.innerHTML = '';
+
+  if (!wd || !wd.sections || wd.sections.length === 0) {
+    container.innerHTML = '<p class="hint">No questions parsed yet.</p>';
+    return;
+  }
+
+  let flatQ = 0; // global question counter for unique radio names
+  wd.sections.forEach((section, si) => {
+    if (section.title) {
+      const h = document.createElement('h3');
+      h.style.cssText = 'margin:1rem 0 .5rem;font-size:.95rem;border-bottom:1px solid var(--border);padding-bottom:.25rem';
+      h.textContent = section.title;
+      container.appendChild(h);
+    }
+    (section.questions || []).forEach((q, qi) => {
+      const div = document.createElement('div');
+      div.className = 'ws-admin-q';
+      div.style.cssText = 'margin-bottom:.75rem;padding:.6rem .75rem;background:var(--card-bg,#fff);border:1px solid var(--border);border-radius:8px';
+
+      if (q.type === 'fitb') {
+        const label = document.createElement('p');
+        label.style.cssText = 'margin:0 0 .4rem;font-size:.9rem;color:var(--muted)';
+        label.textContent = `Fill-in-the-blank${q.num !== undefined ? ` #${q.num}` : ''}`;
+        div.appendChild(label);
+
+        const preview = document.createElement('p');
+        preview.style.cssText = 'margin:0 0 .5rem;font-size:1rem';
+        preview.textContent = q.template;
+        div.appendChild(preview);
+
+        q.blanks.forEach((blank, bi) => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem';
+          const lbl = document.createElement('label');
+          lbl.style.cssText = 'font-size:.85rem;color:var(--muted);white-space:nowrap';
+          lbl.textContent = `Blank ${bi + 1} answer:`;
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.style.cssText = 'flex:1;min-width:0';
+          inp.placeholder = 'Correct answer…';
+          inp.value = blank;
+          inp.dataset.si = si;
+          inp.dataset.qi = qi;
+          inp.dataset.bi = bi;
+          inp.className = 'ws-blank-ans';
+          inp.addEventListener('input', () => syncWorksheetData());
+          row.appendChild(lbl);
+          row.appendChild(inp);
+          div.appendChild(row);
+        });
+
+        const ptsRow = document.createElement('div');
+        ptsRow.style.cssText = 'display:flex;align-items:center;gap:.5rem;margin-top:.25rem';
+        ptsRow.innerHTML = `<label style="font-size:.8rem;color:var(--muted)">Points total: <input type="number" min="0" step="0.5" value="${q.points}" data-si="${si}" data-qi="${qi}" class="ws-pts-inp" style="width:4rem"></label>`;
+        ptsRow.querySelector('.ws-pts-inp').addEventListener('input', () => syncWorksheetData());
+        div.appendChild(ptsRow);
+
+      } else if (q.type === 'tf') {
+        const label = document.createElement('p');
+        label.style.cssText = 'margin:0 0 .4rem;font-size:.9rem;color:var(--muted)';
+        label.textContent = 'True / False';
+        div.appendChild(label);
+
+        const stmt = document.createElement('p');
+        stmt.style.cssText = 'margin:0 0 .5rem;font-size:1rem';
+        stmt.textContent = q.text;
+        div.appendChild(stmt);
+
+        const radios = document.createElement('div');
+        radios.style.cssText = 'display:flex;gap:1rem;align-items:center';
+        const name = `ws-tf-${si}-${qi}-${flatQ}`;
+        ['T', 'F'].forEach(val => {
+          const lbl = document.createElement('label');
+          lbl.style.cssText = 'display:flex;align-items:center;gap:.35rem;font-size:.95rem;cursor:pointer';
+          const radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = name;
+          radio.value = val;
+          radio.dataset.si = si;
+          radio.dataset.qi = qi;
+          radio.className = 'ws-tf-radio';
+          if (q.correct === val) radio.checked = true;
+          radio.addEventListener('change', () => syncWorksheetData());
+          lbl.appendChild(radio);
+          lbl.appendChild(document.createTextNode(val === 'T' ? 'True' : 'False'));
+          radios.appendChild(lbl);
+        });
+        div.appendChild(radios);
+
+      } else if (q.type === 'short') {
+        const label = document.createElement('p');
+        label.style.cssText = 'margin:0 0 .25rem;font-size:.9rem;color:var(--muted)';
+        label.textContent = `Short answer${q.num !== undefined ? ` #${q.num}` : ''} — parent grades`;
+        div.appendChild(label);
+
+        const stmt = document.createElement('p');
+        stmt.style.cssText = 'margin:0 0 .4rem;font-size:1rem';
+        stmt.textContent = q.text;
+        div.appendChild(stmt);
+
+        const ptsRow = document.createElement('div');
+        ptsRow.innerHTML = `<label style="font-size:.8rem;color:var(--muted)">Points: <input type="number" min="0" step="1" value="${q.points}" data-si="${si}" data-qi="${qi}" class="ws-pts-inp" style="width:4rem"></label>`;
+        ptsRow.querySelector('.ws-pts-inp').addEventListener('input', () => syncWorksheetData());
+        div.appendChild(ptsRow);
+      }
+
+      container.appendChild(div);
+      flatQ++;
+    });
+  });
+}
+
+function syncWorksheetData() {
+  if (!currentWorksheetData) return;
+  // Sync blank answers from inputs back into currentWorksheetData
+  document.querySelectorAll('.ws-blank-ans').forEach(inp => {
+    const si = Number(inp.dataset.si), qi = Number(inp.dataset.qi), bi = Number(inp.dataset.bi);
+    if (currentWorksheetData.sections[si]?.questions[qi]?.blanks) {
+      currentWorksheetData.sections[si].questions[qi].blanks[bi] = inp.value.trim();
+    }
+  });
+  document.querySelectorAll('.ws-tf-radio:checked').forEach(radio => {
+    const si = Number(radio.dataset.si), qi = Number(radio.dataset.qi);
+    if (currentWorksheetData.sections[si]?.questions[qi]) {
+      currentWorksheetData.sections[si].questions[qi].correct = radio.value;
+    }
+  });
+  document.querySelectorAll('.ws-pts-inp').forEach(inp => {
+    const si = Number(inp.dataset.si), qi = Number(inp.dataset.qi);
+    if (currentWorksheetData.sections[si]?.questions[qi]) {
+      currentWorksheetData.sections[si].questions[qi].points = Number(inp.value) || 1;
+    }
+  });
+}
+
+function collectWorksheetAnswers() {
+  if (!currentWorksheetData) return null;
+  syncWorksheetData();
+  return currentWorksheetData;
+}
+
+$('#ie-ws-parse').addEventListener('click', () => {
+  const text = $('#ie-ws-paste').value;
+  if (!text.trim()) return;
+  const wd = parseWorksheet(text);
+  const total = wd.sections.reduce((s, sec) => s + sec.questions.length, 0);
+  const statusEl = $('#ie-ws-parse-status');
+  if (total === 0) {
+    statusEl.textContent = 'No questions found — check the format.';
+    statusEl.hidden = false;
+    return;
+  }
+  currentWorksheetData = wd;
+  renderWorksheetEditor(wd);
+  statusEl.textContent = `Parsed ${total} question${total !== 1 ? 's' : ''}. Fill in any correct answers below, then save.`;
+  statusEl.hidden = false;
 });
 
 // ============================================================

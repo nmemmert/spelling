@@ -28,11 +28,12 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const TYPE_ICON = {
   lesson: '📖', assignment: '📝', quiz: '❓', matching: '🔤', crossword: '⬛',
-  spelling_practice: '✏️', spelling_test: '⭐', flashcards: '🗂️',
+  spelling_practice: '✏️', spelling_test: '⭐', flashcards: '🗂️', worksheet: '📋',
 };
 const TYPE_LABEL = {
   lesson: 'Lesson', assignment: 'Assignment', quiz: 'Quiz', matching: 'Matching', crossword: 'Crossword',
   spelling_practice: 'Spelling Practice', spelling_test: 'Spelling Test', flashcards: 'Flashcards',
+  worksheet: 'Worksheet',
 };
 
 document.querySelectorAll('[data-nav]').forEach((btn) =>
@@ -723,6 +724,7 @@ async function openItem(itemId, type) {
   if (type === 'quiz') return openQuiz(itemId, false);
   if (type === 'matching') return openMatching(itemId, false);
   if (type === 'crossword') return openCrossword(itemId);
+  if (type === 'worksheet') return openWorksheet(itemId);
   const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
   if (type === 'spelling_practice') return startPractice({ listId: item.list.id, itemId });
   if (type === 'spelling_test') return startTest({ listId: item.list.id, itemId, allowRetakes: item.allow_retakes });
@@ -815,6 +817,277 @@ async function openAssignment(itemId) {
     };
   }
   show('assignment');
+}
+
+// ---------- worksheet ----------
+
+const wsNormalize = (s) => String(s).trim().toLowerCase();
+
+async function openWorksheet(itemId) {
+  const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
+  if (!item.worksheetData) return;
+
+  const wd = item.worksheetData;
+  const sub = item.submission;
+  const graded = sub && sub.status === 'graded';
+  const submitted = sub && (sub.status === 'done' || sub.status === 'graded');
+
+  backTarget = () => openKid(currentStudent.id);
+
+  $('#ws-kicker').textContent = `${item.course_name} · ${item.unit_name}`;
+  $('#ws-title').textContent = item.title;
+
+  const headerEl = $('#ws-header');
+  if (wd.hasHeader) {
+    headerEl.hidden = false;
+    $('#ws-date').value = new Date().toLocaleDateString();
+    $('#ws-name').value = '';
+  } else {
+    headerEl.hidden = true;
+  }
+
+  // Build question form
+  const form = $('#ws-form');
+  form.innerHTML = '';
+
+  wd.sections.forEach((section, si) => {
+    if (section.title) {
+      const h = document.createElement('h3');
+      h.className = 'ws-section-title';
+      h.textContent = section.title;
+      form.appendChild(h);
+    }
+    (section.questions || []).forEach((q, qi) => {
+      const div = document.createElement('div');
+      div.className = 'ws-question';
+
+      if (q.type === 'fitb') {
+        const parts = q.template.split('___');
+        const numBlanks = q.blankCount || (parts.length - 1);
+        const p = document.createElement('p');
+        p.className = 'ws-fitb';
+        if (q.num !== undefined) {
+          const numSpan = document.createElement('span');
+          numSpan.className = 'ws-qnum';
+          numSpan.textContent = `${q.num}. `;
+          p.appendChild(numSpan);
+        }
+        parts.forEach((part, pi) => {
+          if (part) p.appendChild(document.createTextNode(part));
+          if (pi < numBlanks) {
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'ws-blank-input';
+            inp.name = `${si}:${qi}:${pi}`;
+            inp.autocomplete = 'off';
+            inp.setAttribute('autocapitalize', 'off');
+            inp.setAttribute('autocorrect', 'off');
+            inp.spellcheck = false;
+            if (submitted) inp.disabled = true;
+            if (graded && q.givenBlanks) {
+              inp.value = q.givenBlanks[pi] ?? '';
+              const correct = wsNormalize(q.givenBlanks[pi] ?? '') === wsNormalize((q.blanks || [])[pi] ?? '');
+              inp.classList.add(correct ? 'ws-correct' : 'ws-wrong');
+            }
+            p.appendChild(inp);
+            if (graded && q.blanks && q.blanks[pi]) {
+              const ans = document.createElement('span');
+              ans.className = 'ws-correct-answer';
+              ans.textContent = ` (${q.blanks[pi]})`;
+              p.appendChild(ans);
+            }
+          }
+        });
+        div.appendChild(p);
+
+      } else if (q.type === 'tf') {
+        const p = document.createElement('p');
+        p.className = 'ws-tf';
+        const key = `${si}:${qi}`;
+        ['T', 'F'].forEach(val => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'ws-tf-btn';
+          btn.dataset.val = val;
+          btn.dataset.key = key;
+          btn.textContent = val;
+          if (submitted) btn.disabled = true;
+          if (q.given === val) {
+            btn.classList.add('selected');
+            if (graded) btn.classList.add(q.given === q.correct ? 'ws-correct' : 'ws-wrong');
+          }
+          p.appendChild(btn);
+        });
+        const stmt = document.createElement('span');
+        stmt.className = 'ws-tf-stmt';
+        stmt.textContent = q.text;
+        p.appendChild(stmt);
+        div.appendChild(p);
+
+      } else if (q.type === 'short') {
+        const label = document.createElement('label');
+        label.className = 'ws-short';
+        if (q.num !== undefined) {
+          const numSpan = document.createElement('span');
+          numSpan.className = 'ws-qnum';
+          numSpan.textContent = `${q.num}. `;
+          label.appendChild(numSpan);
+        }
+        label.appendChild(document.createTextNode(q.text));
+        const ta = document.createElement('textarea');
+        ta.name = `${si}:${qi}`;
+        ta.className = 'ws-short-answer';
+        ta.rows = 3;
+        ta.placeholder = 'Write your answer here…';
+        if (submitted) ta.disabled = true;
+        if (q.given) ta.value = q.given;
+        label.appendChild(ta);
+        div.appendChild(label);
+      }
+
+      form.appendChild(div);
+    });
+  });
+
+  // T/F toggle (only active when not submitted)
+  form.addEventListener('click', (e) => {
+    const btn = e.target.closest('.ws-tf-btn');
+    if (!btn || btn.disabled) return;
+    const key = btn.dataset.key;
+    form.querySelectorAll(`.ws-tf-btn[data-key="${key}"]`).forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+
+  // Actions
+  const actions = $('#ws-actions');
+  const result = $('#ws-result');
+  const submitBtn = $('#ws-submit-btn');
+  const printBtn = $('#ws-print-btn');
+  const paperBtn = $('#ws-paper-btn');
+
+  actions.hidden = false;
+  result.hidden = true;
+  paperBtn.hidden = submitted; // hide once any submission exists
+
+  if (submitted && !graded) {
+    result.hidden = false;
+    result.className = 'status-banner';
+    result.textContent = '⏳ Turned in — waiting for a parent to grade it.';
+    submitBtn.hidden = true;
+  } else if (graded) {
+    result.hidden = false;
+    result.className = 'status-banner good';
+    const hasShort = wd.sections.some(s => (s.questions || []).some(q => q.type === 'short'));
+    result.textContent = hasShort
+      ? `🌟 Score: ${sub.score} / ${sub.points_possible} (short answers parent-graded)`
+      : `🌟 Score: ${sub.score} / ${sub.points_possible}`;
+    if (item.allow_retakes) {
+      submitBtn.hidden = false;
+      submitBtn.textContent = '🔁 Retake';
+    } else {
+      submitBtn.hidden = true;
+    }
+  } else {
+    submitBtn.hidden = false;
+    submitBtn.textContent = 'Submit ✓';
+  }
+
+  submitBtn.onclick = async () => {
+    const answers = {};
+    form.querySelectorAll('.ws-blank-input').forEach(inp => { answers[inp.name] = inp.value.trim(); });
+    form.querySelectorAll('.ws-tf-btn.selected').forEach(btn => { answers[btn.dataset.key] = btn.dataset.val; });
+    form.querySelectorAll('.ws-short-answer').forEach(ta => { answers[ta.name] = ta.value.trim(); });
+    try {
+      await api(`/api/items/${itemId}/worksheet-submit`, {
+        method: 'POST',
+        body: { studentId: currentStudent.id, answers, date: todayStr() },
+      });
+      openWorksheet(itemId);
+    } catch (err) {
+      result.hidden = false;
+      result.className = 'status-banner bad';
+      result.textContent = err.message;
+    }
+  };
+
+  printBtn.onclick = () => printWorksheetBlank(item);
+
+  paperBtn.onclick = async () => {
+    try {
+      await api(`/api/items/${itemId}/complete`, {
+        method: 'POST',
+        body: { studentId: currentStudent.id, date: todayStr() },
+      });
+      openWorksheet(itemId);
+    } catch (err) {
+      result.hidden = false;
+      result.className = 'status-banner bad';
+      result.textContent = err.message;
+    }
+  };
+
+  show('worksheet');
+}
+
+function printWorksheetBlank(item) {
+  const wd = item.worksheetData;
+  if (!wd) return;
+
+  const escHtml = (s) => String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${escHtml(item.title)}</title>
+<style>
+  body{font-family:Georgia,serif;max-width:7in;margin:.75in auto;font-size:12pt;line-height:1.5}
+  h1{text-align:center;font-size:16pt;margin-bottom:.4in}
+  .ws-hdr{display:flex;justify-content:space-between;margin-bottom:.5in;font-size:11pt}
+  .ws-hdr-line{border-bottom:1px solid #000;display:inline-block;width:2.8in}
+  h3{margin:.35in 0 .1in;font-size:12pt;border-bottom:1px solid #000;padding-bottom:2pt}
+  .q{margin:.18in 0}
+  p{margin:.1in 0}
+  .blank{display:inline-block;border-bottom:1px solid #000;width:1.4in;margin:0 3pt;vertical-align:baseline}
+  .tf-circle{display:inline-block;border:1px solid #000;border-radius:50%;width:1.1em;height:1.1em;
+    text-align:center;line-height:1.1em;margin-right:.4em;font-size:11pt}
+  .sa-line{border-bottom:1px solid #bbb;height:1.5em;margin:.08in 0}
+  @media print{body{margin:0}}
+</style></head><body>`;
+
+  html += `<h1>${escHtml(item.title)}</h1>`;
+
+  if (wd.hasHeader) {
+    html += `<div class="ws-hdr">
+      <div>Name:&nbsp;<span class="ws-hdr-line">&nbsp;</span></div>
+      <div>Date:&nbsp;<span class="ws-hdr-line" style="width:1.8in">&nbsp;</span></div>
+    </div>`;
+  }
+
+  wd.sections.forEach(section => {
+    if (section.title) html += `<h3>${escHtml(section.title)}</h3>`;
+    (section.questions || []).forEach(q => {
+      html += `<div class="q">`;
+      if (q.type === 'fitb') {
+        const parts = q.template.split('___');
+        let line = q.num !== undefined ? `${q.num}.&nbsp;` : '';
+        parts.forEach((part, pi) => {
+          line += escHtml(part);
+          if (pi < parts.length - 1) line += `<span class="blank">&nbsp;</span>`;
+        });
+        html += `<p>${line}</p>`;
+      } else if (q.type === 'tf') {
+        html += `<p><span class="tf-circle">T</span><span class="tf-circle">F</span>&nbsp;&nbsp;${escHtml(q.text)}</p>`;
+      } else if (q.type === 'short') {
+        html += `<p>${q.num !== undefined ? `${q.num}.&nbsp;` : ''}${escHtml(q.text)}</p>`;
+        html += `<div class="sa-line"></div><div class="sa-line"></div><div class="sa-line"></div>`;
+      }
+      html += `</div>`;
+    });
+  });
+
+  html += `</body></html>`;
+
+  const win = window.open('', '_blank');
+  if (win) { win.document.write(html); win.document.close(); win.print(); }
 }
 
 // ---------- quiz ----------
