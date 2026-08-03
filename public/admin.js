@@ -206,6 +206,110 @@ $('#add-course-form').addEventListener('submit', async (e) => {
   showPanel('course-detail');
 });
 
+// ---------- import course — tab switching ----------
+function setImportTab(tab) {
+  $('#import-tab-json').hidden = tab !== 'json';
+  $('#import-tab-docx').hidden = tab !== 'docx';
+  document.querySelectorAll('.import-tab-btn').forEach((b) => {
+    b.classList.toggle('secondary', b.dataset.tab !== tab);
+  });
+}
+setImportTab('json');
+document.querySelectorAll('.import-tab-btn').forEach((b) =>
+  b.addEventListener('click', () => setImportTab(b.dataset.tab))
+);
+
+// ---------- import course — JSON ----------
+$('#import-course-browse').addEventListener('click', () => $('#import-course-file').click());
+$('#import-course-file').addEventListener('change', () => {
+  const f = $('#import-course-file').files[0];
+  $('#import-course-filename').textContent = f ? f.name : '';
+  $('#import-course-go').disabled = !f;
+  $('#import-course-status').textContent = '';
+});
+$('#import-course-go').addEventListener('click', async () => {
+  const f = $('#import-course-file').files[0];
+  if (!f) return;
+  $('#import-course-status').textContent = 'Importing…';
+  let bundle;
+  try {
+    bundle = JSON.parse(await f.text());
+  } catch {
+    $('#import-course-status').textContent = 'Could not parse JSON file.';
+    return;
+  }
+  let res;
+  try {
+    res = await api('/api/admin/import-course', { method: 'POST', body: bundle });
+  } catch (err) {
+    $('#import-course-status').textContent = `Error: ${err.message}`;
+    return;
+  }
+  $('#import-course-file').value = '';
+  $('#import-course-filename').textContent = '';
+  $('#import-course-go').disabled = true;
+  $('#import-course-status').textContent = '';
+  currentCourseId = res.id;
+  msg('Course imported.');
+  showPanel('course-detail');
+});
+
+// ---------- import course — Word docx ----------
+$('#import-docx-browse').addEventListener('click', () => $('#import-docx-files').click());
+$('#import-docx-files').addEventListener('change', () => {
+  const files = [...$('#import-docx-files').files];
+  if (files.length) {
+    $('#import-docx-filenames').textContent =
+      files.length === 1 ? files[0].name : `${files.length} files selected`;
+    // Pre-fill course name from common filename stem if name field is empty
+    if (!$('#import-docx-name').value.trim() && files.length > 1) {
+      // e.g. "Unit_A_Kitchen_Safety.docx" → try to find a shared prefix word
+    }
+  } else {
+    $('#import-docx-filenames').textContent = '';
+  }
+  $('#import-docx-go').disabled = files.length === 0;
+  $('#import-course-status').textContent = '';
+});
+$('#import-docx-go').addEventListener('click', async () => {
+  const name = $('#import-docx-name').value.trim();
+  if (!name) { $('#import-course-status').textContent = 'Enter a course name first.'; return; }
+  const files = [...$('#import-docx-files').files];
+  if (!files.length) return;
+
+  $('#import-course-status').textContent = `Parsing ${files.length} file${files.length > 1 ? 's' : ''}…`;
+
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('subject', $('#import-docx-subject').value.trim());
+  fd.append('color', $('#import-docx-color').value);
+  files.forEach((f) => fd.append('files', f));
+
+  let data;
+  try {
+    const res = await fetch('/api/admin/import-course-docx', {
+      method: 'POST',
+      headers: { 'x-pin': parentPin },
+      body: fd,
+    });
+    data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Import failed');
+  } catch (err) {
+    $('#import-course-status').textContent = `Error: ${err.message}`;
+    return;
+  }
+
+  $('#import-docx-files').value = '';
+  $('#import-docx-filenames').textContent = '';
+  $('#import-docx-go').disabled = true;
+  $('#import-docx-name').value = '';
+  $('#import-docx-subject').value = '';
+  $('#import-course-status').textContent = '';
+  currentCourseId = data.id;
+  msg('Course imported from Word documents.');
+  showPanel('course-detail');
+});
+
 async function openCourseDetail(id) {
   if (!id) return showPanel('courses');
 
@@ -333,6 +437,24 @@ $('#cd-duplicate').addEventListener('click', async () => {
   currentCourseId = id;
   showPanel('course-detail');
   msg('Course duplicated — update the name and details below.');
+});
+
+$('#cd-export').addEventListener('click', async () => {
+  const res = await fetch(`/api/admin/courses/${currentCourseId}/export`, {
+    headers: { 'x-pin': parentPin },
+  });
+  if (!res.ok) { msg('Export failed.'); return; }
+  const blob = await res.blob();
+  const disposition = res.headers.get('content-disposition') || '';
+  const nameMatch = disposition.match(/filename="([^"]+)"/);
+  const filename = nameMatch ? nameMatch[1] : 'course.json';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  msg('Course exported.');
 });
 
 $('#cd-delete').addEventListener('click', async () => {

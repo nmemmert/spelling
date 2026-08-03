@@ -77,6 +77,47 @@
                 <button type="submit">Add course</button>
               </form>
             </div>
+            <div class="admin-card" style="margin-top:1rem">
+              <h2 style="margin:0 0 0.75rem">Import course</h2>
+
+              <!-- mode tabs -->
+              <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+                <button type="button" class="import-tab-btn secondary" data-tab="json" style="flex:1">📄 From JSON</button>
+                <button type="button" class="import-tab-btn secondary" data-tab="docx" style="flex:1">📝 From Word docs</button>
+              </div>
+
+              <!-- JSON import -->
+              <div id="import-tab-json">
+                <p class="hint" style="margin:0 0 0.75rem">Import a <code>.json</code> bundle previously exported from this app.</p>
+                <input type="file" id="import-course-file" accept=".json" hidden>
+                <div class="inline-form" style="align-items:center;gap:0.5rem">
+                  <button type="button" id="import-course-browse" class="secondary">📂 Choose file…</button>
+                  <span id="import-course-filename" class="hint" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                  <button type="button" id="import-course-go" class="secondary" disabled>📥 Import</button>
+                </div>
+              </div>
+
+              <!-- Word docx import -->
+              <div id="import-tab-docx" hidden>
+                <p class="hint" style="margin:0 0 0.75rem">Select all unit <code>.docx</code> files at once — one file per unit, sorted by filename.</p>
+                <div class="inline-form" style="flex-direction:column;gap:0.5rem">
+                  <input id="import-docx-name" placeholder="Course name (required)" aria-label="Course name" style="width:100%">
+                  <input id="import-docx-subject" placeholder="Subject (optional)" aria-label="Subject" style="width:100%">
+                  <div style="display:flex;align-items:center;gap:0.5rem">
+                    <label style="font-size:0.85rem">Color</label>
+                    <input id="import-docx-color" type="color" value="#4f86f7" aria-label="Color">
+                  </div>
+                </div>
+                <input type="file" id="import-docx-files" accept=".docx" multiple hidden>
+                <div class="inline-form" style="align-items:center;gap:0.5rem;margin-top:0.5rem">
+                  <button type="button" id="import-docx-browse" class="secondary">📂 Choose .docx files…</button>
+                  <span id="import-docx-filenames" class="hint" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                  <button type="button" id="import-docx-go" class="secondary" disabled>📥 Import</button>
+                </div>
+              </div>
+
+              <p id="import-course-status" class="hint" style="margin:0.5rem 0 0"></p>
+            </div>
           </div>
         </div>
       </section>
@@ -95,6 +136,7 @@
             <label class="checkbox-label"><input type="checkbox" id="cd-archived"> Archived</label>
             <button type="submit">Save</button>
             <button type="button" id="cd-duplicate" class="secondary">Duplicate course</button>
+            <button type="button" id="cd-export" class="secondary">⬇ Export course</button>
             <button type="button" id="cd-delete" class="danger">Delete course</button>
           </form>
         </div>

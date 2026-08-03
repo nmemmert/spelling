@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import mammoth from 'mammoth';
+import multer from 'multer';
 import { db, sha256 } from './db.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -21,6 +22,134 @@ const PIPER_OK = existsSync(PIPER_MODEL);
 const app = express();
 app.use(express.json({ limit: '15mb' })); // photos for page-scanning are base64 in the JSON body
 app.use(express.static(join(ROOT, 'public')));
+
+const docxUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+
+// Strip HTML tags and decode entities to plain text
+function htmlToText(html) {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+
+// Parse a unit docx buffer (from mammoth HTML) into an array of LMS items.
+// Handles: Week N: headings → lesson items, Unit X Quiz → quiz item with questions + answers.
+async function parseUnitDocxBuffer(buffer, filename) {
+  const { value: html } = await mammoth.convertToHtml({ buffer });
+
+  // Strip worksheet tables — they are fill-in-blank print sheets, not digital content
+  const stripped = html.replace(/<table[\s\S]*?<\/table>/gi, '');
+
+  // Walk the HTML and collect typed elements
+  const elements = [];
+  for (const m of stripped.matchAll(/<(p|ul|ol)(?:\s[^>]*)?>[\s\S]*?<\/\1>/gi)) {
+    const tag = m[0].match(/^<(\w+)/)[1].toLowerCase();
+    const inner = m[0].replace(/^<[^>]+>/, '').replace(/<\/\w+>\s*$/, '');
+
+    if (tag === 'p') {
+      const text = htmlToText(inner);
+      if (!text) continue;
+      // A paragraph whose only non-whitespace content is wrapped in <strong> is a heading
+      const isHeading = /^<strong>[^<]+<\/strong>\s*$/.test(inner.trim());
+      elements.push({ kind: isHeading ? 'heading' : 'para', text });
+    } else {
+      const items = [...inner.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
+        .map((li) => htmlToText(li[1])).filter(Boolean);
+      if (items.length) elements.push({ kind: tag === 'ol' ? 'numbered' : 'bullets', items });
+    }
+  }
+
+  // Infer unit letter from filename (e.g. Unit_A_Kitchen.docx → 'A')
+  const lm = filename.match(/[Uu]nit[_\s-]([A-Ha-h])[_\s-]/);
+  const letter = lm ? lm[1].toUpperCase() : '';
+
+  // State machine over elements
+  const SECTIONS = {
+    'Objective': 'OBJECTIVE',
+    'Materials Needed': 'MATERIALS NEEDED',
+    'Lesson & Activity Steps': 'LESSON STEPS',
+    'Safety Notes': 'SAFETY NOTES',
+    'Wrap-Up Discussion': 'WRAP-UP DISCUSSION',
+  };
+
+  const weeks = [];
+  let cur = null;
+  let inQuiz = false, inAnswers = false, skipWorksheet = false;
+  const qPrompts = [], qAnswers = [];
+
+  for (const el of elements) {
+    if (el.kind === 'heading') {
+      const t = el.text;
+      if (/^Week \d+:/i.test(t)) {
+        if (cur) weeks.push(cur);
+        inQuiz = inAnswers = skipWorksheet = false;
+        cur = { title: t, lines: [] };
+      } else if (/^Week \d+ Worksheet:/i.test(t)) {
+        skipWorksheet = true;
+      } else if (/^Unit [A-H] Quiz:/i.test(t)) {
+        if (cur) { weeks.push(cur); cur = null; }
+        inQuiz = true; inAnswers = false;
+      } else if (/^Answer Key$/i.test(t)) {
+        inAnswers = true; inQuiz = false;
+      } else if (cur && !skipWorksheet && SECTIONS[t]) {
+        cur.lines.push('\n' + SECTIONS[t]);
+      }
+      continue;
+    }
+
+    if (el.kind === 'para') {
+      const t = el.text;
+      if (/^Name:\s*_/.test(t) || /^Part \d+\b/i.test(t)) continue;
+      if (inAnswers) {
+        const m = t.match(/^\d+[\.\)]+\s*(.+)$/); if (m) qAnswers.push(m[1].trim());
+      } else if (inQuiz) {
+        const m = t.match(/^\d+[\.\)]+\s*(.+)$/); if (m) qPrompts.push(m[1].trim());
+      } else if (cur && !skipWorksheet) {
+        cur.lines.push(t);
+      }
+      continue;
+    }
+
+    if (el.kind === 'bullets') {
+      if (cur && !skipWorksheet) el.items.forEach((item) => cur.lines.push('• ' + item));
+      continue;
+    }
+
+    if (el.kind === 'numbered') {
+      if (inAnswers) { qAnswers.push(...el.items); }
+      else if (inQuiz) { qPrompts.push(...el.items); }
+      else if (cur && !skipWorksheet) {
+        el.items.forEach((item, i) => cur.lines.push(`${i + 1}. ${item}`));
+      }
+    }
+  }
+  if (cur) weeks.push(cur);
+
+  const items = weeks.map((w, i) => ({
+    type: 'lesson', title: w.title,
+    body: w.lines.join('\n').trim(),
+    points: 0, sort: i, allow_retakes: 0,
+    evidence_mode: 'none', retake_policy: 'latest',
+  }));
+
+  if (qPrompts.length) {
+    const questions = qPrompts.map((q, i) => ({
+      type: /^True or False/i.test(q) ? 'tf' : 'short',
+      prompt: q, choices: [], correct_answer: qAnswers[i] || '',
+      points: 1, sort: i,
+    }));
+    items.push({
+      type: 'quiz', title: `${letter ? `Unit ${letter} Quiz` : 'Unit Quiz'}`, body: '',
+      points: questions.length, sort: items.length,
+      allow_retakes: 1, evidence_mode: 'none', retake_policy: 'latest',
+      questions,
+    });
+  }
+
+  return { letter, items };
+}
 
 // ---------- helpers ----------
 
@@ -641,6 +770,196 @@ app.post('/api/courses/:id/duplicate', requirePin, (req, res) => {
   }
 
   res.json({ id: newCourseId });
+});
+
+// ---------- course export / import ----------
+
+app.get('/api/admin/courses/:id/export', requirePin, (req, res) => {
+  const course = db.prepare(`SELECT name, subject, color FROM courses WHERE id = ?`).get(req.params.id);
+  if (!course) return res.status(404).json({ error: 'No such course' });
+
+  const units = db.prepare(`SELECT id, name, sort FROM units WHERE course_id = ? ORDER BY sort, id`).all(req.params.id);
+  const itemStmt = db.prepare(`SELECT id, type, title, body, points, sort, due_date, allow_retakes, evidence_mode, retake_policy FROM items WHERE unit_id = ? ORDER BY sort, id`);
+  const qStmt = db.prepare(`SELECT type, prompt, choices, correct_answer, points, sort FROM quiz_questions WHERE item_id = ? ORDER BY sort, id`);
+
+  const bundle = {
+    format: 'homeschool-lms-course',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    course,
+    units: units.map((u) => ({
+      name: u.name,
+      sort: u.sort,
+      items: itemStmt.all(u.id).map((it) => {
+        const out = {
+          type: it.type,
+          title: it.title,
+          body: it.body || '',
+          points: it.points,
+          sort: it.sort,
+          due_date: it.due_date || null,
+          allow_retakes: it.allow_retakes,
+          evidence_mode: it.evidence_mode || 'none',
+          retake_policy: it.retake_policy || 'latest',
+        };
+        if (it.type === 'quiz') {
+          out.questions = qStmt.all(it.id).map((q) => ({
+            type: q.type,
+            prompt: q.prompt,
+            choices: JSON.parse(q.choices || '[]'),
+            correct_answer: q.correct_answer,
+            points: q.points,
+            sort: q.sort,
+          }));
+        }
+        return out;
+      }),
+    })),
+  };
+
+  const safe = course.name.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_');
+  res.setHeader('Content-Disposition', `attachment; filename="${safe}.json"`);
+  res.json(bundle);
+});
+
+app.post('/api/admin/import-course', requirePin, (req, res) => {
+  const { format, course, units } = req.body;
+  if (format !== 'homeschool-lms-course' || !String(course?.name || '').trim()) {
+    return res.status(400).json({ error: 'Invalid course bundle' });
+  }
+
+  const insItem = db.prepare(`
+    INSERT INTO items (unit_id, type, title, body, points, sort, due_date, allow_retakes, evidence_mode, retake_policy)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insQ = db.prepare(`
+    INSERT INTO quiz_questions (item_id, type, prompt, choices, correct_answer, points, sort)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  let courseId;
+  try {
+    db.exec('BEGIN');
+    courseId = db.prepare(`INSERT INTO courses (name, subject, color) VALUES (?, ?, ?)`)
+      .run(String(course.name).trim(), String(course.subject || '').trim(), course.color || '#4f86f7')
+      .lastInsertRowid;
+
+    for (const unit of (units || [])) {
+      const unitId = db.prepare(`INSERT INTO units (course_id, name, sort) VALUES (?, ?, ?)`)
+        .run(courseId, String(unit.name).trim(), unit.sort ?? 0)
+        .lastInsertRowid;
+
+      for (const item of (unit.items || [])) {
+        const itemId = insItem.run(
+          unitId,
+          item.type || 'lesson',
+          String(item.title || '').trim(),
+          String(item.body || ''),
+          item.points || 0,
+          item.sort ?? 0,
+          item.due_date || null,
+          item.allow_retakes ? 1 : 0,
+          item.evidence_mode || 'none',
+          item.retake_policy || 'latest',
+        ).lastInsertRowid;
+
+        if (item.type === 'quiz' && Array.isArray(item.questions) && item.questions.length) {
+          let totalPts = 0;
+          for (const q of item.questions) {
+            insQ.run(
+              itemId,
+              q.type || 'short',
+              String(q.prompt || ''),
+              JSON.stringify(Array.isArray(q.choices) ? q.choices : []),
+              String(q.correct_answer || ''),
+              q.points || 1,
+              q.sort ?? 0,
+            );
+            totalPts += q.points || 1;
+          }
+          db.prepare(`UPDATE items SET points = ? WHERE id = ?`).run(totalPts, itemId);
+        }
+      }
+    }
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    return res.status(500).json({ error: e.message });
+  }
+
+  res.json({ id: courseId });
+});
+
+// Multi-file docx → course import
+app.post('/api/admin/import-course-docx', requirePin, docxUpload.array('files'), async (req, res) => {
+  try {
+    if (!req.files?.length) return res.status(400).json({ error: 'No files uploaded' });
+    const courseName = String(req.body.name || '').trim();
+    if (!courseName) return res.status(400).json({ error: 'Course name is required' });
+
+    // Sort by filename so Unit_A_ comes before Unit_B_, etc.
+    const sorted = [...req.files].sort((a, b) => a.originalname.localeCompare(b.originalname));
+
+    // Parse each docx into unit items
+    const parsedUnits = [];
+    for (const file of sorted) {
+      const { letter, items } = await parseUnitDocxBuffer(file.buffer, file.originalname);
+      const unitName = letter
+        ? `Unit ${letter}`
+        : file.originalname.replace(/\.docx$/i, '').replace(/[_-]/g, ' ').trim();
+      parsedUnits.push({ name: unitName, items });
+    }
+
+    const insItem = db.prepare(`
+      INSERT INTO items (unit_id, type, title, body, points, sort, due_date, allow_retakes, evidence_mode, retake_policy)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insQ = db.prepare(`
+      INSERT INTO quiz_questions (item_id, type, prompt, choices, correct_answer, points, sort)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let courseId;
+    db.exec('BEGIN');
+    try {
+      courseId = db.prepare(`INSERT INTO courses (name, subject, color) VALUES (?, ?, ?)`)
+        .run(courseName, String(req.body.subject || '').trim(), req.body.color || '#4f86f7')
+        .lastInsertRowid;
+
+      for (let ui = 0; ui < parsedUnits.length; ui++) {
+        const pu = parsedUnits[ui];
+        const unitId = db.prepare(`INSERT INTO units (course_id, name, sort) VALUES (?, ?, ?)`)
+          .run(courseId, pu.name, ui).lastInsertRowid;
+
+        for (const item of pu.items) {
+          const itemId = insItem.run(
+            unitId, item.type, item.title, item.body,
+            item.points, item.sort, null,
+            item.allow_retakes ? 1 : 0,
+            item.evidence_mode, item.retake_policy,
+          ).lastInsertRowid;
+
+          if (item.type === 'quiz' && item.questions?.length) {
+            let pts = 0;
+            for (const q of item.questions) {
+              insQ.run(itemId, q.type, q.prompt, JSON.stringify(q.choices || []),
+                q.correct_answer, q.points || 1, q.sort ?? 0);
+              pts += q.points || 1;
+            }
+            db.prepare(`UPDATE items SET points = ? WHERE id = ?`).run(pts, itemId);
+          }
+        }
+      }
+      db.exec('COMMIT');
+    } catch (e) {
+      db.exec('ROLLBACK');
+      throw e;
+    }
+
+    res.json({ id: courseId });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/courses/:id/enroll', requirePin, (req, res) => {
