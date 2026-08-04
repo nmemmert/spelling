@@ -653,6 +653,11 @@ button.tiny { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
 .planner-task[draggable] { cursor: grab; }
 .planner-task[draggable]:active { cursor: grabbing; }
 .planner-task.dragging { opacity: 0.35; }
+.planner-task.insert-before { border-top: 2px solid var(--accent); }
+.planner-done-btn { flex-shrink: 0; width: 20px; height: 20px; padding: 0; border: 1.5px solid #bbb; border-radius: 4px; background: transparent; color: transparent; font-size: 0.72rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.15s, color 0.15s, background 0.15s; }
+.planner-done-btn.is-done { border-color: var(--good); color: var(--good); background: var(--good-bg); }
+.planner-day.today { outline: 2px solid var(--accent); outline-offset: 2px; }
+.planner-day.today > h3 { color: var(--accent); }
 .planner-test-badge { background: color-mix(in srgb, var(--accent) 18%, var(--card)); border-left: 3px solid var(--accent); font-size: 0.78rem; cursor: default; pointer-events: none; }
 .planner-tasks.drop-target {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
@@ -665,6 +670,8 @@ button.tiny { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
 .task-save-btn { font-size: 0.85rem; }
 
 .grade-input { width: 4.5rem; padding: 0.4rem; border: 2px solid #d8d2c0; border-radius: 8px; font-family: inherit; }
+.grade-score-row { display: flex; align-items: center; gap: 0.4rem; }
+.grade-max-label { font-size: 0.9rem; font-weight: 600; color: var(--ink); white-space: nowrap; }
 
 @media (max-width: 700px) {
   .planner-grid { grid-template-columns: 1fr; }

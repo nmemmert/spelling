@@ -533,7 +533,7 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-title').value = item.title;
     $('#ie-body-lesson').innerHTML = item.body || '';
     $('#ie-body-assignment').innerHTML = item.body || '';
-    $('#ie-points').value = item.points || 10;
+    $('#ie-points').value = item.points || 100;
     $('#ie-due-date').value = item.due_date || '';
     $('#ie-allow-retakes').checked = !!item.allow_retakes;
     $('#ie-prereq').value = item.prereq_item_id || '';
@@ -582,7 +582,7 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-ws-paste').value = '';
     $('#ie-ws-editor').innerHTML = '';
     $('#ie-ws-parse-status').hidden = true;
-    $('#ie-points').value = 10;
+    $('#ie-points').value = 100;
     $('#ie-due-date').value = '';
     $('#ie-allow-retakes').checked = false;
     $('#ie-prereq').value = '';
@@ -1161,6 +1161,15 @@ function weekStartOf(d) {
   date.setDate(date.getDate() - diff);
   return date.toISOString().slice(0, 10);
 }
+function formatWeekLabel(start, end) {
+  const s = new Date(start + 'T00:00:00');
+  const e = new Date(end + 'T00:00:00');
+  const sM = s.toLocaleString('default', { month: 'short' });
+  const eM = e.toLocaleString('default', { month: 'short' });
+  const y = s.getFullYear();
+  if (s.getMonth() === e.getMonth()) return `${sM} ${s.getDate()}–${e.getDate()}, ${y}`;
+  return `${sM} ${s.getDate()} – ${eM} ${e.getDate()}, ${y}`;
+}
 function addDays(dateStr, n) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
@@ -1266,6 +1275,11 @@ $('#planner-copy').addEventListener('click', async () => {
   msg(`Copied ${copied} task${copied === 1 ? '' : 's'} from last week.`);
   renderPlanner();
 });
+$('#planner-today').addEventListener('click', () => {
+  plannerWeekStart = weekStartOf(new Date());
+  plannerMonthRef = plannerWeekStart;
+  renderPlanner();
+});
 
 $('#planner-print').addEventListener('click', () => {
   if (plannerMode === 'month') printMonthReport(plannerStudentId, plannerWeekStart, plannerMonthRef);
@@ -1278,18 +1292,51 @@ const DAY_NAMES = () => appSettings.weekStartDay === 'sunday' ? DAY_NAMES_SUN : 
 
 function attachPlannerEvents() {
   let draggingId = null;
+  let draggingDate = null;
+
   document.querySelectorAll('.planner-task[draggable]').forEach((el) => {
     el.addEventListener('dragstart', (e) => {
       draggingId = el.dataset.taskId;
+      draggingDate = el.closest('.planner-tasks')?.dataset.dropDate;
       el.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
     });
     el.addEventListener('dragend', () => {
       draggingId = null;
+      draggingDate = null;
       el.classList.remove('dragging');
       document.querySelectorAll('.planner-tasks').forEach((col) => col.classList.remove('drop-target'));
+      document.querySelectorAll('.planner-task').forEach((t) => t.classList.remove('insert-before'));
+    });
+    el.addEventListener('dragover', (e) => {
+      if (!draggingId || el.dataset.taskId === draggingId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      document.querySelectorAll('.planner-task').forEach((t) => t.classList.remove('insert-before'));
+      el.classList.add('insert-before');
+    });
+    el.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      document.querySelectorAll('.planner-task').forEach((t) => t.classList.remove('insert-before'));
+      if (!draggingId || el.dataset.taskId === draggingId) return;
+      const targetDate = el.closest('.planner-tasks')?.dataset.dropDate;
+      if (draggingDate === targetDate) {
+        const colEl = el.closest('.planner-tasks');
+        const ids = [...colEl.querySelectorAll('.planner-task[data-task-id]')].map((t) => t.dataset.taskId);
+        const fromIdx = ids.indexOf(draggingId);
+        const toIdx = ids.indexOf(el.dataset.taskId);
+        if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+        ids.splice(fromIdx, 1);
+        ids.splice(toIdx, 0, draggingId);
+        await api('/api/schedule/reorder', { method: 'POST', body: { tasks: ids.map((id, sort) => ({ id: Number(id), sort })) } });
+      } else {
+        await api(`/api/schedule/${draggingId}`, { method: 'PATCH', body: { date: targetDate } });
+      }
+      renderPlanner();
     });
   });
+
   document.querySelectorAll('.planner-tasks').forEach((col) => {
     col.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -1301,36 +1348,54 @@ function attachPlannerEvents() {
       e.preventDefault();
       col.classList.remove('drop-target');
       if (!draggingId) return;
-      await api(`/api/schedule/${draggingId}`, { method: 'PATCH', body: { date: col.dataset.dropDate } });
-      renderPlanner();
+      const targetDate = col.dataset.dropDate;
+      if (targetDate !== draggingDate) {
+        await api(`/api/schedule/${draggingId}`, { method: 'PATCH', body: { date: targetDate } });
+        renderPlanner();
+      }
     });
   });
+
   document.querySelectorAll('[data-del-schedule]').forEach((btn) =>
     btn.addEventListener('click', async () => {
       await api(`/api/schedule/${btn.dataset.delSchedule}`, { method: 'DELETE' });
       renderPlanner();
     })
   );
+  document.querySelectorAll('[data-done-schedule]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const isDone = btn.dataset.isDone === '1';
+      await api(`/api/schedule/${btn.dataset.doneSchedule}`, { method: 'PATCH', body: { done: !isDone } });
+      renderPlanner();
+    });
+  });
   document.querySelectorAll('[data-add-task]').forEach((btn) =>
     btn.addEventListener('click', () => openPlannerAddModal(btn.dataset.addTask))
   );
 }
 
-function renderDayCell(day, tasks, compact = false, spellingTests = []) {
+function renderDayCell(day, tasks, compact = false, spellingTests = [], today = '') {
   const dayTasks = tasks.filter((t) => t.date === day.date);
   const dayTests = spellingTests.filter((t) => t.date === day.date);
+  const isToday = day.date === today;
   const testBadges = dayTests.map((t) => {
     const pct = Math.round((t.score / t.total) * 100);
     return `<div class="planner-task planner-test-badge" title="${esc(t.list)}">⭐ Spelling ${t.score}/${t.total} (${pct}%)</div>`;
   }).join('');
-  return `<div class="planner-day${compact ? ' planner-day-compact' : ''}" data-drop-date="${day.date}">
+  const taskHtml = dayTasks.map((t) => {
+    const colorStyle = t.courseColor ? ` style="border-left:3px solid ${esc(t.courseColor)}"` : '';
+    return `<div class="planner-task${t.done ? ' done' : ''}" draggable="true" data-task-id="${t.id}"${colorStyle}>
+      <button class="planner-done-btn${t.done ? ' is-done' : ''}" data-done-schedule="${t.id}" data-is-done="${t.done ? '1' : '0'}" title="${t.done ? 'Mark not done' : 'Mark done'}">✓</button>
+      <span>${t.itemId ? TYPE_ICON[t.type] : '📌'} ${esc(t.itemTitle || t.offlineTitle)}</span>
+      <button class="danger tiny" data-del-schedule="${t.id}">✕</button>
+    </div>`;
+  }).join('');
+  return `<div class="planner-day${compact ? ' planner-day-compact' : ''}${isToday ? ' today' : ''}" data-drop-date="${day.date}">
     <h3>${compact ? day.name.slice(0,3) : day.name}<small>${compact ? day.date.slice(5) : day.date}</small></h3>
     <div class="planner-tasks" data-drop-date="${day.date}">
       ${testBadges}
-      ${dayTasks.map((t) => `<div class="planner-task ${t.done ? 'done' : ''}" draggable="true" data-task-id="${t.id}">
-        <span>${t.itemId ? TYPE_ICON[t.type] : '📌'} ${esc(t.itemTitle || t.offlineTitle)}</span>
-        <button class="danger tiny" data-del-schedule="${t.id}">✕</button>
-      </div>`).join('') || (!testBadges ? `<p class="hint tiny">—</p>` : '')}
+      ${taskHtml || (!testBadges ? `<p class="hint tiny">—</p>` : '')}
     </div>
     <button class="secondary small" data-add-task="${day.date}">+ Add</button>
   </div>`;
@@ -1360,23 +1425,25 @@ async function renderPlanner() {
       api(`/api/admin/students/${plannerStudentId}/tests-range?from=${rangeStart}&to=${rangeEnd}`),
     ]);
 
+    const today = new Date().toISOString().slice(0, 10);
     $('#planner-week-label').textContent = monthLabel(plannerMonthRef);
     $('#planner-grid').className = 'planner-grid planner-month';
     $('#planner-grid').innerHTML =
       `<div class="planner-month-header">${DAY_NAMES().map((d) => `<div>${d.slice(0,3)}</div>`).join('')}</div>` +
       weeks.map((week) =>
-        `<div class="planner-month-row">${week.map((day) => renderDayCell(day, tasks, true, spellingTests)).join('')}</div>`
+        `<div class="planner-month-row">${week.map((day) => renderDayCell(day, tasks, true, spellingTests, today)).join('')}</div>`
       ).join('');
   } else {
     const end = addDays(plannerWeekStart, 4);
-    $('#planner-week-label').textContent = `${plannerWeekStart} → ${end}`;
+    $('#planner-week-label').textContent = formatWeekLabel(plannerWeekStart, end);
     const [{ tasks }, { tests: spellingTests }] = await Promise.all([
       api(`/api/schedule-week/${plannerStudentId}?start=${plannerWeekStart}`),
       api(`/api/admin/students/${plannerStudentId}/tests-range?from=${plannerWeekStart}&to=${end}`),
     ]);
+    const today = new Date().toISOString().slice(0, 10);
     const days = DAY_NAMES().map((name, i) => ({ name, date: addDays(plannerWeekStart, i) }));
     $('#planner-grid').className = 'planner-grid';
-    $('#planner-grid').innerHTML = days.map((day) => renderDayCell(day, tasks, false, spellingTests)).join('');
+    $('#planner-grid').innerHTML = days.map((day) => renderDayCell(day, tasks, false, spellingTests, today)).join('');
   }
 
   attachPlannerEvents();
@@ -1384,7 +1451,7 @@ async function renderPlanner() {
 
 // ---------- planner add-task modal ----------
 
-let allCourseItems = []; // {id, type, title, courseName}
+let allCourseItems = []; // {id, type, title, courseName, courseColor}
 let plannerAddDate = null;
 
 async function loadAllCourseItems() {
@@ -1394,7 +1461,7 @@ async function loadAllCourseItems() {
   for (const course of details) {
     for (const unit of course.units) {
       for (const it of unit.items) {
-        allCourseItems.push({ id: it.id, type: it.type, title: it.title, courseName: course.name });
+        allCourseItems.push({ id: it.id, type: it.type, title: it.title, courseName: course.name, courseColor: course.color });
       }
     }
   }
@@ -1734,7 +1801,10 @@ async function loadGrading() {
         </div>
         ${evidenceBtn}
         <div class="grading-footer">
-          <input type="number" class="grade-input" min="0" max="${r.points_possible}" placeholder="Score / ${r.points_possible || '?'}" data-sub="${r.submissionId}">
+          <div class="grade-score-row">
+            <input type="number" class="grade-input" min="0" max="${r.points_possible || 100}" placeholder="Score" data-sub="${r.submissionId}">
+            <span class="grade-max-label">/ ${r.points_possible || 100} pts</span>
+          </div>
           <input type="text" class="comment-input" placeholder="Parent comment (optional)" data-comment-sub="${r.submissionId}">
           <button data-save-grade="${r.submissionId}">Save grade</button>
         </div>

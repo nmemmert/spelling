@@ -1912,9 +1912,22 @@ app.post('/api/schedule', requirePin, (req, res) => {
 });
 
 app.patch('/api/schedule/:id', requirePin, (req, res) => {
-  const { date } = req.body;
-  if (!isDateStr(date)) return res.status(400).json({ error: 'date=YYYY-MM-DD required' });
-  db.prepare(`UPDATE schedule SET date = ? WHERE id = ?`).run(date, req.params.id);
+  const { date, done } = req.body;
+  if (date !== undefined) {
+    if (!isDateStr(date)) return res.status(400).json({ error: 'date=YYYY-MM-DD required' });
+    db.prepare(`UPDATE schedule SET date = ? WHERE id = ?`).run(date, req.params.id);
+  }
+  if (done !== undefined) {
+    const d = done ? 1 : 0;
+    db.prepare(`UPDATE schedule SET done = ?, done_at = CASE WHEN ? THEN datetime('now') ELSE NULL END WHERE id = ?`).run(d, d, req.params.id);
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/schedule/reorder', requirePin, (req, res) => {
+  const stmt = db.prepare(`UPDATE schedule SET sort = ? WHERE id = ?`);
+  const run = db.transaction((tasks) => { for (const t of tasks) stmt.run(t.sort, t.id); });
+  run(req.body.tasks || []);
   res.json({ ok: true });
 });
 
@@ -1929,7 +1942,7 @@ app.get('/api/schedule-week/:studentId', requirePin, (req, res) => {
   if (!start) return res.status(400).json({ error: 'start=YYYY-MM-DD required' });
   const tasks = db.prepare(`
     SELECT sc.id, sc.date, sc.title AS offlineTitle, sc.done,
-           i.id AS itemId, i.type, i.title AS itemTitle, c.name AS courseName
+           i.id AS itemId, i.type, i.title AS itemTitle, c.name AS courseName, c.color AS courseColor
     FROM schedule sc
     LEFT JOIN items i ON i.id = sc.item_id
     LEFT JOIN units u ON u.id = i.unit_id
@@ -1946,7 +1959,7 @@ app.get('/api/schedule-range/:studentId', requirePin, (req, res) => {
   if (!start || !end) return res.status(400).json({ error: 'start and end (YYYY-MM-DD) required' });
   const tasks = db.prepare(`
     SELECT sc.id, sc.date, sc.title AS offlineTitle, sc.done,
-           i.id AS itemId, i.type, i.title AS itemTitle, i.body, c.name AS courseName
+           i.id AS itemId, i.type, i.title AS itemTitle, i.body, c.name AS courseName, c.color AS courseColor
     FROM schedule sc
     LEFT JOIN items i ON i.id = sc.item_id
     LEFT JOIN units u ON u.id = i.unit_id
