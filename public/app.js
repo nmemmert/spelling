@@ -246,10 +246,11 @@ async function loadHome() {
   const students = await api('/api/students');
   $('#no-kids').hidden = students.length > 0;
   $('#kid-cards').innerHTML = students
-    .map(
-      (s, i) => `<button class="kid-card" data-id="${s.id}" data-theme="${esc(s.theme || 'blue')}" style="animation-delay:${i * 100}ms">
-        <span class="avatar">${esc(s.emoji)}</span>${esc(s.name)}</button>`
-    )
+    .map((s, i) => {
+      const accent = (THEMES[s.theme || 'blue'] || {})['--accent'] || DEFAULT_VARS['--accent'];
+      return `<button class="kid-card" data-id="${s.id}" data-theme="${esc(s.theme || 'blue')}" style="--kid-accent:${accent};animation-delay:${i * 100}ms">
+        <span class="avatar">${esc(s.emoji)}</span>${esc(s.name)}</button>`;
+    })
     .join('');
   document.querySelectorAll('.kid-card').forEach((card) =>
     card.addEventListener('click', () => openKid(Number(card.dataset.id), 'today', true))
