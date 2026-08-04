@@ -1168,7 +1168,6 @@ function addDays(dateStr, n) {
 }
 
 let plannerWeekStart = null; // initialized lazily after settings load
-let plannerQueue = [];
 let plannerStudentId = null;
 let plannerCoursesCache = [];
 let plannerMode = 'week'; // 'week' | 'month'
@@ -1190,6 +1189,7 @@ function monthLabel(dateStr) {
 
 async function loadPlannerPanel() {
   if (!plannerWeekStart) plannerWeekStart = weekStartOf(new Date());
+  allCourseItems = [];
   const [students, courses] = await Promise.all([api('/api/students'), api('/api/admin/courses')]);
   if (students.length === 0) {
     $('#planner-grid').innerHTML = `<p class="hint">Add a kid first.</p>`;
@@ -1201,6 +1201,7 @@ async function loadPlannerPanel() {
   $('#auto-course').innerHTML = courses.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   if (!$('#auto-start-date').value) $('#auto-start-date').value = plannerWeekStart;
   await renderPlanner();
+  loadAllCourseItems(); // pre-fetch in background, no need to await
 }
 
 $('#auto-schedule-btn').addEventListener('click', async () => {
@@ -1218,8 +1219,7 @@ $('#auto-schedule-btn').addEventListener('click', async () => {
 });
 
 $('#planner-student').addEventListener('change', () => {
-  plannerQueue = [];
-  updatePlannerSaveBtn();
+  allCourseItems = [];
   plannerStudentId = Number($('#planner-student').value);
   renderPlanner();
 });
@@ -1312,7 +1312,7 @@ function attachPlannerEvents() {
     })
   );
   document.querySelectorAll('[data-add-task]').forEach((btn) =>
-    btn.addEventListener('click', () => toggleAddTaskForm(btn.dataset.addTask))
+    btn.addEventListener('click', () => openPlannerAddModal(btn.dataset.addTask))
   );
 }
 
@@ -1333,7 +1333,6 @@ function renderDayCell(day, tasks, compact = false, spellingTests = []) {
       </div>`).join('') || (!testBadges ? `<p class="hint tiny">—</p>` : '')}
     </div>
     <button class="secondary small" data-add-task="${day.date}">+ Add</button>
-    <div class="add-task-form" data-form-for="${day.date}" hidden></div>
   </div>`;
 }
 
@@ -1383,81 +1382,121 @@ async function renderPlanner() {
   attachPlannerEvents();
 }
 
-function toggleAddTaskForm(date) {
-  const box = document.querySelector(`[data-form-for="${date}"]`);
-  if (!box.hidden) { box.hidden = true; return; }
-  const itemOptions = plannerCoursesCache
-    .map((c) => `<optgroup label="${esc(c.name)}"></optgroup>`)
-    .join('');
-  box.hidden = false;
-  box.innerHTML = `
-    <select class="task-course-select"><option value="">— pick a course item —</option></select>
-    <div class="or-divider">or</div>
-    <input class="task-offline-input" placeholder="Offline task, e.g. Read Ch. 3">
-    <button type="button" class="task-save-btn">Add</button>`;
+// ---------- planner add-task modal ----------
 
-  const courseSelect = box.querySelector('.task-course-select');
-  (async () => {
-    const details = await Promise.all(plannerCoursesCache.map((c) => api(`/api/admin/courses/${c.id}`)));
-    for (const detail of details) {
-      const group = document.createElement('optgroup');
-      group.label = detail.name;
-      for (const u of detail.units) {
-        for (const it of u.items) {
-          const opt = document.createElement('option');
-          opt.value = it.id;
-          opt.textContent = `${TYPE_ICON[it.type]} ${it.title}`;
-          group.appendChild(opt);
-        }
+let allCourseItems = []; // {id, type, title, courseName}
+let plannerAddDate = null;
+
+async function loadAllCourseItems() {
+  const courses = await api(`/api/courses/mine/${plannerStudentId}`);
+  const details = await Promise.all(courses.map((c) => api(`/api/admin/courses/${c.id}`)));
+  allCourseItems = [];
+  for (const course of details) {
+    for (const unit of course.units) {
+      for (const it of unit.items) {
+        allCourseItems.push({ id: it.id, type: it.type, title: it.title, courseName: course.name });
       }
-      courseSelect.appendChild(group);
     }
-  })();
+  }
+}
 
-  box.querySelector('.task-save-btn').addEventListener('click', () => {
-    const itemId = courseSelect.value;
-    const title = box.querySelector('.task-offline-input').value.trim();
-    if (!itemId && !title) return;
-    const label = itemId
-      ? courseSelect.options[courseSelect.selectedIndex].textContent
-      : `📌 ${title}`;
-    plannerQueue.push({ date, itemId: itemId || null, title, label });
-    updatePlannerSaveBtn();
-    // Show as pending in the day cell without a full re-render
-    const tasksEl = document.querySelector(`.planner-tasks[data-drop-date="${date}"]`);
-    if (tasksEl) {
-      const hint = tasksEl.querySelector('.hint.tiny');
-      if (hint) hint.remove();
-      const el = document.createElement('div');
-      el.className = 'planner-task planner-pending';
-      el.textContent = label;
-      tasksEl.appendChild(el);
-    }
-    courseSelect.value = '';
-    box.querySelector('.task-offline-input').value = '';
+function openPlannerAddModal(date) {
+  plannerAddDate = date || addDays(plannerWeekStart, 0);
+  renderDayTabs();
+  renderItemList('');
+  $('#planner-item-search').value = '';
+  $('#planner-offline-input').value = '';
+  $('#planner-add-modal').hidden = false;
+  setTimeout(() => $('#planner-item-search').focus(), 60);
+}
+
+function closePlannerAddModal() {
+  $('#planner-add-modal').hidden = true;
+  renderPlanner();
+}
+
+function renderDayTabs() {
+  const days = DAY_NAMES().map((name, i) => ({ name, date: addDays(plannerWeekStart, i) }));
+  $('#planner-day-tabs').innerHTML = days.map((d) =>
+    `<button class="day-tab${d.date === plannerAddDate ? ' active' : ''}" data-tab-date="${d.date}">
+      <span>${d.name.slice(0, 3)}</span>
+      <small>${d.date.slice(5)}</small>
+    </button>`
+  ).join('');
+  $('#planner-day-tabs').querySelectorAll('.day-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      plannerAddDate = btn.dataset.tabDate;
+      document.querySelectorAll('.day-tab').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
   });
 }
 
-function updatePlannerSaveBtn() {
-  const btn = $('#planner-save-all');
-  const n = plannerQueue.length;
-  btn.hidden = n === 0;
-  btn.textContent = `💾 Save ${n} item${n === 1 ? '' : 's'}`;
+function renderItemList(query) {
+  const q = query.toLowerCase();
+  const filtered = q
+    ? allCourseItems.filter((it) => it.title.toLowerCase().includes(q) || it.courseName.toLowerCase().includes(q))
+    : allCourseItems;
+
+  if (!filtered.length) {
+    $('#planner-item-list').innerHTML = '<p class="hint" style="padding:1rem;text-align:center">No items match.</p>';
+    return;
+  }
+
+  const groups = {};
+  for (const it of filtered) {
+    if (!groups[it.courseName]) groups[it.courseName] = [];
+    groups[it.courseName].push(it);
+  }
+
+  $('#planner-item-list').innerHTML = Object.entries(groups).map(([course, items]) =>
+    `<div class="item-group-header">${esc(course)}</div>` +
+    items.map((it) =>
+      `<div class="item-list-item" tabindex="0" data-item-id="${it.id}">
+        <span>${TYPE_ICON[it.type] || '📄'}</span>
+        <span class="item-label">${esc(it.title)}</span>
+        <span class="item-course">${TYPE_LABEL[it.type] || ''}</span>
+      </div>`
+    ).join('')
+  ).join('');
+
+  $('#planner-item-list').querySelectorAll('.item-list-item').forEach((el) => {
+    el.addEventListener('click', () => scheduleItem(Number(el.dataset.itemId), null, el));
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter') scheduleItem(Number(el.dataset.itemId), null, el); });
+  });
 }
 
-$('#planner-save-all').addEventListener('click', async () => {
-  const count = plannerQueue.length;
-  if (!count) return;
-  await Promise.all(plannerQueue.map((item) =>
-    api('/api/schedule', {
-      method: 'POST',
-      body: { studentId: plannerStudentId, date: item.date, itemId: item.itemId, title: item.title },
-    })
-  ));
-  plannerQueue = [];
-  updatePlannerSaveBtn();
-  msg(`${count} item${count === 1 ? '' : 's'} added to planner.`);
-  renderPlanner();
+async function scheduleItem(itemId, title, el) {
+  if (!plannerAddDate) return;
+  if (el) {
+    el.classList.add('added');
+    el.innerHTML = '<span>✓</span><span class="item-label">Added</span>';
+    el.style.pointerEvents = 'none';
+  }
+  await api('/api/schedule', {
+    method: 'POST',
+    body: { studentId: plannerStudentId, date: plannerAddDate, itemId: itemId || null, title: title || null },
+  });
+  if (title) {
+    msg('Added to planner.');
+    $('#planner-offline-input').value = '';
+  }
+  if (el) setTimeout(() => renderItemList($('#planner-item-search').value), 2000);
+}
+
+$('#planner-item-search').addEventListener('input', (e) => renderItemList(e.target.value));
+
+$('#planner-modal-close').addEventListener('click', closePlannerAddModal);
+$('#planner-add-modal').addEventListener('click', (e) => { if (e.target === $('#planner-add-modal')) closePlannerAddModal(); });
+
+$('#planner-add-btn').addEventListener('click', () => openPlannerAddModal(plannerWeekStart || addDays(weekStartOf(new Date()), 0)));
+
+$('#planner-offline-add').addEventListener('click', () => {
+  const title = $('#planner-offline-input').value.trim();
+  if (title) scheduleItem(null, title, null);
+});
+$('#planner-offline-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { const t = e.target.value.trim(); if (t) scheduleItem(null, t, null); }
 });
 
 function renderPrintTaskBlock(t) {

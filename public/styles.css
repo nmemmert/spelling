@@ -1127,6 +1127,29 @@ body.bg-bubbles {
 #toast.toast-out { opacity: 0; transform: translateY(0.5rem); }
 .planner-pending { border: 2px dashed var(--accent) !important; background: color-mix(in srgb, var(--accent) 10%, var(--card)) !important; color: var(--accent) !important; opacity: 0.85; cursor: default; }
 
+/* ---------- planner add-task modal ---------- */
+.planner-add-box { max-width: 620px; width: 95%; max-height: 88vh; display: flex; flex-direction: column; gap: 0.75rem; padding: 1.25rem; }
+.planner-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
+.planner-modal-header h3 { margin: 0; font-size: 1.1rem; }
+.day-tabs { display: flex; gap: 0.35rem; }
+.day-tab { flex: 1; padding: 0.45rem 0.3rem; border: 2px solid #d8d2c0; border-radius: 8px; background: var(--bg); cursor: pointer; font-family: inherit; font-size: 0.8rem; text-align: center; line-height: 1.25; }
+.day-tab span { display: block; font-weight: 700; }
+.day-tab small { color: var(--muted); font-size: 0.7rem; }
+.day-tab.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card)); color: var(--accent); }
+.day-tab.active small { color: var(--accent); opacity: 0.75; }
+.planner-item-search { width: 100%; box-sizing: border-box; padding: 0.55rem 0.75rem; font-size: 0.95rem; font-family: inherit; border: 2px solid #d8d2c0; border-radius: 10px; background: var(--bg); color: var(--ink); }
+.planner-item-search:focus { outline: none; border-color: var(--accent); }
+.item-list { flex: 1; overflow-y: auto; border: 1.5px solid #e0ddd0; border-radius: 10px; min-height: 180px; max-height: 340px; }
+.item-group-header { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 0.45rem 0.75rem 0.2rem; background: var(--bg); position: sticky; top: 0; }
+.item-list-item { padding: 0.5rem 0.75rem; cursor: pointer; border-bottom: 1px solid #ede9dc; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.item-list-item:last-child { border-bottom: none; }
+.item-list-item:hover, .item-list-item:focus { background: color-mix(in srgb, var(--accent) 10%, var(--card)); outline: none; }
+.item-list-item.added { background: var(--good-bg); color: var(--good); cursor: default; }
+.item-list-item .item-label { flex: 1; }
+.item-list-item .item-course { font-size: 0.72rem; color: var(--muted); margin-left: auto; white-space: nowrap; }
+.planner-offline-row { display: flex; gap: 0.5rem; padding-top: 0.75rem; border-top: 1.5px solid #e0ddd0; }
+.planner-offline-row input { flex: 1; }
+
 /* ---------- crossword ---------- */
 .cw-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; margin-top: 1rem; }
 .cw-grid-wrap { overflow: auto; }

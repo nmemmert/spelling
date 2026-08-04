@@ -336,7 +336,7 @@
           <button id="planner-next" class="secondary">Next →</button>
           <button id="planner-copy" class="secondary">Copy last week</button>
           <button id="planner-print">🖨 Print</button>
-          <button id="planner-save-all" hidden>💾 Save 0 items</button>
+          <button id="planner-add-btn">+ Add task</button>
         </div>
 
         <details id="auto-schedule-details" class="admin-card" style="margin-bottom:1rem">
@@ -545,6 +545,23 @@
   </div>
 
   <div id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Planner add-task modal -->
+  <div id="planner-add-modal" class="modal" hidden>
+    <div class="modal-box planner-add-box">
+      <div class="planner-modal-header">
+        <h3>Add to planner</h3>
+        <button id="planner-modal-close" class="secondary small">✕</button>
+      </div>
+      <div id="planner-day-tabs" class="day-tabs"></div>
+      <input id="planner-item-search" type="search" class="planner-item-search" placeholder="Search course items…" autocomplete="off">
+      <div id="planner-item-list" class="item-list"></div>
+      <div class="planner-offline-row">
+        <input id="planner-offline-input" placeholder="Or type an offline task…">
+        <button id="planner-offline-add">Add</button>
+      </div>
+    </div>
+  </div>
 
   <script src="admin.js"></script>
 </body>
