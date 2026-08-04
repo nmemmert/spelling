@@ -107,7 +107,9 @@ body:has(#view-home:not([hidden])) .page-confetti span { opacity: 0.7; }
 }
 .page-confetti {
   position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  display: none;
 }
+body:has(#view-home:not([hidden])) .page-confetti { display: block; }
 .page-confetti span {
   position: absolute; font-size: 1.8rem; user-select: none;
   animation: confetti-float ease-in-out infinite;
