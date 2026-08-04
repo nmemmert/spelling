@@ -1391,8 +1391,9 @@ function renderDayCell(day, tasks, compact = false, spellingTests = [], today = 
       <button class="danger tiny" data-del-schedule="${t.id}">✕</button>
     </div>`;
   }).join('');
+  const fmtDate = (d) => { const dt = new Date(d + 'T00:00:00'); return dt.toLocaleString('default', { month: 'short', day: 'numeric' }); };
   return `<div class="planner-day${compact ? ' planner-day-compact' : ''}${isToday ? ' today' : ''}" data-drop-date="${day.date}">
-    <h3>${compact ? day.name.slice(0,3) : day.name}<small>${compact ? day.date.slice(5) : day.date}</small></h3>
+    <h3>${compact ? day.name.slice(0,3) : day.name}<small>${fmtDate(day.date)}</small></h3>
     <div class="planner-tasks" data-drop-date="${day.date}">
       ${testBadges}
       ${taskHtml || (!testBadges ? `<p class="hint tiny">—</p>` : '')}
@@ -1782,7 +1783,19 @@ function showEvidenceLightbox(notes, photo) {
 const STUDENT_NOTE_LABEL = { needs_help: '🙋 Needs help', not_sure: '🤔 Not sure' };
 
 async function loadGrading() {
-  const rows = await api('/api/grading-queue');
+  const allRows = await api('/api/grading-queue');
+
+  // Populate student filter
+  const filterEl = $('#grading-student-filter');
+  const prevFilter = filterEl.value;
+  const seen = new Set();
+  filterEl.innerHTML = '<option value="">All students</option>' +
+    allRows.filter((r) => { if (seen.has(r.studentId)) return false; seen.add(r.studentId); return true; })
+           .map((r) => `<option value="${r.studentId}">${esc(r.emoji)} ${esc(r.studentName)}</option>`).join('');
+  if (prevFilter) filterEl.value = prevFilter;
+
+  const rows = filterEl.value ? allRows.filter((r) => String(r.studentId) === filterEl.value) : allRows;
+
   $('#grading-empty').hidden = rows.length > 0;
   $('#grading-rows').innerHTML = rows
     .map((r) => {
@@ -1814,7 +1827,6 @@ async function loadGrading() {
 
   document.querySelectorAll('[data-evidence-notes]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      // photo may be truncated in the attribute — fetch full evidence via API
       const subId = btn.dataset.subId;
       let photo = null;
       if (btn.dataset.evidencePhoto === 'yes') {
@@ -1825,21 +1837,28 @@ async function loadGrading() {
     });
   });
 
-  document.querySelectorAll('[data-save-grade]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const input = document.querySelector(`.grade-input[data-sub="${btn.dataset.saveGrade}"]`);
-      const commentInput = document.querySelector(`.comment-input[data-comment-sub="${btn.dataset.saveGrade}"]`);
-      if (input.value === '') return;
-      await api(`/api/submissions/${btn.dataset.saveGrade}/grade`, {
-        method: 'PUT',
-        body: { score: Number(input.value), parentComment: commentInput?.value || '' },
-      });
-      msg('Grade saved.');
-      loadGrading();
-      loadGradingBadge();
+  async function saveGrade(subId) {
+    const input = document.querySelector(`.grade-input[data-sub="${subId}"]`);
+    const commentInput = document.querySelector(`.comment-input[data-comment-sub="${subId}"]`);
+    if (!input || input.value === '') return;
+    await api(`/api/submissions/${subId}/grade`, {
+      method: 'PUT',
+      body: { score: Number(input.value), parentComment: commentInput?.value || '', pointsPossible: Number(input.max) || 100 },
     });
-  });
+    msg('Grade saved.');
+    loadGrading();
+    loadGradingBadge();
+  }
+
+  document.querySelectorAll('[data-save-grade]').forEach((btn) =>
+    btn.addEventListener('click', () => saveGrade(btn.dataset.saveGrade))
+  );
+  document.querySelectorAll('.grade-input').forEach((input) =>
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveGrade(input.dataset.sub); })
+  );
 }
+
+$('#grading-student-filter').addEventListener('change', loadGrading);
 
 // ============================================================
 // Gradebook

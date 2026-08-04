@@ -1569,11 +1569,13 @@ app.put('/api/submissions/:id/grade', requirePin, (req, res) => {
   const score = Number(req.body.score);
   if (Number.isNaN(score)) return res.status(400).json({ error: 'Score must be a number' });
   const comment = req.body.parentComment !== undefined ? String(req.body.parentComment).trim() || null : undefined;
-  db.prepare(`
-    UPDATE submissions SET score = ?, status = 'graded', graded_at = datetime('now')
-    ${comment !== undefined ? ', parent_comment = ?' : ''}
-    WHERE id = ?
-  `).run(...(comment !== undefined ? [score, comment, req.params.id] : [score, req.params.id]));
+  const pp = req.body.pointsPossible !== undefined ? Number(req.body.pointsPossible) : null;
+  const sets = [`score = ?`, `status = 'graded'`, `graded_at = datetime('now')`];
+  const vals = [score];
+  if (comment !== undefined) { sets.push('parent_comment = ?'); vals.push(comment); }
+  if (pp && pp > 0) { sets.push('points_possible = CASE WHEN COALESCE(points_possible, 0) = 0 THEN ? ELSE points_possible END'); vals.push(pp); }
+  vals.push(req.params.id);
+  db.prepare(`UPDATE submissions SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
   res.json({ ok: true });
 });
 
@@ -1839,9 +1841,10 @@ app.post('/api/schedule/auto', requirePin, (req, res) => {
   const items = db.prepare(`
     SELECT i.id, i.title FROM items i
     JOIN units u ON u.id = i.unit_id
-    WHERE u.course_id = ?
+    LEFT JOIN submissions sub ON sub.item_id = i.id AND sub.student_id = ?
+    WHERE u.course_id = ? AND sub.id IS NULL
     ORDER BY u.sort, i.sort
-  `).all(courseId);
+  `).all(studentId, courseId);
   if (!items.length) return res.json({ scheduled: 0 });
 
   const perDay = Math.max(1, Math.min(20, Number(itemsPerDay)));

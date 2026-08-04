@@ -258,6 +258,28 @@ async function loadHome() {
 
 // ---------- kid home: Today / Courses / Spelling ----------
 
+let currentCourseItems = []; // flat [{id, type, title}] from most-recently opened course
+
+function findNextCourseItem(currentId) {
+  const idx = currentCourseItems.findIndex((it) => it.id === currentId);
+  if (idx === -1 || idx >= currentCourseItems.length - 1) return null;
+  return currentCourseItems[idx + 1];
+}
+
+function showNextActions(containerId, currentItemId) {
+  const next = findNextCourseItem(currentItemId);
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!next) { backTarget(); return; }
+  el.hidden = false;
+  el.innerHTML = `
+    <button class="check-btn" id="next-item-btn">Next: ${esc(next.title)} →</button>
+    <button class="check-btn secondary" id="back-course-btn">← Back to course</button>
+  `;
+  document.getElementById('next-item-btn').addEventListener('click', () => { el.hidden = true; openItem(next.id, next.type); });
+  document.getElementById('back-course-btn').addEventListener('click', () => { el.hidden = true; backTarget(); });
+}
+
 document.querySelectorAll('.nav-pill').forEach((pill) =>
   pill.addEventListener('click', () => switchTab(pill.dataset.tab))
 );
@@ -902,6 +924,7 @@ function activeUnitIndex(units) {
 
 async function openCourse(courseId) {
   const course = await api(`/api/courses/${courseId}/detail?studentId=${currentStudent.id}`);
+  currentCourseItems = course.units.flatMap((u) => u.items.map((it) => ({ id: it.id, type: it.type, title: it.title })));
   $('#course-title').textContent = course.name;
   const activeIdx = activeUnitIndex(course.units);
   $('#course-units').innerHTML = course.units
@@ -992,12 +1015,15 @@ async function openLesson(itemId) {
   show('lesson');
 
   const btn = $('#lesson-done-btn');
+  const nextActions = $('#lesson-next-actions');
+  nextActions.hidden = true;
   btn.textContent = item.submission ? '✅ Read' : 'Done reading ✓';
   btn.onclick = async () => {
     await api(`/api/items/${itemId}/complete`, { method: 'POST', body: { studentId: currentStudent.id, date: todayStr() } });
     showMiniCelebration('📖 Lesson complete!');
     await showDoneStamp();
-    backTarget();
+    btn.disabled = true;
+    showNextActions('lesson-next-actions', itemId);
   };
 }
 
@@ -1009,6 +1035,7 @@ async function openAssignment(itemId) {
   $('#assignment-photo-input').value = '';
   $('#assignment-evidence-notes').value = '';
   $('#assignment-student-note').value = '';
+  $('#assignment-next-actions').hidden = true;
 
   const item = await api(`/api/items/${itemId}?studentId=${currentStudent.id}`);
   $('#assignment-kicker').textContent = `${item.course_name} · ${item.unit_name}`;
@@ -1068,7 +1095,11 @@ async function openAssignment(itemId) {
       await api(`/api/items/${itemId}/complete`, { method: 'POST', body });
       showMiniCelebration('📝 Turned in!');
       await showDoneStamp();
-      openAssignment(itemId);
+      btn.hidden = true;
+      status.hidden = false;
+      status.className = 'status-banner';
+      status.textContent = '⏳ Turned in — waiting for a parent to grade it.';
+      showNextActions('assignment-next-actions', itemId);
     };
   }
   show('assignment');
