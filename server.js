@@ -323,14 +323,21 @@ const GRADABLE_TYPES = ['assignment', 'quiz', 'matching', 'crossword', 'spelling
 // ---------- kid picker ----------
 
 app.get('/api/students', (req, res) => {
-  res.json(db.prepare(`SELECT id, name, emoji, theme, streak_count, streak_date FROM students ORDER BY name`).all());
+  res.json(db.prepare(`SELECT id, name, emoji, theme, bg_pattern, streak_count, streak_date FROM students ORDER BY name`).all());
 });
 
 const VALID_THEMES = ['blue','green','purple','orange','pink','red','teal','yellow','indigo'];
+const VALID_BG_PATTERNS = ['none','dots','stripes','grid','stars','bubbles'];
 
 app.patch('/api/students/:id/theme', (req, res) => {
   const theme = VALID_THEMES.includes(req.body.theme) ? req.body.theme : 'blue';
   db.prepare(`UPDATE students SET theme = ? WHERE id = ?`).run(theme, req.params.id);
+  res.json({ ok: true });
+});
+
+app.patch('/api/students/:id/bg-pattern', (req, res) => {
+  const pattern = VALID_BG_PATTERNS.includes(req.body.pattern) ? req.body.pattern : 'none';
+  db.prepare(`UPDATE students SET bg_pattern = ? WHERE id = ?`).run(pattern, req.params.id);
   res.json({ ok: true });
 });
 
@@ -361,7 +368,7 @@ app.post('/api/students/:id/complete-day', (req, res) => {
 // Everything the standalone spelling home screen needs
 app.get('/api/state/:studentId', (req, res) => {
   const id = req.params.studentId;
-  const student = db.prepare(`SELECT id, name, emoji, theme FROM students WHERE id = ?`).get(id);
+  const student = db.prepare(`SELECT id, name, emoji, theme, bg_pattern FROM students WHERE id = ?`).get(id);
   if (!student) return res.status(404).json({ error: 'No such student' });
 
   const assignment = db.prepare(`

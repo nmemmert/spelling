@@ -211,7 +211,19 @@ function applyTheme(theme) {
   const vars = THEMES[theme] || {};
   for (const [k, v] of Object.entries(DEFAULT_VARS))
     document.documentElement.style.setProperty(k, vars[k] || v);
+  const bgClass = [...document.body.classList].find(c => c.startsWith('bg-'));
   document.body.className = theme && theme !== 'blue' ? `theme-${theme}` : '';
+  if (bgClass) document.body.classList.add(bgClass);
+}
+
+const BG_PATTERNS = ['none','dots','stripes','grid','stars','bubbles'];
+
+function applyBgPattern(pattern) {
+  BG_PATTERNS.forEach(p => document.body.classList.remove(`bg-${p}`));
+  if (pattern && pattern !== 'none') document.body.classList.add(`bg-${pattern}`);
+  document.querySelectorAll('.bg-pattern-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.pattern === (pattern || 'none'))
+  );
 }
 
 function resetTheme() {
@@ -225,16 +237,22 @@ let currentStudent = null;
 
 async function loadHome() {
   resetTheme();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning! ☀️'
+                 : hour < 17 ? 'Good afternoon! 🌤️'
+                 : 'Good evening! 🌙';
+  document.querySelector('.subtitle').textContent = greeting;
+
   const students = await api('/api/students');
   $('#no-kids').hidden = students.length > 0;
   $('#kid-cards').innerHTML = students
     .map(
-      (s) => `<button class="kid-card" data-id="${s.id}" data-theme="${esc(s.theme || 'blue')}">
+      (s, i) => `<button class="kid-card" data-id="${s.id}" data-theme="${esc(s.theme || 'blue')}" style="animation-delay:${i * 100}ms">
         <span class="avatar">${esc(s.emoji)}</span>${esc(s.name)}</button>`
     )
     .join('');
   document.querySelectorAll('.kid-card').forEach((card) =>
-    card.addEventListener('click', () => openKid(Number(card.dataset.id)))
+    card.addEventListener('click', () => openKid(Number(card.dataset.id), 'today', true))
   );
 }
 
@@ -244,12 +262,26 @@ document.querySelectorAll('.nav-pill').forEach((pill) =>
   pill.addEventListener('click', () => switchTab(pill.dataset.tab))
 );
 
+const TAB_ORDER = ['today', 'courses', 'spelling'];
+let currentTab = 'today';
+
 function switchTab(name) {
+  const animate = name !== currentTab;
+  const dir = TAB_ORDER.indexOf(name) > TAB_ORDER.indexOf(currentTab) ? 'right' : 'left';
+  currentTab = name;
   document.querySelectorAll('.nav-pill').forEach((p) => p.classList.toggle('active', p.dataset.tab === name));
-  document.querySelectorAll('.tab-panel').forEach((panel) => (panel.hidden = panel.id !== `tab-${name}`));
+  document.querySelectorAll('.tab-panel').forEach((panel) => {
+    const isTarget = panel.id === `tab-${name}`;
+    panel.hidden = !isTarget;
+    if (isTarget && animate) {
+      panel.classList.remove('sliding-right', 'sliding-left');
+      void panel.offsetWidth;
+      panel.classList.add(dir === 'right' ? 'sliding-right' : 'sliding-left');
+    }
+  });
 }
 
-async function openKid(id, tab = 'today') {
+async function openKid(id, tab = 'today', welcome = false) {
   const [state, agenda, courses, { tests: recentTests }] = await Promise.all([
     api(`/api/state/${id}`),
     api(`/api/schedule/${id}?date=${todayStr()}`),
@@ -258,6 +290,7 @@ async function openKid(id, tab = 'today') {
   ]);
   currentStudent = state.student;
   applyTheme(currentStudent.theme || 'blue');
+  applyBgPattern(currentStudent.bg_pattern || 'none');
   updateThemeDots(currentStudent.theme || 'blue');
 
   $('#kid-greeting').textContent = `${state.student.emoji} Hi, ${state.student.name}!`;
@@ -277,7 +310,9 @@ async function openKid(id, tab = 'today') {
   renderSpellingTab(state, recentTests);
 
   show('kid');
+  currentTab = tab;
   switchTab(tab);
+  if (welcome) showWelcomeToast(currentStudent.emoji, currentStudent.name);
 
   // Celebrate if all today's tasks are done
   if (agenda.tasks.length > 0) {
@@ -298,6 +333,7 @@ function updateThemeDots(active) {
 }
 
 function showCelebration({ streak, best }) {
+  playFanfare();
   const isRecord = streak > 1 && streak === best;
   let streakHtml = '';
   if (streak >= 2) {
@@ -314,11 +350,225 @@ $('#celebration-close').addEventListener('click', () => {
   $('#celebration-overlay').hidden = true;
 });
 
+// ---------- mini celebration (confetti + toast) ----------
+
+let pendingMiniCelebration = false;
+
+function popConfetti() {
+  const colors = ['#4f86f7','#e84040','#2e9e5b','#e8802a','#7c5cbf','#d45d8a','#c8960c','#20a8a0','#f7c948','#ff6b6b','#48dbfb'];
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:999;overflow:hidden';
+  document.body.appendChild(container);
+  for (let i = 0; i < 160; i++) {
+    const piece = document.createElement('div');
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const x = Math.random() * 110 - 5;
+    const delay = Math.random() * 1.2;
+    const dur = 1.8 + Math.random() * 1.4;
+    const size = 10 + Math.random() * 18;
+    const shape = Math.random();
+    let borderRadius = '2px';
+    if (shape > 0.66) borderRadius = '50%';
+    else if (shape > 0.33) borderRadius = '0';
+    piece.style.cssText = `position:absolute;left:${x}%;top:-30px;width:${size}px;height:${size * (0.4 + Math.random() * 0.8)}px;`
+      + `background:${color};border-radius:${borderRadius};`
+      + `animation:confetti-fall ${dur}s ${delay}s ease-in forwards;transform:rotate(${Math.random()*360}deg)`;
+    container.appendChild(piece);
+  }
+  setTimeout(() => container.remove(), 4000);
+}
+
+function playFlip() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(320, t);
+    osc.frequency.exponentialRampToValueAtTime(680, t + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(220, t + 0.14);
+    gain.gain.setValueAtTime(0.16, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    osc.start(t); osc.stop(t + 0.16);
+    setTimeout(() => ctx.close(), 400);
+  } catch(e) {}
+}
+
+function playDing() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.setValueAtTime(1400, t);
+    osc.frequency.exponentialRampToValueAtTime(900, t + 0.12);
+    gain.gain.setValueAtTime(0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.start(t); osc.stop(t + 0.35);
+    setTimeout(() => ctx.close(), 600);
+  } catch(e) {}
+}
+
+function playBuzz() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, t);
+    osc.frequency.exponentialRampToValueAtTime(80, t + 0.18);
+    gain.gain.setValueAtTime(0.22, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    osc.start(t); osc.stop(t + 0.22);
+    setTimeout(() => ctx.close(), 400);
+  } catch(e) {}
+}
+
+function playFanfare() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    // Rising arpeggio
+    [[523, 0], [659, 0.13], [784, 0.26], [1047, 0.39]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.frequency.value = freq;
+      const s = t + delay;
+      g.gain.setValueAtTime(0.38, s);
+      g.gain.exponentialRampToValueAtTime(0.001, s + 0.28);
+      osc.start(s); osc.stop(s + 0.28);
+    });
+    // Final sustained chord
+    [523, 659, 784, 1047].forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.frequency.value = freq;
+      const s = t + 0.55;
+      g.gain.setValueAtTime(0.22, s);
+      g.gain.exponentialRampToValueAtTime(0.001, s + 1.1);
+      osc.start(s); osc.stop(s + 1.15);
+    });
+    setTimeout(() => ctx.close(), 2500);
+  } catch(e) {}
+}
+
+function animateScore(el, score, total) {
+  if (!el) return;
+  const duration = 650;
+  const start = performance.now();
+  const tick = (now) => {
+    const p = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = `${Math.round(eased * score)} / ${total}`;
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function playPopSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+
+    // Thump: short pitch-sweep down like a party popper
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(900, t);
+    osc.frequency.exponentialRampToValueAtTime(80, t + 0.13);
+    gain.gain.setValueAtTime(0.55, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+    osc.start(t); osc.stop(t + 0.13);
+
+    // Sparkle: quick ascending arpeggio C-E-G-C
+    [523, 659, 784, 1047].forEach((freq, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = freq;
+      const s = t + 0.06 + i * 0.075;
+      g.gain.setValueAtTime(0, s);
+      g.gain.linearRampToValueAtTime(0.28, s + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, s + 0.13);
+      o.start(s); o.stop(s + 0.15);
+    });
+
+    setTimeout(() => ctx.close(), 1200);
+  } catch (e) {}
+}
+
+const CHEERS = [
+  '🎉 Nailed it!', '⭐ Star student!', '💪 You\'re crushing it!',
+  '🔥 On fire!', '🎯 Spot on!', '✨ Brilliant!',
+  '🚀 Killing it!', '🏅 Awesome work!', '💫 You rock!', '🦾 Unstoppable!',
+];
+function randomCheer() { return CHEERS[Math.floor(Math.random() * CHEERS.length)]; }
+
+function showMiniCelebration(msg = '🎉 Great job!') {
+  playPopSound();
+  popConfetti();
+  const toast = document.createElement('div');
+  toast.className = 'mini-celebration-toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.animation = 'mini-toast-out 0.5s ease forwards'; }, 1800);
+  setTimeout(() => toast.remove(), 2400);
+}
+
+function showWelcomeToast(emoji, name) {
+  const toast = document.createElement('div');
+  toast.className = 'welcome-toast';
+  toast.innerHTML = `<span class="welcome-emoji">${emoji}</span><div class="welcome-name">Hi, ${esc(name)}! 👋</div>`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('welcome-toast-out'), 1700);
+  setTimeout(() => toast.remove(), 2150);
+}
+
+function showDoneStamp() {
+  return new Promise((resolve) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'done-stamp-wrap';
+    const stamp = document.createElement('div');
+    stamp.className = 'done-stamp';
+    stamp.textContent = '✅';
+    wrap.appendChild(stamp);
+    document.body.appendChild(wrap);
+    setTimeout(() => {
+      stamp.classList.add('done-stamp-out');
+      setTimeout(() => { wrap.remove(); resolve(); }, 380);
+    }, 750);
+  });
+}
+
 // Theme picker toggle
 $('#theme-picker-btn').addEventListener('click', () => {
   $('#theme-dots').hidden = !$('#theme-dots').hidden;
   $('#icon-grid').hidden = true;
+  $('#bg-pattern-panel').hidden = true;
 });
+
+// BG pattern picker toggle
+$('#bg-picker-btn').addEventListener('click', () => {
+  $('#bg-pattern-panel').hidden = !$('#bg-pattern-panel').hidden;
+  $('#theme-dots').hidden = true;
+  $('#icon-grid').hidden = true;
+});
+
+document.querySelectorAll('.bg-pattern-btn').forEach(btn =>
+  btn.addEventListener('click', async () => {
+    const pattern = btn.dataset.pattern;
+    applyBgPattern(pattern);
+    currentStudent.bg_pattern = pattern;
+    await api(`/api/students/${currentStudent.id}/bg-pattern`, { method: 'PATCH', body: { pattern } });
+    $('#bg-pattern-panel').hidden = true;
+  })
+);
 
 document.querySelectorAll('.theme-dot').forEach((btn) =>
   btn.addEventListener('click', async () => {
@@ -352,6 +602,7 @@ $('#icon-picker-btn').addEventListener('click', () => {
   }
   grid.hidden = !grid.hidden;
   $('#theme-dots').hidden = true;
+  $('#bg-pattern-panel').hidden = true;
 });
 
 const OFFLINE_STATUS_ICON = { not_started: '⬜', in_progress: '🔄', done: '✅' };
@@ -744,6 +995,8 @@ async function openLesson(itemId) {
   btn.textContent = item.submission ? '✅ Read' : 'Done reading ✓';
   btn.onclick = async () => {
     await api(`/api/items/${itemId}/complete`, { method: 'POST', body: { studentId: currentStudent.id, date: todayStr() } });
+    showMiniCelebration('📖 Lesson complete!');
+    await showDoneStamp();
     backTarget();
   };
 }
@@ -813,6 +1066,8 @@ async function openAssignment(itemId) {
       const body = { studentId: currentStudent.id, date: todayStr() };
       if (needsEvidence) { body.evidenceNotes = $('#assignment-evidence-notes').value || null; body.evidencePhoto = evidencePhotoBase64; body.studentNote = $('#assignment-student-note').value || null; }
       await api(`/api/items/${itemId}/complete`, { method: 'POST', body });
+      showMiniCelebration('📝 Turned in!');
+      await showDoneStamp();
       openAssignment(itemId);
     };
   }
@@ -974,6 +1229,7 @@ async function openWorksheet(itemId) {
     result.className = 'status-banner';
     result.textContent = '⏳ Turned in — waiting for a parent to grade it.';
     submitBtn.hidden = true;
+    if (pendingMiniCelebration) { pendingMiniCelebration = false; showMiniCelebration('📋 Turned in!'); }
   } else if (graded) {
     result.hidden = false;
     result.className = 'status-banner good';
@@ -981,6 +1237,11 @@ async function openWorksheet(itemId) {
     result.textContent = hasShort
       ? `🌟 Score: ${sub.score} / ${sub.points_possible} (short answers parent-graded)`
       : `🌟 Score: ${sub.score} / ${sub.points_possible}`;
+    if (pendingMiniCelebration) {
+      pendingMiniCelebration = false;
+      const wsPct = sub.points_possible ? Math.round((sub.score / sub.points_possible) * 100) : 100;
+      showMiniCelebration(wsPct >= 70 ? `🌟 ${wsPct}% — Great!` : randomCheer());
+    }
     if (item.allow_retakes) {
       submitBtn.hidden = false;
       submitBtn.textContent = '🔁 Retake';
@@ -1002,6 +1263,7 @@ async function openWorksheet(itemId) {
         method: 'POST',
         body: { studentId: currentStudent.id, answers, date: todayStr() },
       });
+      pendingMiniCelebration = true;
       openWorksheet(itemId);
     } catch (err) {
       result.hidden = false;
@@ -1108,6 +1370,11 @@ async function openQuiz(itemId, forceRetake = false) {
     const pct = item.submission.points_possible ? Math.round((item.submission.score / item.submission.points_possible) * 100) : 0;
     result.innerHTML = `🌟 Score: ${item.submission.score} / ${item.submission.points_possible} (${pct}%)`;
 
+    if (pendingMiniCelebration) {
+      pendingMiniCelebration = false;
+      showMiniCelebration(pct >= 70 ? `🌟 ${pct}% — Nice!` : randomCheer());
+    }
+
     // Attempt history
     const { history } = await api(`/api/items/${itemId}/history?studentId=${currentStudent.id}`);
     let historyHtml = '';
@@ -1179,6 +1446,7 @@ async function openQuiz(itemId, forceRetake = false) {
         method: 'POST',
         body: { studentId: currentStudent.id, answers, date: todayStr() },
       });
+      pendingMiniCelebration = true;
       openQuiz(itemId, false);
     };
   }
@@ -1213,6 +1481,11 @@ async function openMatching(itemId, forceRetake = false) {
     const pct = item.submission.points_possible
       ? Math.round((item.submission.score / item.submission.points_possible) * 100) : 0;
     result.innerHTML = `🌟 Score: ${item.submission.score} / ${item.submission.points_possible} (${pct}%)`;
+
+    if (pendingMiniCelebration) {
+      pendingMiniCelebration = false;
+      showMiniCelebration(pct >= 70 ? `🌟 ${pct}% — Nice!` : randomCheer());
+    }
 
     let retakeBtn = '';
     if (item.allow_retakes) retakeBtn = `<button id="quiz-retake-btn" class="check-btn secondary">🔁 Retake</button>`;
@@ -1269,6 +1542,7 @@ async function openMatching(itemId, forceRetake = false) {
         method: 'POST',
         body: { studentId: currentStudent.id, answers, date: todayStr() },
       });
+      pendingMiniCelebration = true;
       openMatching(itemId, false);
     };
   }
@@ -1601,9 +1875,18 @@ function presentFlashcard() {
 }
 
 $('#flash-reveal').addEventListener('click', () => {
-  $('#flash-back').hidden = false;
-  $('#flash-reveal').hidden = true;
-  $('#flash-grade-buttons').hidden = false;
+  playFlip();
+  const card = $('#flash-card');
+  card.classList.remove('flip-in');
+  card.classList.add('flip-out');
+  setTimeout(() => {
+    card.classList.remove('flip-out');
+    $('#flash-back').hidden = false;
+    $('#flash-reveal').hidden = true;
+    $('#flash-grade-buttons').hidden = false;
+    card.classList.add('flip-in');
+    setTimeout(() => card.classList.remove('flip-in'), 200);
+  }, 180);
 });
 
 let flashGrading = false;
@@ -1611,6 +1894,7 @@ let flashGrading = false;
 async function gradeFlashcard(gotIt) {
   if (flashGrading) return; // guard against a rapid double-tap misgrading two cards
   flashGrading = true;
+  if (gotIt) playDing(); else playBuzz();
   const c = flash.cards[flash.i];
   await api('/api/flashcards/grade', { method: 'POST', body: { studentId: currentStudent.id, cardId: c.id, gotIt } });
   flash.reviewed++;
@@ -1686,9 +1970,15 @@ $('#practice-form').addEventListener('submit', async (e) => {
   });
 
   if (result.correct) {
+    playDing();
+    const card = $('#practice-card');
+    card.classList.remove('flash-correct', 'flash-wrong');
+    void card.offsetWidth;
+    card.classList.add('flash-correct');
     if (!practice.awaitingRetype) {
       practice.firstTryCorrect++;
       practice.streak++;
+      if ([3, 5, 7, 10].includes(practice.streak)) showMiniCelebration(`🔥 ${practice.streak} in a row!`);
     }
     const streakMsg = (!practice.awaitingRetype && practice.streak >= 2)
       ? ` <span class="streak-badge">🔥 ${practice.streak} in a row!</span>` : '';
@@ -1697,6 +1987,11 @@ $('#practice-form').addEventListener('submit', async (e) => {
     setTimeout(nextPracticeWord, practice.streak >= 2 ? 1300 : 900);
   } else {
     if (!practice.awaitingRetype) {
+      playBuzz();
+      const card = $('#practice-card');
+      card.classList.remove('flash-correct', 'flash-wrong');
+      void card.offsetWidth;
+      card.classList.add('flash-wrong');
       practice.missed.push(w.word);
       practice.missedWords.push(w);
       practice.streak = 0;
@@ -1761,6 +2056,9 @@ async function nextPracticeWord() {
     ${drillBtn}
     <button id="practice-home">Back</button>`;
   $('#practice-done').hidden = false;
+  animateScore($('#practice-done .big-score'), practice.firstTryCorrect, practice.words.length);
+  if (practice.missed.length === 0) showMiniCelebration('🏆 Perfect round!');
+  else showMiniCelebration(randomCheer());
   if (missedWords.length) {
     $('#practice-drill-missed').addEventListener('click', () => {
       Object.assign(practice, { words: shuffle(missedWords), i: 0, missed: [], missedWords: [], firstTryCorrect: 0, awaitingRetype: false, streak: 0 });
@@ -1838,6 +2136,7 @@ async function finishTest() {
   let retakeBtn = '';
   if (test.itemId && test.allowRetakes) retakeBtn = `<button id="test-retake-btn" class="check-btn secondary">🔁 Retake Test</button>`;
 
+  const testPct = result.total ? Math.round((result.score / result.total) * 100) : 100;
   $('#test-done').innerHTML = `
     <div>⭐ Test complete!</div>
     <div class="big-score">${result.score} / ${result.total}</div>
@@ -1845,6 +2144,11 @@ async function finishTest() {
     ${retakeBtn}
     <button id="test-home">Back</button>`;
   $('#test-done').hidden = false;
+  animateScore($('#test-done .big-score'), result.score, result.total);
+  if (testPct === 100) showMiniCelebration('🏆 Perfect score!');
+  else if (testPct >= 80) showMiniCelebration(`⭐ ${result.score}/${result.total} — Amazing!`);
+  else if (testPct >= 60) showMiniCelebration(`✅ ${result.score}/${result.total} — Nice work!`);
+  else showMiniCelebration(randomCheer());
   $('#test-home').addEventListener('click', () => backTarget());
   if (test.itemId && test.allowRetakes) {
     $('#test-retake-btn').addEventListener('click', () => {

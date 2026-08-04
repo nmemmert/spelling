@@ -55,6 +55,18 @@ body {
 .error { color: var(--bad); margin: 0.5rem 0; }
 
 /* ---------- kid picker ---------- */
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(26px) scale(0.93); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes emoji-wobble {
+  0%   { transform: rotate(0deg)   scale(1); }
+  20%  { transform: rotate(-15deg) scale(1.18); }
+  50%  { transform: rotate(13deg)  scale(1.14); }
+  75%  { transform: rotate(-7deg)  scale(1.07); }
+  100% { transform: rotate(0deg)   scale(1); }
+}
+
 .kid-cards {
   display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;
   margin-bottom: 2.5rem;
@@ -68,10 +80,16 @@ body {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(45, 49, 66, 0.08);
-  transition: transform 0.1s, border-color 0.1s;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
   min-width: 140px;
+  animation: card-enter 0.42s ease backwards;
 }
-.kid-card:hover { transform: translateY(-3px) scale(1.03); border-color: var(--accent); }
+.kid-card:hover {
+  transform: translateY(-7px) scale(1.07);
+  border-color: var(--accent);
+  box-shadow: 0 12px 30px rgba(45, 49, 66, 0.18);
+}
+.kid-card:hover .avatar { animation: emoji-wobble 0.48s ease; }
 .kid-card .avatar { display: block; font-size: 3rem; margin-bottom: 0.5rem; }
 
 /* ---------- kid home ---------- */
@@ -111,7 +129,7 @@ body {
 .progress-track {
   height: 12px; background: #e8e2d0; border-radius: 6px; overflow: hidden; margin-bottom: 1.5rem;
 }
-.progress-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.3s; }
+.progress-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.5s ease-out; }
 .progress-fill.test-fill { background: var(--gold); }
 
 .word-card {
@@ -140,8 +158,9 @@ body {
   background: var(--accent); color: #fff; border: none;
   border-radius: 12px; padding: 0.75rem 2.5rem; cursor: pointer;
   box-shadow: 0 4px 0 var(--accent-dark);
+  transition: transform 0.12s;
 }
-.check-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--accent-dark); }
+.check-btn:active { transform: scale(0.94) translateY(2px); box-shadow: 0 1px 0 var(--accent-dark); }
 
 /* letter-diff feedback */
 .feedback { min-height: 1rem; margin-bottom: 1rem; font-size: 1.2rem; }
@@ -276,6 +295,16 @@ table.results tr:nth-child(even) td { background: #faf7ee; }
 }
 .nav-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .tab-panel { text-align: left; }
+@keyframes tab-slide-right {
+  from { transform: translateX(56px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes tab-slide-left {
+  from { transform: translateX(-56px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.tab-panel.sliding-right { animation: tab-slide-right 0.26s ease; }
+.tab-panel.sliding-left  { animation: tab-slide-left  0.26s ease; }
 
 /* ---------- today list / item rows (shared by agenda + course pages) ---------- */
 .today-row {
@@ -441,6 +470,28 @@ table.results tr:nth-child(even) td { background: #faf7ee; }
 }
 .grade-btn.again { background: var(--bad); }
 .grade-btn.got-it { background: var(--good); }
+@keyframes card-flash-correct {
+  0%   { background: var(--card); }
+  30%  { background: color-mix(in srgb, var(--good) 25%, var(--card)); }
+  100% { background: var(--card); }
+}
+@keyframes card-flash-wrong {
+  0%   { background: var(--card); }
+  30%  { background: color-mix(in srgb, var(--bad) 20%, var(--card)); }
+  100% { background: var(--card); }
+}
+.word-card.flash-correct { animation: card-flash-correct 0.55s ease; }
+.word-card.flash-wrong   { animation: card-flash-wrong   0.45s ease; }
+@keyframes flash-flip-out {
+  from { transform: perspective(800px) rotateY(0deg); }
+  to   { transform: perspective(800px) rotateY(90deg); }
+}
+@keyframes flash-flip-in {
+  from { transform: perspective(800px) rotateY(-90deg); }
+  to   { transform: perspective(800px) rotateY(0deg); }
+}
+#flash-card.flip-out { animation: flash-flip-out 0.18s ease-in  forwards; }
+#flash-card.flip-in  { animation: flash-flip-in  0.18s ease-out forwards; }
 
 /* ---------- admin console ---------- */
 .admin-header {
@@ -799,6 +850,144 @@ body.theme-indigo { --accent: #5b6abf; --accent-dark: #4a57a0; --bg: #f4f5ff; }
 }
 .icon-choice:hover { transform: scale(1.2); }
 .icon-choice.active { border-color: var(--accent); background: var(--bg); }
+
+/* ---------- background patterns ---------- */
+body.bg-dots {
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--accent) 38%, transparent) 2.5px, transparent 2.5px);
+  background-size: 26px 26px;
+}
+body.bg-stripes {
+  background-image: repeating-linear-gradient(
+    45deg, transparent, transparent 14px,
+    color-mix(in srgb, var(--accent) 18%, transparent) 14px,
+    color-mix(in srgb, var(--accent) 18%, transparent) 28px
+  );
+}
+body.bg-grid {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+body.bg-stars {
+  background-image:
+    radial-gradient(circle, color-mix(in srgb, var(--accent) 55%, transparent) 1.5px, transparent 1.5px),
+    radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent) 1px, transparent 1px),
+    radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, transparent) 2px, transparent 2px);
+  background-size: 48px 48px, 28px 28px, 68px 68px;
+  background-position: 5px 8px, 18px 32px, 46px 18px;
+}
+body.bg-bubbles {
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent) 18px, transparent 18px);
+  background-size: 64px 64px;
+}
+
+/* ---------- bg pattern picker ---------- */
+.bg-pattern-panel {
+  display: flex; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.6rem 0.75rem; background: var(--card);
+  border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  margin-bottom: 0.75rem;
+}
+.bg-pattern-btn {
+  width: 46px; height: 46px; border-radius: 8px;
+  border: 2.5px solid transparent; cursor: pointer;
+  background-color: var(--bg); flex-shrink: 0;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.bg-pattern-btn:hover { transform: scale(1.12); }
+.bg-pattern-btn.active { border-color: var(--accent); }
+.bg-pattern-btn[data-pattern="dots"] {
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--accent) 50%, transparent) 2.5px, transparent 2.5px);
+  background-size: 9px 9px;
+}
+.bg-pattern-btn[data-pattern="stripes"] {
+  background-image: repeating-linear-gradient(
+    45deg, transparent, transparent 5px,
+    color-mix(in srgb, var(--accent) 30%, transparent) 5px,
+    color-mix(in srgb, var(--accent) 30%, transparent) 10px
+  );
+}
+.bg-pattern-btn[data-pattern="grid"] {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 25%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 25%, transparent) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+.bg-pattern-btn[data-pattern="stars"] {
+  background-image:
+    radial-gradient(circle, color-mix(in srgb, var(--accent) 60%, transparent) 1.5px, transparent 1.5px),
+    radial-gradient(circle, color-mix(in srgb, var(--accent) 35%, transparent) 1px, transparent 1px);
+  background-size: 14px 14px, 8px 8px;
+  background-position: 2px 3px, 6px 10px;
+}
+.bg-pattern-btn[data-pattern="bubbles"] {
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--accent) 25%, transparent) 8px, transparent 8px);
+  background-size: 22px 22px;
+}
+
+/* ---------- welcome toast ---------- */
+.welcome-toast {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card); border-radius: var(--radius);
+  padding: 2.2rem 3.5rem; text-align: center;
+  box-shadow: 0 16px 56px rgba(0,0,0,0.22); z-index: 1000;
+  pointer-events: none;
+  animation: welcome-in 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.welcome-emoji { display: block; font-size: 4.5rem; margin-bottom: 0.4rem; }
+.welcome-name  { font-size: 2.2rem; font-weight: 800; }
+@keyframes welcome-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes welcome-out {
+  to { opacity: 0; transform: translate(-50%, -54%) scale(0.88); }
+}
+.welcome-toast-out { animation: welcome-out 0.4s ease forwards; }
+
+/* ---------- done stamp ---------- */
+.done-stamp-wrap {
+  position: fixed; inset: 0;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 10vh;
+  z-index: 1000; pointer-events: none;
+  background: rgba(0,0,0,0.06);
+}
+.done-stamp {
+  background: var(--card); border-radius: 50%;
+  width: 170px; height: 170px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 5.5rem;
+  box-shadow: 0 10px 48px rgba(0,0,0,0.22);
+  animation: stamp-in 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes stamp-in {
+  from { transform: scale(0) rotate(-18deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
+}
+@keyframes stamp-out {
+  to { transform: scale(0.75) rotate(6deg); opacity: 0; }
+}
+.done-stamp-out { animation: stamp-out 0.35s ease forwards; }
+
+/* ---------- mini celebration (confetti + toast) ---------- */
+@keyframes confetti-fall {
+  to { transform: translateY(105vh) rotate(540deg); opacity: 0; }
+}
+.mini-celebration-toast {
+  position: fixed; top: 45%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card); border-radius: var(--radius);
+  padding: 1.6rem 3.2rem; font-size: 2.4rem; font-weight: 800;
+  text-align: center; white-space: nowrap;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.28); z-index: 1000;
+  animation: pop-in 0.25s ease; pointer-events: none;
+}
+@keyframes mini-toast-out {
+  to { opacity: 0; transform: translate(-50%, -65%) scale(0.88); }
+}
 
 /* ---------- celebration overlay ---------- */
 #celebration-overlay {
