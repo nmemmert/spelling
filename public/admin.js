@@ -8,6 +8,7 @@ const esc = (s) =>
 
 sessionStorage.removeItem('pin');
 let parentPin = null;
+const appSettings = { schoolName: '', passingPct: 80, weekStartDay: 'monday' };
 
 async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -57,7 +58,17 @@ $('#pin-form').addEventListener('submit', async (e) => {
   unlock();
 });
 
+async function loadAppSettings() {
+  try {
+    const s = await api('/api/admin/app-settings');
+    appSettings.schoolName = s.school_name || '';
+    appSettings.passingPct = Number(s.passing_pct) || 80;
+    appSettings.weekStartDay = s.week_start_day || 'monday';
+  } catch {}
+}
+
 async function unlock() {
+  await loadAppSettings();
   $('#pin-gate').hidden = true;
   $('#console').hidden = false;
   showPanel('kids');
@@ -95,7 +106,7 @@ function showPanel(name) {
   const loaders = {
     kids: loadKids, courses: loadCourses, planner: loadPlannerPanel,
     grading: loadGrading, gradebook: loadGradebookPanel, spelling: loadSpelling, decks: loadDecks,
-    settings: () => {},
+    settings: loadSettings,
   };
   if (loaders[name]) loaders[name]();
   if (name === 'course-detail') openCourseDetail(currentCourseId);
@@ -1142,11 +1153,12 @@ $('#ie-ws-parse').addEventListener('click', () => {
 // Planner
 // ============================================================
 
-function mondayOf(d) {
+function weekStartOf(d) {
   const date = new Date(d);
   const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
+  const target = appSettings.weekStartDay === 'sunday' ? 0 : 1;
+  const diff = (day - target + 7) % 7;
+  date.setDate(date.getDate() - diff);
   return date.toISOString().slice(0, 10);
 }
 function addDays(dateStr, n) {
@@ -1155,17 +1167,17 @@ function addDays(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
-let plannerWeekStart = mondayOf(new Date());
+let plannerWeekStart = null; // initialized lazily after settings load
 let plannerQueue = [];
 let plannerStudentId = null;
 let plannerCoursesCache = [];
 let plannerMode = 'week'; // 'week' | 'month'
 let plannerMonthRef = null; // YYYY-MM-01 of the month being viewed
 
-function firstMondayOfMonth(dateStr) {
+function firstWeekStartOfMonth(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(1);
-  return mondayOf(d);
+  return weekStartOf(d);
 }
 function addMonths(dateStr, n) {
   const d = new Date(dateStr + 'T00:00:00');
@@ -1177,6 +1189,7 @@ function monthLabel(dateStr) {
 }
 
 async function loadPlannerPanel() {
+  if (!plannerWeekStart) plannerWeekStart = weekStartOf(new Date());
   const [students, courses] = await Promise.all([api('/api/students'), api('/api/admin/courses')]);
   if (students.length === 0) {
     $('#planner-grid').innerHTML = `<p class="hint">Add a kid first.</p>`;
@@ -1200,7 +1213,7 @@ $('#auto-schedule-btn').addEventListener('click', async () => {
     body: { studentId: plannerStudentId, courseId, startDate, itemsPerDay },
   });
   $('#auto-schedule-msg').textContent = `Scheduled ${scheduled} item${scheduled === 1 ? '' : 's'} starting ${startDate}.`;
-  plannerWeekStart = mondayOf(startDate + 'T12:00:00');
+  plannerWeekStart = weekStartOf(startDate + 'T12:00:00');
   renderPlanner();
 });
 
@@ -1222,7 +1235,7 @@ $('#planner-view-month').addEventListener('click', () => {
   // derive the month from the current week view date
   const ref = new Date(plannerWeekStart + 'T00:00:00');
   plannerMonthRef = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}-01`;
-  plannerWeekStart = firstMondayOfMonth(plannerMonthRef);
+  plannerWeekStart = firstWeekStartOfMonth(plannerMonthRef);
   $('#planner-view-month').classList.add('active-view');
   $('#planner-view-week').classList.remove('active-view');
   $('#planner-copy').hidden = true;
@@ -1231,7 +1244,7 @@ $('#planner-view-month').addEventListener('click', () => {
 $('#planner-prev').addEventListener('click', () => {
   if (plannerMode === 'month') {
     plannerMonthRef = addMonths(plannerMonthRef, -1);
-    plannerWeekStart = firstMondayOfMonth(plannerMonthRef);
+    plannerWeekStart = firstWeekStartOfMonth(plannerMonthRef);
   } else {
     plannerWeekStart = addDays(plannerWeekStart, -7);
   }
@@ -1240,7 +1253,7 @@ $('#planner-prev').addEventListener('click', () => {
 $('#planner-next').addEventListener('click', () => {
   if (plannerMode === 'month') {
     plannerMonthRef = addMonths(plannerMonthRef, 1);
-    plannerWeekStart = firstMondayOfMonth(plannerMonthRef);
+    plannerWeekStart = firstWeekStartOfMonth(plannerMonthRef);
   } else {
     plannerWeekStart = addDays(plannerWeekStart, 7);
   }
@@ -1259,7 +1272,9 @@ $('#planner-print').addEventListener('click', () => {
   else printWeekReport(plannerStudentId, plannerWeekStart);
 });
 
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DAY_NAMES_MON = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DAY_NAMES_SUN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+const DAY_NAMES = () => appSettings.weekStartDay === 'sunday' ? DAY_NAMES_SUN : DAY_NAMES_MON;
 
 function attachPlannerEvents() {
   let draggingId = null;
@@ -1332,7 +1347,7 @@ async function renderPlanner() {
     const weeks = [];
     let cursor = plannerWeekStart;
     for (let w = 0; w < 6; w++) {
-      const weekDays = DAY_NAMES.map((name, i) => ({ name, date: addDays(cursor, i) }));
+      const weekDays = DAY_NAMES().map((name, i) => ({ name, date: addDays(cursor, i) }));
       const fridayMonth = new Date(weekDays[4].date + 'T00:00:00').getMonth();
       const mondayMonth = new Date(weekDays[0].date + 'T00:00:00').getMonth();
       if (w > 0 && mondayMonth !== month && fridayMonth !== month) break;
@@ -1349,7 +1364,7 @@ async function renderPlanner() {
     $('#planner-week-label').textContent = monthLabel(plannerMonthRef);
     $('#planner-grid').className = 'planner-grid planner-month';
     $('#planner-grid').innerHTML =
-      `<div class="planner-month-header">${DAY_NAMES.map((d) => `<div>${d.slice(0,3)}</div>`).join('')}</div>` +
+      `<div class="planner-month-header">${DAY_NAMES().map((d) => `<div>${d.slice(0,3)}</div>`).join('')}</div>` +
       weeks.map((week) =>
         `<div class="planner-month-row">${week.map((day) => renderDayCell(day, tasks, true, spellingTests)).join('')}</div>`
       ).join('');
@@ -1360,7 +1375,7 @@ async function renderPlanner() {
       api(`/api/schedule-week/${plannerStudentId}?start=${plannerWeekStart}`),
       api(`/api/admin/students/${plannerStudentId}/tests-range?from=${plannerWeekStart}&to=${end}`),
     ]);
-    const days = DAY_NAMES.map((name, i) => ({ name, date: addDays(plannerWeekStart, i) }));
+    const days = DAY_NAMES().map((name, i) => ({ name, date: addDays(plannerWeekStart, i) }));
     $('#planner-grid').className = 'planner-grid';
     $('#planner-grid').innerHTML = days.map((day) => renderDayCell(day, tasks, false, spellingTests)).join('');
   }
@@ -1482,7 +1497,8 @@ async function printWeekReport(studentId, start) {
     .map((t) => `<tr><td>${esc(t.list)}</td><td>${t.score}/${t.total}</td></tr>`)
     .join('');
   const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>Weekly Plan — ${esc(r.student)}</title>
+  const schoolPrefix = appSettings.schoolName ? `${esc(appSettings.schoolName)} — ` : '';
+  win.document.write(`<!DOCTYPE html><html><head><title>${schoolPrefix}Weekly Plan — ${esc(r.student)}</title>
     <style>
       body { font-family: Georgia, serif; max-width: 680px; margin: 2rem auto; color: #222; font-size: .95rem; }
       h1 { font-size: 1.4rem; border-bottom: 2px solid #222; padding-bottom: .4rem; }
@@ -1502,7 +1518,7 @@ async function printWeekReport(studentId, start) {
       .empty { color: #888; font-style: italic; }
       @media print { h2 { break-after: avoid; } .task-block { break-inside: avoid; } }
     </style></head><body>
-    <h1>Weekly Plan — ${esc(r.student)}</h1>
+    <h1>${schoolPrefix}Weekly Plan — ${esc(r.student)}</h1>
     <p>Week of ${r.start}</p>
     <h2>Schedule</h2>
     ${dayBlocks}
@@ -1519,7 +1535,7 @@ async function printMonthReport(studentId, monthMonday, monthRef) {
   const weeks = [];
   let cursor = monthMonday;
   for (let w = 0; w < 6; w++) {
-    const weekDays = DAY_NAMES.map((name, i) => ({ name, date: addDays(cursor, i) }));
+    const weekDays = DAY_NAMES().map((name, i) => ({ name, date: addDays(cursor, i) }));
     const fridayMonth = new Date(weekDays[4].date + 'T00:00:00').getMonth();
     const mondayMonth = new Date(weekDays[0].date + 'T00:00:00').getMonth();
     if (w > 0 && mondayMonth !== month && fridayMonth !== month) break;
@@ -1531,7 +1547,7 @@ async function printMonthReport(studentId, monthMonday, monthRef) {
   const student = (await api('/api/students')).find((s) => s.id === studentId);
   const { tasks } = await api(`/api/schedule-range/${studentId}?start=${rangeStart}&end=${rangeEnd}`);
 
-  const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const DAY_SHORT = DAY_NAMES().map((d) => d.slice(0, 3));
   const calRows = weeks.map((week) =>
     `<tr>${week.map((day) => {
       const dayTasks = tasks.filter((t) => t.date === day.date);
@@ -1555,7 +1571,8 @@ async function printMonthReport(studentId, monthMonday, monthRef) {
   }).join('');
 
   const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>${monthLabel(monthRef)} — ${student?.name || ''}</title>
+  const schoolPfx = appSettings.schoolName ? `${esc(appSettings.schoolName)} — ` : '';
+  win.document.write(`<!DOCTYPE html><html><head><title>${schoolPfx}${monthLabel(monthRef)} — ${student?.name || ''}</title>
   <style>
     body { font-family: Georgia, serif; margin: 1cm; color: #222; font-size: .88rem; }
     h1 { font-size: 1.3rem; border-bottom: 2px solid #222; padding-bottom: .4rem; margin-bottom: .75rem; }
@@ -1578,7 +1595,7 @@ async function printMonthReport(studentId, monthMonday, monthRef) {
     .empty { color: #888; font-style: italic; }
     @media print { @page { size: landscape; margin: .75cm; } h2 { break-after: avoid; } .task-block { break-inside: avoid; } }
   </style></head><body>
-  <h1>${monthLabel(monthRef)} — ${esc(student?.name || '')}</h1>
+  <h1>${schoolPfx}${monthLabel(monthRef)} — ${esc(student?.name || '')}</h1>
   <table><tr>${DAY_SHORT.map((d) => `<th>${d}</th>`).join('')}</tr>${calRows}</table>
   ${detailBlocks ? `<h2>Assignment Detail</h2>${detailBlocks}` : ''}
   <script>window.print()<\/script></body></html>`);
@@ -1745,7 +1762,7 @@ async function loadSpellingTests() {
           return `<tr>
             <td>${new Date(t.at + 'Z').toLocaleDateString()}</td>
             <td>${esc(t.list)}</td>
-            <td class="${pct >= 80 ? 'score-good' : 'score-bad'}">${t.score}/${t.total} (${pct}%)</td>
+            <td class="${pct >= appSettings.passingPct ? 'score-good' : 'score-bad'}">${t.score}/${t.total} (${pct}%)</td>
             <td><button data-print="${t.id}">🖨 Print</button></td>
           </tr>`;
         })
@@ -1778,7 +1795,7 @@ async function showHistory(studentId, itemId, label) {
   } else {
     const rows = history.map((h) => {
       const pct = h.points_possible ? Math.round((h.score / h.points_possible) * 100) : null;
-      const cls = pct !== null ? (pct >= 80 ? 'score-good' : 'score-bad') : '';
+      const cls = pct !== null ? (pct >= appSettings.passingPct ? 'score-good' : 'score-bad') : '';
       return `<tr><td>${new Date(h.completed_at + 'Z').toLocaleString()}</td><td class="${cls}">${h.score}/${h.points_possible}${pct !== null ? ` (${pct}%)` : ''}</td></tr>`;
     }).join('');
     $('#history-modal-body').innerHTML = `<table class="results"><tr><th>Date</th><th>Score</th></tr>${rows}</table>`;
@@ -1816,7 +1833,7 @@ async function renderGradebook(courseId) {
         if (!sc || (!sc.status && !sc.overdue)) return `<td class="hint">—</td>`;
         if (sc.overdue && !sc.status) return `<td class="hint overdue" title="Overdue">⚠️</td>`;
         if (sc.status !== 'graded') return `<td class="hint${overdueClass}">${sc.overdue ? '⚠️ ' : ''}⏳</td>`;
-        return `<td class="${sc.score / sc.points_possible >= 0.8 ? 'score-good' : 'score-bad'}${overdueClass}" style="cursor:pointer" data-history-student="${s.id}" data-history-item="${it.id}" data-history-label="${esc(it.title)} — ${esc(s.name)}">${sc.score}/${sc.points_possible}</td>`;
+        return `<td class="${sc.score / sc.points_possible >= appSettings.passingPct / 100 ? 'score-good' : 'score-bad'}${overdueClass}" style="cursor:pointer" data-history-student="${s.id}" data-history-item="${it.id}" data-history-label="${esc(it.title)} — ${esc(s.name)}">${sc.score}/${sc.points_possible}</td>`;
       }).join('');
       return `<tr><td>${esc(s.emoji)} ${esc(s.name)}</td>${cells}</tr>`;
     }).join('');
@@ -1842,7 +1859,7 @@ async function renderGradebook(courseId) {
 
   // Overall course summary
   const overallRows = gb.students.map((s) => {
-    const pctClass = s.percent === null ? '' : s.percent >= 80 ? 'score-good' : 'score-bad';
+    const pctClass = s.percent === null ? '' : s.percent >= appSettings.passingPct ? 'score-good' : 'score-bad';
     return `<tr><td>${esc(s.emoji)} ${esc(s.name)}</td><td class="${pctClass}">${s.percent === null ? '—' : s.percent + '%'}</td></tr>`;
   }).join('');
 
@@ -2332,5 +2349,31 @@ $('#pin-change-form').addEventListener('submit', async (e) => {
   } catch (err) {
     msg(err.message);
   }
+});
+
+async function loadSettings() {
+  const s = await api('/api/admin/app-settings');
+  appSettings.schoolName = s.school_name || '';
+  appSettings.passingPct = Number(s.passing_pct) || 80;
+  appSettings.weekStartDay = s.week_start_day || 'monday';
+  $('#setting-school-name').value = appSettings.schoolName;
+  $('#setting-passing-pct').value = appSettings.passingPct;
+  const radio = document.querySelector(`input[name="week_start_day"][value="${appSettings.weekStartDay}"]`);
+  if (radio) radio.checked = true;
+}
+
+$('#app-settings-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const school_name = $('#setting-school-name').value.trim();
+  const passing_pct = Number($('#setting-passing-pct').value);
+  const week_start_day = document.querySelector('input[name="week_start_day"]:checked')?.value || 'monday';
+  await api('/api/admin/app-settings', { method: 'POST', body: { school_name, passing_pct, week_start_day } });
+  appSettings.schoolName = school_name;
+  appSettings.passingPct = passing_pct;
+  if (appSettings.weekStartDay !== week_start_day) {
+    appSettings.weekStartDay = week_start_day;
+    plannerWeekStart = weekStartOf(new Date());
+  }
+  msg('Settings saved.');
 });
 

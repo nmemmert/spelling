@@ -195,6 +195,8 @@ const updateCardProgress = leitnerUpdater('card_progress', 'card_id');
 
 // Parent-only routes must send the PIN in the x-pin header
 const getStoredPin = db.prepare(`SELECT value FROM settings WHERE key = 'pin'`);
+const getSetting = (key) => db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key)?.value;
+
 function requirePin(req, res, next) {
   const stored = getStoredPin.get().value;
   if (sha256(req.get('x-pin') || '') !== stored) {
@@ -663,6 +665,23 @@ app.post('/api/parent/pin', requirePin, (req, res) => {
   const pin = String(req.body.newPin || '');
   if (pin.length < 4) return res.status(400).json({ error: 'PIN must be at least 4 digits' });
   db.prepare(`UPDATE settings SET value = ? WHERE key = 'pin'`).run(sha256(pin));
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/app-settings', requirePin, (req, res) => {
+  res.json({
+    school_name: getSetting('school_name') || '',
+    passing_pct: Number(getSetting('passing_pct') || 80),
+    week_start_day: getSetting('week_start_day') || 'monday',
+  });
+});
+
+app.post('/api/admin/app-settings', requirePin, (req, res) => {
+  const { school_name, passing_pct, week_start_day } = req.body;
+  const upsert = (k, v) => db.prepare(`INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(k, String(v));
+  if (school_name !== undefined) upsert('school_name', String(school_name).trim());
+  if (passing_pct !== undefined) upsert('passing_pct', Math.max(0, Math.min(100, Number(passing_pct))));
+  if (week_start_day !== undefined && ['monday', 'sunday'].includes(week_start_day)) upsert('week_start_day', week_start_day);
   res.json({ ok: true });
 });
 
@@ -1974,8 +1993,6 @@ app.get('/api/week-report/:studentId', requirePin, (req, res) => {
 
   res.json({ student: student.name, start, tasks, graded, spellingTests });
 });
-
-const getSetting = (key) => db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key)?.value;
 
 // ---------- local TTS (Piper) ----------
 

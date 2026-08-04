@@ -498,9 +498,39 @@
       <!-- Settings -->
       <section id="panel-settings" class="panel">
         <h1>Settings</h1>
+
+        <h2>Parent PIN</h2>
         <form id="pin-change-form" class="inline-form">
           <input id="new-pin" type="password" inputmode="numeric" placeholder="New PIN (4+ digits)" aria-label="New PIN">
           <button type="submit">Change PIN</button>
+        </form>
+
+        <h2>School</h2>
+        <form id="app-settings-form">
+          <div class="field-group">
+            <label for="setting-school-name">School / family name <span class="hint">(appears on printed reports)</span></label>
+            <input id="setting-school-name" type="text" placeholder="e.g. Emmert Academy" style="max-width:22rem;display:block;margin-top:.35rem">
+          </div>
+
+          <div class="field-group" style="margin-top:1rem">
+            <label for="setting-passing-pct">Passing grade threshold</label>
+            <div class="inline-form" style="margin-top:.35rem">
+              <input id="setting-passing-pct" type="number" min="0" max="100" style="width:5rem" aria-label="Passing percent"> <span>%</span>
+            </div>
+            <p class="hint">Scores at or above this show green in gradebooks and reports.</p>
+          </div>
+
+          <div class="field-group" style="margin-top:1rem">
+            <label>School week starts on</label>
+            <label class="radio-label" style="margin-top:.35rem">
+              <input type="radio" name="week_start_day" value="monday"> Monday (Mon–Fri)
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="week_start_day" value="sunday"> Sunday (Sun–Thu)
+            </label>
+          </div>
+
+          <button type="submit" style="margin-top:1.25rem">Save settings</button>
         </form>
 
       </section>

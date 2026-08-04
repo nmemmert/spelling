@@ -244,6 +244,9 @@ const seedSetting = (key, val) => {
   if (!db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key))
     db.prepare(`INSERT INTO settings (key, value) VALUES (?, ?)`).run(key, val);
 };
+seedSetting('school_name', '');
+seedSetting('passing_pct', '80');
+seedSetting('week_start_day', 'monday');
 
 // Seed bundled word lists on first run
 if (db.prepare(`SELECT COUNT(*) AS n FROM lists`).get().n === 0) {
