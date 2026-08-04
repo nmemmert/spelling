@@ -95,7 +95,7 @@ function showPanel(name) {
   const loaders = {
     kids: loadKids, courses: loadCourses, planner: loadPlannerPanel,
     grading: loadGrading, gradebook: loadGradebookPanel, spelling: loadSpelling, decks: loadDecks,
-    settings: loadOllamaConfig,
+    settings: () => {},
   };
   if (loaders[name]) loaders[name]();
   if (name === 'course-detail') openCourseDetail(currentCourseId);
@@ -580,7 +580,6 @@ async function openItemEditor(unitId, itemId) {
     $('#ie-delete').hidden = true;
   }
   updateItemFieldVisibility();
-  resetScanSection();
   resetImportSection();
   showPanel('item-editor');
 }
@@ -595,7 +594,6 @@ function updateItemFieldVisibility() {
   $('#ie-field-spelling').hidden = type !== 'spelling_practice' && type !== 'spelling_test';
   $('#ie-field-flashcards').hidden = type !== 'flashcards';
   $('#ie-field-worksheet').hidden = type !== 'worksheet';
-  $('#ie-scan-section').hidden = type !== 'lesson' && type !== 'quiz';
   $('#ie-import-section').hidden = type === 'spelling_practice' || type === 'spelling_test'
     || type === 'flashcards' || type === 'worksheet';
 }
@@ -659,97 +657,12 @@ document.querySelectorAll('.rte-youtube-btn').forEach((btn) => {
   });
 });
 
-// ---------- scan a page (photo -> lesson/quiz content via local Ollama) ----------
-
-let scanImageBase64 = null;
-
 function resetImportSection() {
   $('#import-local-input').value = '';
   $('#import-local-name').textContent = '';
   $('#import-go-btn').disabled = true;
   $('#import-status').textContent = '';
 }
-
-function resetScanSection() {
-  scanImageBase64 = null;
-  $('#scan-file-input').value = '';
-  $('#scan-preview').hidden = true;
-  $('#scan-preview').src = '';
-  $('#scan-go-btn').disabled = true;
-  $('#scan-status').textContent = '';
-}
-
-function fileToScanImage(file, maxDim = 1600, quality = 0.85) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read that file'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('Could not read that image'));
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          const scale = maxDim / Math.max(width, height);
-          width = Math.round(width * scale);
-          height = Math.round(height * scale);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-$('#scan-pick-btn').addEventListener('click', () => $('#scan-file-input').click());
-
-$('#scan-file-input').addEventListener('change', async () => {
-  const file = $('#scan-file-input').files[0];
-  if (!file) return;
-  try {
-    const dataUrl = await fileToScanImage(file);
-    scanImageBase64 = dataUrl.split(',')[1];
-    $('#scan-preview').src = dataUrl;
-    $('#scan-preview').hidden = false;
-    $('#scan-go-btn').disabled = false;
-    $('#scan-status').textContent = '';
-  } catch (err) {
-    $('#scan-status').textContent = `❌ ${err.message}`;
-  }
-});
-
-$('#scan-go-btn').addEventListener('click', async () => {
-  if (!scanImageBase64) return;
-  const mode = $('#ie-type').value === 'quiz' ? 'quiz' : 'lesson';
-  $('#scan-go-btn').disabled = true;
-  $('#scan-status').textContent = '🔍 Reading the page… this can take a minute or two on local hardware.';
-  try {
-    const result = await api('/api/admin/scan', { method: 'POST', body: { image: scanImageBase64, mode } });
-    if (result.title) $('#ie-title').value = result.title;
-    const providerLabel = result._provider === 'cloud' ? 'cloud API' : 'local Ollama';
-    const fallbackNote = result._fallback ? ` (primary failed — used ${providerLabel} as fallback: ${result._primaryError})` : ` via ${providerLabel}`;
-    if (mode === 'lesson') {
-      $('#ie-body-lesson').innerHTML = result.body || '';
-      $('#scan-status').textContent = `✅ Scanned${fallbackNote}. Review the text below before saving.`;
-    } else {
-      $('#ie-questions').innerHTML = '';
-      questionCount = 0;
-      // addQuestionRow expects correct_answer (snake_case); scan returns correctAnswer (camelCase) — normalize here.
-      (result.questions || []).forEach((q) => addQuestionRow({ ...q, correct_answer: q.correctAnswer }));
-      const blanks = (result.questions || []).filter((q) => !q.correctAnswer).length;
-      $('#scan-status').textContent = `✅ Found ${result.questions?.length || 0} question(s)${fallbackNote}` +
-        (blanks ? ` — ${blanks} need${blanks === 1 ? 's' : ''} a correct answer` : '') + '. Review before saving.';
-    }
-  } catch (err) {
-    $('#scan-status').textContent = `❌ ${err.message}`;
-  } finally {
-    $('#scan-go-btn').disabled = false;
-  }
-});
 
 // ---------- import from local .docx file ----------
 
@@ -2421,44 +2334,3 @@ $('#pin-change-form').addEventListener('submit', async (e) => {
   }
 });
 
-// ---------- Scan config (settings panel) ----------
-
-async function loadOllamaConfig() {
-  const cfg = await api('/api/admin/scan-config');
-  document.querySelector(`input[name="scan_primary"][value="${cfg.primary || 'local'}"]`).checked = true;
-  $('#ollama-host').value = cfg.ollama_host || '';
-  $('#ollama-model').value = cfg.ollama_model || '';
-  $('#ollama-test-result').textContent = '';
-  $('#ollama-cloud-model').value = cfg.ollama_cloud_model || '';
-  $('#ollama-cloud-api-key').value = '';
-  $('#ollama-cloud-key-status').textContent = cfg.ollama_cloud_has_key ? '🔑 Key saved' : 'No key saved';
-}
-
-$('#scan-config-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const primary = document.querySelector('input[name="scan_primary"]:checked')?.value || 'local';
-  const body = {
-    primary,
-    ollama_host: $('#ollama-host').value.trim(),
-    ollama_model: $('#ollama-model').value.trim(),
-    ollama_cloud_model: $('#ollama-cloud-model').value.trim(),
-  };
-  const ollamaCloudKey = $('#ollama-cloud-api-key').value.trim();
-  if (ollamaCloudKey) body.ollama_cloud_api_key = ollamaCloudKey;
-  await api('/api/admin/scan-config', { method: 'POST', body });
-  if (ollamaCloudKey) { $('#ollama-cloud-api-key').value = ''; $('#ollama-cloud-key-status').textContent = '🔑 Key saved'; }
-  msg('Scan settings saved.');
-});
-
-$('#ollama-test-btn').addEventListener('click', async () => {
-  $('#ollama-test-result').textContent = 'Testing…';
-  const r = await api('/api/admin/ollama-test', { method: 'POST' });
-  if (r.reachable && r.hasModel) {
-    $('#ollama-test-result').textContent = `✅ Connected — "${esc($('#ollama-model').value)}" is available.`;
-  } else if (r.reachable) {
-    $('#ollama-test-result').textContent =
-      `⚠️ Connected but "${esc($('#ollama-model').value)}" isn't pulled. Available: ${esc(r.availableModels.join(', ') || '(none)')}. Run: ollama pull ${esc($('#ollama-model').value)}`;
-  } else {
-    $('#ollama-test-result').textContent = `❌ ${esc(r.error)}`;
-  }
-});

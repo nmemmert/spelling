@@ -244,11 +244,6 @@ const seedSetting = (key, val) => {
   if (!db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key))
     db.prepare(`INSERT INTO settings (key, value) VALUES (?, ?)`).run(key, val);
 };
-seedSetting('scan_primary', 'local');
-seedSetting('ollama_host', 'http://localhost:11434');
-seedSetting('ollama_model', 'llava');
-seedSetting('cloud_endpoint', 'https://api.openai.com/v1');
-seedSetting('cloud_model', 'gpt-4o');
 
 // Seed bundled word lists on first run
 if (db.prepare(`SELECT COUNT(*) AS n FROM lists`).get().n === 0) {

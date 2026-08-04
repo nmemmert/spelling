@@ -202,18 +202,6 @@
             </label>
           </div>
 
-          <!-- Scan a page: visible for lesson + quiz types -->
-          <div id="ie-scan-section" class="scan-card" hidden>
-            <strong>📷 Scan a book page</strong>
-            <input type="file" id="scan-file-input" accept="image/*" capture="environment" hidden>
-            <div class="scan-controls">
-              <button type="button" id="scan-pick-btn" class="secondary">Choose photo</button>
-              <button type="button" id="scan-go-btn" disabled>🔍 Scan this page</button>
-            </div>
-            <img id="scan-preview" alt="Selected page photo" hidden>
-            <p id="scan-status" class="hint"></p>
-          </div>
-
           <!-- Import from .docx file: visible for lesson, assignment, quiz types -->
           <div id="ie-import-section" class="scan-card" hidden>
             <strong>📂 Import from .docx</strong>
@@ -515,42 +503,6 @@
           <button type="submit">Change PIN</button>
         </form>
 
-        <h2>Page scanning (AI vision)</h2>
-        <p class="hint">Used by "Scan a page" in the lesson/quiz editor. Configure one or both providers — the primary is tried first and the other is used as automatic fallback.</p>
-        <form id="scan-config-form">
-          <fieldset class="scan-provider-box">
-            <legend>Primary provider</legend>
-            <label class="radio-label">
-              <input type="radio" name="scan_primary" value="local"> Local (Ollama) — runs on your machine, completely free &amp; private
-            </label>
-            <label class="radio-label">
-              <input type="radio" name="scan_primary" value="ollama_cloud"> Ollama Cloud — free hosted tier, requires API key
-            </label>
-          </fieldset>
-
-          <fieldset class="scan-provider-box">
-            <legend>Local — Ollama</legend>
-            <div class="inline-form">
-              <input id="ollama-host" placeholder="http://localhost:11434" aria-label="Ollama host">
-              <input id="ollama-model" placeholder="llava" aria-label="Vision model">
-              <button type="button" id="ollama-test-btn" class="secondary">Test</button>
-            </div>
-            <p id="ollama-test-result" class="hint"></p>
-            <p class="hint">Install a vision model: <code>ollama pull llava</code> or <code>ollama pull llava-llama3</code></p>
-          </fieldset>
-
-          <fieldset class="scan-provider-box">
-            <legend>Ollama Cloud (free tier)</legend>
-            <div class="inline-form">
-              <input id="ollama-cloud-model" placeholder="gemma4" aria-label="Ollama Cloud model">
-              <input id="ollama-cloud-api-key" type="password" placeholder="Ollama Cloud API key" aria-label="Ollama Cloud API key">
-              <span id="ollama-cloud-key-status" class="hint"></span>
-            </div>
-            <p class="hint">Runs through your local Ollama but offloads compute to Ollama's cloud. Get a free API key at <strong>ollama.com</strong> → Account → API Keys, then pull the model: <code>ollama pull gemma4:cloud</code>. Enter the base name only (e.g. <code>gemma4</code>) — <code>:cloud</code> is added automatically.</p>
-          </fieldset>
-
-          <button type="submit">Save scan settings</button>
-        </form>
       </section>
 
     </main>
