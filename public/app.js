@@ -243,6 +243,10 @@ async function loadHome() {
                  : 'Good evening! 🌙';
   document.querySelector('.subtitle').textContent = greeting;
 
+  const pubSettings = await fetch('/api/public-settings').then((r) => r.json()).catch(() => ({}));
+  document.querySelector('.page-confetti').style.display =
+    pubSettings.show_home_emoji === false ? 'none' : '';
+
   const students = await api('/api/students');
   $('#no-kids').hidden = students.length > 0;
   $('#kid-cards').innerHTML = students

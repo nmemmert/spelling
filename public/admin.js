@@ -2488,6 +2488,7 @@ async function loadSettings() {
   $('#setting-passing-pct').value = appSettings.passingPct;
   const radio = document.querySelector(`input[name="week_start_day"][value="${appSettings.weekStartDay}"]`);
   if (radio) radio.checked = true;
+  $('#setting-show-emoji').checked = s.show_home_emoji !== false;
 }
 
 $('#app-settings-form').addEventListener('submit', async (e) => {
@@ -2495,7 +2496,8 @@ $('#app-settings-form').addEventListener('submit', async (e) => {
   const school_name = $('#setting-school-name').value.trim();
   const passing_pct = Number($('#setting-passing-pct').value);
   const week_start_day = document.querySelector('input[name="week_start_day"]:checked')?.value || 'monday';
-  await api('/api/admin/app-settings', { method: 'POST', body: { school_name, passing_pct, week_start_day } });
+  const show_home_emoji = $('#setting-show-emoji').checked;
+  await api('/api/admin/app-settings', { method: 'POST', body: { school_name, passing_pct, week_start_day, show_home_emoji } });
   appSettings.schoolName = school_name;
   appSettings.passingPct = passing_pct;
   if (appSettings.weekStartDay !== week_start_day) {

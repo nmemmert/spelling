@@ -843,6 +843,25 @@ button.tiny { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
 .radio-label { display: block; margin: 0.3rem 0; cursor: pointer; }
 .radio-label input { margin-right: 0.4rem; }
 
+.toggle-label {
+  display: flex; align-items: center; gap: 0.65rem;
+  cursor: pointer; font-size: 0.95rem; user-select: none;
+}
+.toggle-label input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  flex-shrink: 0; width: 40px; height: 22px;
+  background: #d0ccc0; border-radius: 999px;
+  position: relative; transition: background 0.2s;
+}
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s;
+}
+.toggle-label input:checked ~ .toggle-track { background: var(--accent); }
+.toggle-label input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
+
 /* ---------- new features: locked items, due dates, overdue, history, modal ---------- */
 .today-row.locked {
   opacity: 0.55;

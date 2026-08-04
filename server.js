@@ -673,16 +673,22 @@ app.get('/api/admin/app-settings', requirePin, (req, res) => {
     school_name: getSetting('school_name') || '',
     passing_pct: Number(getSetting('passing_pct') || 80),
     week_start_day: getSetting('week_start_day') || 'monday',
+    show_home_emoji: getSetting('show_home_emoji') !== 'false',
   });
 });
 
 app.post('/api/admin/app-settings', requirePin, (req, res) => {
-  const { school_name, passing_pct, week_start_day } = req.body;
+  const { school_name, passing_pct, week_start_day, show_home_emoji } = req.body;
   const upsert = (k, v) => db.prepare(`INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(k, String(v));
   if (school_name !== undefined) upsert('school_name', String(school_name).trim());
   if (passing_pct !== undefined) upsert('passing_pct', Math.max(0, Math.min(100, Number(passing_pct))));
   if (week_start_day !== undefined && ['monday', 'sunday'].includes(week_start_day)) upsert('week_start_day', week_start_day);
+  if (show_home_emoji !== undefined) upsert('show_home_emoji', show_home_emoji ? 'true' : 'false');
   res.json({ ok: true });
+});
+
+app.get('/api/public-settings', (req, res) => {
+  res.json({ show_home_emoji: getSetting('show_home_emoji') !== 'false' });
 });
 
 app.post('/api/students', requirePin, (req, res) => {
