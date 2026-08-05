@@ -316,6 +316,7 @@ async function openKid(id, tab = 'today', welcome = false) {
     api(`/api/students/${id}/tests`),
   ]);
   currentStudent = state.student;
+  youngLearnerMode = !!currentStudent.young_learner;
   applyTheme(currentStudent.theme || 'blue');
   applyBgPattern(currentStudent.bg_pattern || 'none');
   updateThemeDots(currentStudent.theme || 'blue');
@@ -1959,7 +1960,35 @@ async function finishFlashcards(nothingDue) {
 
 const practice = { words: [], i: 0, missed: [], missedWords: [], firstTryCorrect: 0, awaitingRetype: false, itemId: null, streak: 0 };
 
+// Young learner mode: word stays visible while typing (set per-student by parent in admin)
+let youngLearnerMode = false;
+
+// Pending practice args stored while the word-list preview is showing
+let pendingPractice = null;
+
 async function startPractice({ listId, itemId } = {}) {
+  const previewListId = listId || currentSpellingListId;
+  if (previewListId) {
+    pendingPractice = { listId, itemId };
+    const list = await api(`/api/lists/${previewListId}`);
+    $('#word-preview-title').textContent = list.name;
+    $('#word-preview-list').innerHTML = list.words
+      .map((w, i) => `<li><span class="word-num">${i + 1}.</span><span>${esc(w.word)}${w.sentence ? `<span class="word-sentence">${esc(w.sentence)}</span>` : ''}</span></li>`)
+      .join('');
+    show('word-preview');
+    return;
+  }
+  await startPracticeNow({ listId, itemId });
+}
+
+$('#word-preview-start').addEventListener('click', () => {
+  if (!pendingPractice) return;
+  const args = pendingPractice;
+  pendingPractice = null;
+  startPracticeNow(args);
+});
+
+async function startPracticeNow({ listId, itemId } = {}) {
   const url = listId ? `/api/session/${currentStudent.id}?listId=${listId}` : `/api/session/${currentStudent.id}`;
   const { words } = await api(url);
   if (words.length === 0) {
@@ -1982,9 +2011,24 @@ function presentPracticeWord() {
   practice.awaitingRetype = false;
   $('#practice-progress').textContent = `Word ${practice.i + 1} of ${practice.words.length}`;
   $('#practice-bar').style.width = `${(practice.i / practice.words.length) * 100}%`;
-  $('#practice-prompt').textContent = 'Listen, then type the word:';
   $('#feedback').innerHTML = '';
   const input = $('#practice-input');
+  input.value = '';
+
+  if (youngLearnerMode) {
+    showWordFirst(w);
+  } else {
+    $('#practice-prompt').textContent = 'Listen, then type the word:';
+    input.disabled = false;
+    input.focus();
+    speakWord(w);
+  }
+}
+
+function showWordFirst(w) {
+  const input = $('#practice-input');
+  $('#practice-prompt').textContent = 'Look at the word and type it:';
+  $('#feedback').innerHTML = `<div class="study-word">${esc(w.word)}</div>`;
   input.value = '';
   input.disabled = false;
   input.focus();
@@ -2043,7 +2087,7 @@ function showStudyThenRetype(typed, w) {
   input.disabled = true;
   const d = diffLetters(typed, w.word);
   const fb = $('#feedback');
-  let secs = 4;
+  let secs = 8;
 
   const hint = `Hint: starts with <strong>${esc(w.word[0].toUpperCase())}</strong>`;
   const render = () => {

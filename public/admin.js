@@ -128,11 +128,18 @@ async function loadKids() {
             .map(([t, c]) => `<button class="theme-swatch theme-${t} ${t === theme ? 'selected' : ''}" data-student-theme="${s.id}" data-theme="${t}" title="${t}" style="background:${c}"></button>`)
             .join('');
           const streak = s.streak_count >= 2 ? `<span style="color:#e8802a;font-size:.85rem">🔥 ${s.streak_count} day streak</span>` : '';
-          return `<div class="item-row">
+          const youngLabel = s.young_learner
+            ? `<span class="badge-young" title="Young learner mode on">👶 Young</span>`
+            : '';
+          return `<div class="item-row" style="flex-wrap:wrap;gap:0.5rem">
             <span style="font-size:1.5rem">${esc(s.emoji)}</span>
             <strong class="grow">${esc(s.name)}</strong>
             ${streak}
+            ${youngLabel}
             <div class="theme-swatch-row" title="Kid's color theme">${swatches}</div>
+            <label class="young-learner-toggle" title="Show word while typing (for younger kids)" style="font-size:0.85rem;display:flex;align-items:center;gap:0.3rem;cursor:pointer">
+              <input type="checkbox" data-young-learner="${s.id}" ${s.young_learner ? 'checked' : ''}> 👶 See it first
+            </label>
             <button class="danger" data-del-student="${s.id}">Remove</button>
           </div>`;
         })
@@ -148,6 +155,15 @@ async function loadKids() {
       document.querySelectorAll(`[data-student-theme="${studentId}"]`).forEach((b) =>
         b.classList.toggle('selected', b.dataset.theme === theme)
       );
+    })
+  );
+
+  document.querySelectorAll('[data-young-learner]').forEach((chk) =>
+    chk.addEventListener('change', async () => {
+      await api(`/api/students/${chk.dataset.youngLearner}/young-learner`, {
+        method: 'PATCH',
+        body: { young_learner: chk.checked },
+      });
     })
   );
 

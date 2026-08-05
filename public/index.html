@@ -195,6 +195,17 @@
     <div id="flash-done" class="done-card" hidden></div>
   </section>
 
+  <!-- Word list preview (shown before practice starts) -->
+  <section id="view-word-preview" class="view" hidden>
+    <button class="back-btn" data-back="word-preview">← Back</button>
+    <div class="word-card">
+      <h2 id="word-preview-title" class="preview-title"></h2>
+      <p class="prompt">Here are your spelling words:</p>
+      <ol id="word-preview-list" class="word-preview-list"></ol>
+      <button id="word-preview-start" class="check-btn">Ready! Start Practice →</button>
+    </div>
+  </section>
+
   <!-- Practice (spelling) -->
   <section id="view-practice" class="view" hidden>
     <button class="back-btn" data-back="practice">← Stop</button>
