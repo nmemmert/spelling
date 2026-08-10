@@ -342,6 +342,9 @@ async function openKid(id, tab = 'today', welcome = false) {
   switchTab(tab);
   if (welcome) showWelcomeToast(currentStudent.emoji, currentStudent.name);
 
+  // Birthday celebration — show once per day when it's the student's birthday week
+  if (state.student.isBirthdayWeek) showBirthdayCelebration(state.student.name);
+
   // Celebrate if all today's tasks are done
   if (agenda.tasks.length > 0) {
     const allDone = agenda.tasks.every((t) =>
@@ -376,6 +379,23 @@ function showCelebration({ streak, best }) {
 
 $('#celebration-close').addEventListener('click', () => {
   $('#celebration-overlay').hidden = true;
+});
+
+// ---------- birthday celebration ----------
+
+function showBirthdayCelebration(name) {
+  const key = `bday_shown_${name}_${todayStr()}`;
+  if (sessionStorage.getItem(key)) return; // only once per session per day
+  sessionStorage.setItem(key, '1');
+  $('#birthday-heading').textContent = `Happy Birthday, ${name}! 🎉`;
+  $('#birthday-message').textContent = 'Wishing you an amazing day full of fun and joy!';
+  $('#birthday-overlay').hidden = false;
+  playFanfare();
+  popConfetti();
+}
+
+$('#birthday-close').addEventListener('click', () => {
+  $('#birthday-overlay').hidden = true;
 });
 
 // ---------- mini celebration (confetti + toast) ----------

@@ -118,6 +118,27 @@ function showPanel(name) {
 
 const THEME_COLORS = { blue: '#4f86f7', green: '#2e9e5b', purple: '#7c5cbf', orange: '#e8802a', pink: '#d45d8a', red: '#e84040', teal: '#20a8a0', yellow: '#c8960c', indigo: '#5b6abf' };
 
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function formatBirthday(mmdd) {
+  if (!mmdd) return '';
+  const [mm, dd] = mmdd.split('-');
+  const month = MONTH_NAMES[Number(mm) - 1] || mm;
+  return `${month} ${Number(dd)}`;
+}
+
+// Convert stored MM-DD to YYYY-MM-DD for <input type="date"> (uses current year as placeholder)
+function birthdayToDateInput(mmdd) {
+  if (!mmdd) return '';
+  return `${new Date().getFullYear()}-${mmdd}`;
+}
+
+function isSummerBirthday(mmdd) {
+  if (!mmdd) return false;
+  const mm = Number(mmdd.split('-')[0]);
+  return mm >= 6 && mm <= 8;
+}
+
 async function loadKids() {
   const students = await api('/api/students');
   $('#student-rows').innerHTML = students.length
@@ -131,6 +152,11 @@ async function loadKids() {
           const youngLabel = s.young_learner
             ? `<span class="badge-young" title="Young learner mode on">👶 Young</span>`
             : '';
+          const bdayVal = birthdayToDateInput(s.birthday);
+          const bdayDisplay = s.birthday ? `🎂 ${formatBirthday(s.birthday)}` : '🎂 —';
+          const summerNote = isSummerBirthday(s.birthday)
+            ? `<span style="font-size:.8rem;color:#c8760c" title="Summer birthday: the celebration shows that week. Change the date to a nearby school week to celebrate early instead.">☀️ Summer birthday</span>`
+            : '';
           return `<div class="item-row" style="flex-wrap:wrap;gap:0.5rem">
             <span style="font-size:1.5rem">${esc(s.emoji)}</span>
             <strong class="grow">${esc(s.name)}</strong>
@@ -140,6 +166,13 @@ async function loadKids() {
             <label class="young-learner-toggle" title="Show word while typing (for younger kids)" style="font-size:0.85rem;display:flex;align-items:center;gap:0.3rem;cursor:pointer">
               <input type="checkbox" data-young-learner="${s.id}" ${s.young_learner ? 'checked' : ''}> 👶 See it first
             </label>
+            <div style="width:100%;display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;font-size:.85rem;padding-top:.25rem;border-top:1px solid #eee">
+              <span style="color:#555">${bdayDisplay}</span>
+              ${summerNote}
+              <label style="display:flex;align-items:center;gap:.35rem;color:#555">
+                Edit: <input type="date" class="birthday-input" data-birthday-student="${s.id}" value="${bdayVal}" style="font-size:.82rem;border:1px solid #ccc;border-radius:4px;padding:2px 4px">
+              </label>
+            </div>
             <button class="danger" data-del-student="${s.id}">Remove</button>
           </div>`;
         })
@@ -151,7 +184,6 @@ async function loadKids() {
       const studentId = btn.dataset.studentTheme;
       const theme = btn.dataset.theme;
       await api(`/api/students/${studentId}`, { method: 'PUT', body: { theme } });
-      // Update selected state without full reload
       document.querySelectorAll(`[data-student-theme="${studentId}"]`).forEach((b) =>
         b.classList.toggle('selected', b.dataset.theme === theme)
       );
@@ -164,6 +196,17 @@ async function loadKids() {
         method: 'PATCH',
         body: { young_learner: chk.checked },
       });
+    })
+  );
+
+  // Birthday edit: auto-save on change, strip year from YYYY-MM-DD → MM-DD
+  document.querySelectorAll('.birthday-input').forEach((input) =>
+    input.addEventListener('change', async () => {
+      const studentId = input.dataset.birthdayStudent;
+      const birthday = input.value ? input.value.slice(5) : '';
+      await api(`/api/students/${studentId}`, { method: 'PUT', body: { birthday } });
+      msg('Birthday saved.');
+      loadKids();
     })
   );
 
@@ -181,8 +224,11 @@ $('#add-student-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = $('#new-student-name').value.trim();
   if (!name) return;
-  await api('/api/students', { method: 'POST', body: { name, emoji: $('#new-student-emoji').value } });
+  const bdayFull = $('#new-student-birthday').value; // YYYY-MM-DD from <input type="date">
+  const birthday = bdayFull ? bdayFull.slice(5) : ''; // strip year → MM-DD
+  await api('/api/students', { method: 'POST', body: { name, emoji: $('#new-student-emoji').value, birthday } });
   $('#new-student-name').value = '';
+  $('#new-student-birthday').value = '';
   msg('Kid added.');
   loadKids();
 });

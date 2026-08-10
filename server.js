@@ -324,8 +324,26 @@ const GRADABLE_TYPES = ['assignment', 'quiz', 'matching', 'crossword', 'spelling
 
 // ---------- kid picker ----------
 
+// Returns true if today falls within the Mon–Sun week that contains the birthday (MM-DD)
+function isBirthdayWeek(birthday) {
+  if (!birthday) return false;
+  const [mm, dd] = birthday.split('-').map(Number);
+  if (!mm || !dd) return false;
+  const now = new Date();
+  const year = now.getFullYear();
+  const bday = new Date(year, mm - 1, dd);
+  // Monday of the week containing the birthday
+  const dow = bday.getDay(); // 0=Sun
+  const monday = new Date(bday);
+  monday.setDate(bday.getDate() - (dow === 0 ? 6 : dow - 1));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return todayMidnight >= monday && todayMidnight <= sunday;
+}
+
 app.get('/api/students', (req, res) => {
-  res.json(db.prepare(`SELECT id, name, emoji, theme, bg_pattern, streak_count, streak_date, young_learner FROM students ORDER BY name`).all());
+  res.json(db.prepare(`SELECT id, name, emoji, theme, bg_pattern, streak_count, streak_date, young_learner, birthday FROM students ORDER BY name`).all());
 });
 
 const VALID_THEMES = ['blue','green','purple','orange','pink','red','teal','yellow','indigo'];
@@ -376,7 +394,7 @@ app.post('/api/students/:id/complete-day', (req, res) => {
 // Everything the standalone spelling home screen needs
 app.get('/api/state/:studentId', (req, res) => {
   const id = req.params.studentId;
-  const student = db.prepare(`SELECT id, name, emoji, theme, bg_pattern, young_learner FROM students WHERE id = ?`).get(id);
+  const student = db.prepare(`SELECT id, name, emoji, theme, bg_pattern, young_learner, birthday FROM students WHERE id = ?`).get(id);
   if (!student) return res.status(404).json({ error: 'No such student' });
 
   const assignment = db.prepare(`
@@ -402,7 +420,7 @@ app.get('/api/state/:studentId', (req, res) => {
       AND date(p.due) <= date('now')
   `).get(id, assignment ? assignment.id : -1).n;
 
-  res.json({ student, assignment, listProgress, dueReviews });
+  res.json({ student: { ...student, isBirthdayWeek: isBirthdayWeek(student.birthday) }, assignment, listProgress, dueReviews });
 });
 
 // Build a practice session: the target list's unmastered words + due reviews.
@@ -696,19 +714,32 @@ app.get('/api/public-settings', (req, res) => {
   res.json({ show_home_emoji: getSetting('show_home_emoji') !== 'false' });
 });
 
+// Validate MM-DD format (no year stored — birthday repeats annually)
+function parseBirthday(val) {
+  if (!val) return null;
+  const m = String(val).match(/^(\d{1,2})-(\d{2})$/);
+  if (!m) return null;
+  const mm = Number(m[1]), dd = Number(m[2]);
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+  return `${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+}
+
 app.post('/api/students', requirePin, (req, res) => {
   const name = String(req.body.name || '').trim();
   if (!name) return res.status(400).json({ error: 'Name required' });
-  const id = db.prepare(`INSERT INTO students (name, emoji) VALUES (?, ?)`)
-    .run(name, req.body.emoji || '🙂').lastInsertRowid;
+  const birthday = parseBirthday(req.body.birthday);
+  const id = db.prepare(`INSERT INTO students (name, emoji, birthday) VALUES (?, ?, ?)`)
+    .run(name, req.body.emoji || '🙂', birthday).lastInsertRowid;
   res.json({ id });
 });
 
 app.put('/api/students/:id', requirePin, (req, res) => {
-  const { emoji, theme } = req.body;
+  const { emoji, theme, birthday } = req.body;
   if (emoji) db.prepare(`UPDATE students SET emoji = ? WHERE id = ?`).run(String(emoji), req.params.id);
   if (theme && VALID_THEMES.includes(theme))
     db.prepare(`UPDATE students SET theme = ? WHERE id = ?`).run(theme, req.params.id);
+  if (birthday !== undefined)
+    db.prepare(`UPDATE students SET birthday = ? WHERE id = ?`).run(parseBirthday(birthday), req.params.id);
   res.json({ ok: true });
 });
 
