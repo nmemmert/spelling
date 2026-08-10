@@ -53,6 +53,8 @@ body {
 }
 
 .app-title { font-size: 2.4rem; margin-bottom: 0.5rem; }
+
+#school-logo { display: block; margin: 2.5rem auto 0; max-width: min(520px, 92vw); height: auto; }
 .subtitle { font-size: 1.25rem; color: var(--muted); margin-bottom: 2rem; }
 .hint { color: var(--muted); margin: 1rem 0; }
 .error { color: var(--bad); margin: 0.5rem 0; }

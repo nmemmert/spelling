@@ -22,7 +22,7 @@
 
   <div id="console" hidden>
     <header class="admin-header">
-      <a href="index.html" class="admin-logo">🎓 Homeschool</a>
+      <a href="index.html" class="admin-logo" id="admin-school-name">🎓 Homeschool</a>
       <nav class="admin-nav">
         <button class="nav-pill active" data-panel="kids">🧒 Kids</button>
         <button class="nav-pill" data-panel="courses">📚 Courses</button>
@@ -516,8 +516,24 @@
         <h2>School</h2>
         <form id="app-settings-form">
           <div class="field-group">
-            <label for="setting-school-name">School / family name <span class="hint">(appears on printed reports)</span></label>
+            <label for="setting-school-name">School / family name <span class="hint">(appears on home screen and printed reports)</span></label>
             <input id="setting-school-name" type="text" placeholder="e.g. Emmert Academy" style="max-width:22rem;display:block;margin-top:.35rem">
+          </div>
+
+          <div class="field-group" style="margin-top:1rem">
+            <label>School logo <span class="hint">(shown on the student home screen)</span></label>
+            <div id="logo-preview-wrap" style="margin:.4rem 0 .6rem">
+              <img id="logo-preview" src="" alt="School logo" hidden style="max-height:80px;max-width:240px;border-radius:6px;display:block;margin-bottom:.4rem">
+              <p id="logo-none-msg" class="hint" style="margin:0">No logo uploaded.</p>
+            </div>
+            <div class="inline-form" style="gap:.5rem;flex-wrap:wrap">
+              <label class="btn" style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem">
+                📁 Choose logo
+                <input id="logo-file-input" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" style="display:none">
+              </label>
+              <button type="button" id="logo-remove-btn" hidden>Remove logo</button>
+            </div>
+            <p class="hint" style="margin-top:.3rem">PNG, JPG, GIF, WebP, or SVG · max 2 MB</p>
           </div>
 
           <div class="field-group" style="margin-top:1rem">

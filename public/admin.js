@@ -58,12 +58,17 @@ $('#pin-form').addEventListener('submit', async (e) => {
   unlock();
 });
 
+function updateAdminHeader() {
+  $('#admin-school-name').textContent = `🎓 ${appSettings.schoolName || 'Homeschool'}`;
+}
+
 async function loadAppSettings() {
   try {
     const s = await api('/api/admin/app-settings');
     appSettings.schoolName = s.school_name || '';
     appSettings.passingPct = Number(s.passing_pct) || 80;
     appSettings.weekStartDay = s.week_start_day || 'monday';
+    updateAdminHeader();
   } catch {}
 }
 
@@ -2551,7 +2556,48 @@ async function loadSettings() {
   const radio = document.querySelector(`input[name="week_start_day"][value="${appSettings.weekStartDay}"]`);
   if (radio) radio.checked = true;
   $('#setting-show-emoji').checked = s.show_home_emoji !== false;
+
+  const pub = await fetch('/api/public-settings').then((r) => r.json()).catch(() => ({}));
+  setLogoPreview(pub.has_logo);
 }
+
+function setLogoPreview(hasLogo) {
+  const preview = $('#logo-preview');
+  const noneMsg = $('#logo-none-msg');
+  const removeBtn = $('#logo-remove-btn');
+  if (hasLogo) {
+    preview.src = `/api/logo?v=${Date.now()}`;
+    preview.hidden = false;
+    noneMsg.hidden = true;
+    removeBtn.hidden = false;
+  } else {
+    preview.hidden = true;
+    noneMsg.hidden = false;
+    removeBtn.hidden = true;
+  }
+}
+
+$('#logo-file-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { msg('Logo must be under 2 MB.'); e.target.value = ''; return; }
+  const b64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  await api('/api/admin/upload-logo', { method: 'POST', body: { base64: b64, mime: file.type } });
+  e.target.value = '';
+  setLogoPreview(true);
+  msg('Logo saved.');
+});
+
+$('#logo-remove-btn').addEventListener('click', async () => {
+  await api('/api/admin/logo', { method: 'DELETE' });
+  setLogoPreview(false);
+  msg('Logo removed.');
+});
 
 $('#app-settings-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -2561,6 +2607,7 @@ $('#app-settings-form').addEventListener('submit', async (e) => {
   const show_home_emoji = $('#setting-show-emoji').checked;
   await api('/api/admin/app-settings', { method: 'POST', body: { school_name, passing_pct, week_start_day, show_home_emoji } });
   appSettings.schoolName = school_name;
+  updateAdminHeader();
   appSettings.passingPct = passing_pct;
   if (appSettings.weekStartDay !== week_start_day) {
     appSettings.weekStartDay = week_start_day;

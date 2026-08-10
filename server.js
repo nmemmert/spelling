@@ -3,7 +3,7 @@ import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import mammoth from 'mammoth';
 import multer from 'multer';
@@ -711,7 +711,56 @@ app.post('/api/admin/app-settings', requirePin, (req, res) => {
 });
 
 app.get('/api/public-settings', (req, res) => {
-  res.json({ show_home_emoji: getSetting('show_home_emoji') !== 'false' });
+  const logoExt = getSetting('logo_ext');
+  res.json({
+    show_home_emoji: getSetting('show_home_emoji') !== 'false',
+    school_name: getSetting('school_name') || '',
+    has_logo: !!(logoExt && existsSync(join(DATA_DIR, `logo${logoExt}`))),
+  });
+});
+
+app.get('/api/logo', (req, res) => {
+  const ext = getSetting('logo_ext');
+  if (!ext) return res.status(404).end();
+  const filePath = join(DATA_DIR, `logo${ext}`);
+  if (!existsSync(filePath)) return res.status(404).end();
+  const mimeMap = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml' };
+  res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(filePath);
+});
+
+app.post('/api/admin/upload-logo', requirePin, async (req, res) => {
+  const { base64: b64, mime } = req.body;
+  if (!b64 || !mime) return res.status(400).json({ error: 'base64 and mime required' });
+  const mimeToExt = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp', 'image/svg+xml': '.svg' };
+  const ext = mimeToExt[mime];
+  if (!ext) return res.status(400).json({ error: 'Unsupported image type' });
+
+  let buffer;
+  try { buffer = Buffer.from(b64, 'base64'); }
+  catch (_) { return res.status(400).json({ error: 'Invalid base64' }); }
+
+  if (buffer.byteLength > 2 * 1024 * 1024) return res.status(400).json({ error: 'Logo must be under 2 MB' });
+
+  const oldExt = getSetting('logo_ext');
+  if (oldExt && oldExt !== ext) {
+    await unlink(join(DATA_DIR, `logo${oldExt}`)).catch(() => {});
+  }
+
+  await writeFile(join(DATA_DIR, `logo${ext}`), buffer);
+  const upsert = (k, v) => db.prepare(`INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(k, String(v));
+  upsert('logo_ext', ext);
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/logo', requirePin, async (req, res) => {
+  const ext = getSetting('logo_ext');
+  if (ext) {
+    await unlink(join(DATA_DIR, `logo${ext}`)).catch(() => {});
+    db.prepare(`DELETE FROM settings WHERE key = 'logo_ext'`).run();
+  }
+  res.json({ ok: true });
 });
 
 // Validate MM-DD format (no year stored — birthday repeats annually)

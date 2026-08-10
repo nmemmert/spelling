@@ -247,6 +247,21 @@ async function loadHome() {
   document.querySelector('.page-confetti').style.display =
     pubSettings.show_home_emoji === false ? 'none' : '';
 
+  const nameTitle = document.getElementById('school-name-title');
+  if (pubSettings.school_name) {
+    nameTitle.textContent = pubSettings.school_name;
+    document.title = pubSettings.school_name;
+  }
+  const logoEl = document.getElementById('school-logo');
+  if (pubSettings.has_logo) {
+    logoEl.src = `/api/logo?v=${Date.now()}`;
+    logoEl.hidden = false;
+    nameTitle.hidden = true;
+  } else {
+    logoEl.hidden = true;
+    nameTitle.hidden = false;
+  }
+
   const students = await api('/api/students');
   $('#no-kids').hidden = students.length > 0;
   $('#kid-cards').innerHTML = students
