@@ -406,6 +406,25 @@
       <!-- Spelling (legacy word lists + weekly assignment) -->
       <section id="panel-spelling" class="panel">
         <h1>Spelling</h1>
+
+        <h2>Practice Activity</h2>
+        <div class="inline-form">
+          <label>Period <select id="practice-since">
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="">All time</option>
+          </select></label>
+        </div>
+        <div id="practice-activity-table"></div>
+
+        <div id="practice-modal" class="modal" hidden>
+          <div class="modal-box">
+            <h3 id="practice-modal-title">Practice Detail</h3>
+            <div id="practice-modal-body"></div>
+            <button id="practice-modal-close" class="secondary">Close</button>
+          </div>
+        </div>
+
         <div class="panel-cols">
           <div class="panel-col">
             <h2>This week's list per kid</h2>

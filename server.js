@@ -544,6 +544,59 @@ app.get('/api/test-report/:testId', (req, res) => {
   res.json(test);
 });
 
+// ---------- spelling practice activity (parent view) ----------
+
+app.get('/api/spelling-activity', requirePin, (req, res) => {
+  const sinceArg = req.query.since ? Math.max(1, Math.min(365, Number(req.query.since))) : null;
+  const sinceDate = sinceArg ? new Date(Date.now() - sinceArg * 86400000).toISOString().slice(0, 10) : null;
+
+  const students = db.prepare(`SELECT id, name, emoji FROM students ORDER BY name`).all();
+  const dayWithSince = db.prepare(`
+    SELECT date(a.at) AS day, MIN(a.at) AS first_at, MAX(a.at) AS last_at,
+           COUNT(CASE WHEN a.mode = 'practice' THEN 1 END) AS attempted,
+           SUM(CASE WHEN a.mode = 'practice' AND a.correct = 1 THEN 1 ELSE 0 END) AS correct_count,
+           GROUP_CONCAT(DISTINCT l.name) AS lists
+    FROM attempts a
+    JOIN words w ON w.id = a.word_id
+    JOIN lists l ON l.id = w.list_id
+    WHERE a.student_id = ? AND date(a.at) >= ?
+    GROUP BY date(a.at)
+    ORDER BY day DESC
+  `);
+  const dayAll = db.prepare(`
+    SELECT date(a.at) AS day, MIN(a.at) AS first_at, MAX(a.at) AS last_at,
+           COUNT(CASE WHEN a.mode = 'practice' THEN 1 END) AS attempted,
+           SUM(CASE WHEN a.mode = 'practice' AND a.correct = 1 THEN 1 ELSE 0 END) AS correct_count,
+           GROUP_CONCAT(DISTINCT l.name) AS lists
+    FROM attempts a
+    JOIN words w ON w.id = a.word_id
+    JOIN lists l ON l.id = w.list_id
+    WHERE a.student_id = ?
+    GROUP BY date(a.at)
+    ORDER BY day DESC
+  `);
+
+  const result = students.map((s) => {
+    const rows = sinceDate ? dayWithSince.all(s.id, sinceDate) : dayAll.all(s.id);
+    return { ...s, days: rows.map((d) => ({ ...d, lists: d.lists ? d.lists.split(',') : [] })) };
+  }).filter((s) => s.days.length > 0);
+
+  res.json({ students: result });
+});
+
+app.get('/api/spelling-activity/:studentId/:date', requirePin, (req, res) => {
+  if (!isDateStr(req.params.date)) return res.status(400).json({ error: 'Invalid date' });
+  const words = db.prepare(`
+    SELECT w.word, a.typed, a.correct, a.mode, a.at, l.name AS list_name
+    FROM attempts a
+    JOIN words w ON w.id = a.word_id
+    JOIN lists l ON l.id = w.list_id
+    WHERE a.student_id = ? AND date(a.at) = ?
+    ORDER BY a.at
+  `).all(req.params.studentId, req.params.date);
+  res.json({ words });
+});
+
 // ---------- word lists (read is public, kids never write) ----------
 
 app.get('/api/lists', (req, res) => {

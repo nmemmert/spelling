@@ -2088,7 +2088,85 @@ async function loadSpelling() {
   cachedStudents = overview.students;
   renderAssignRows(overview.students);
   renderLists(lists);
+  loadPracticeActivity();
 }
+
+async function loadPracticeActivity() {
+  const since = $('#practice-since').value;
+  const url = since ? `/api/spelling-activity?since=${since}` : '/api/spelling-activity';
+  const container = $('#practice-activity-table');
+  try {
+    const { students } = await api(url);
+    if (!students.length) {
+      container.innerHTML = `<p class="hint">No practice recorded yet.</p>`;
+      return;
+    }
+    container.innerHTML = students.map((s) => {
+      const rows = s.days.map((d) => {
+        const pct = d.attempted > 0 ? Math.round((d.correct_count / d.attempted) * 100) : null;
+        const startTime = new Date(d.first_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const endTime = new Date(d.last_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateLabel = new Date(d.day + 'T00:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+        const scoreHtml = pct !== null
+          ? `<span class="${pct >= appSettings.passingPct ? 'score-good' : 'score-bad'}">${d.correct_count}/${d.attempted} (${pct}%)</span>`
+          : '<span class="hint">—</span>';
+        return `<tr style="cursor:pointer" data-student="${s.id}" data-date="${d.day}">
+          <td>${dateLabel}</td>
+          <td class="hint">${startTime}–${endTime}</td>
+          <td>${esc(d.lists.join(', '))}</td>
+          <td>${scoreHtml}</td>
+        </tr>`;
+      }).join('');
+      return `<div class="results-student"><h3>${esc(s.emoji)} ${esc(s.name)}</h3>
+        <table class="results"><tr><th>Date</th><th>Time</th><th>Lists</th><th>First-try score</th></tr>${rows}</table></div>`;
+    }).join('');
+    container.querySelectorAll('[data-student][data-date]').forEach((row) =>
+      row.addEventListener('click', () => showPracticeDetail(row.dataset.student, row.dataset.date))
+    );
+  } catch (e) {
+    container.innerHTML = `<p class="hint">Could not load practice activity.</p>`;
+  }
+}
+
+async function showPracticeDetail(studentId, date) {
+  const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  $('#practice-modal-title').textContent = `Practice on ${dateLabel}`;
+  $('#practice-modal-body').innerHTML = `<p class="hint">Loading…</p>`;
+  $('#practice-modal').hidden = false;
+  try {
+    const { words } = await api(`/api/spelling-activity/${studentId}/${date}`);
+    if (!words.length) {
+      $('#practice-modal-body').innerHTML = `<p class="hint">No attempts recorded.</p>`;
+      return;
+    }
+    const byList = {};
+    for (const w of words) {
+      if (!byList[w.list_name]) byList[w.list_name] = [];
+      byList[w.list_name].push(w);
+    }
+    $('#practice-modal-body').innerHTML = Object.entries(byList).map(([list, ws]) => {
+      const rows = ws.map((w) => {
+        const time = new Date(w.at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const modeIcon = w.mode === 'practice' ? '✏️' : '🔁';
+        const correct = Number(w.correct);
+        return `<tr>
+          <td class="hint">${time}</td>
+          <td title="${w.mode === 'practice' ? 'First try' : 'Retype'}">${modeIcon}</td>
+          <td><strong>${esc(w.word)}</strong></td>
+          <td class="${correct ? 'score-good' : 'score-bad'}">${esc(w.typed)}</td>
+          <td>${correct ? '✓' : '✗'}</td>
+        </tr>`;
+      }).join('');
+      return `<h4 style="margin:0.75rem 0 0.25rem;font-size:.95rem">${esc(list)}</h4>
+        <table class="results"><tr><th>Time</th><th></th><th>Word</th><th>Typed</th><th></th></tr>${rows}</table>`;
+    }).join('');
+  } catch {
+    $('#practice-modal-body').innerHTML = `<p class="hint">Could not load detail.</p>`;
+  }
+}
+
+$('#practice-modal-close').addEventListener('click', () => { $('#practice-modal').hidden = true; });
+$('#practice-since').addEventListener('change', loadPracticeActivity);
 
 function renderAssignRows(students) {
   const options = (sel) =>
