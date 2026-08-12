@@ -1991,6 +1991,15 @@ async function finishFlashcards(nothingDue) {
   $('#flash-home').addEventListener('click', () => backTarget());
 }
 
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 // ---------- spelling: practice ----------
 
 const practice = { words: [], i: 0, missed: [], missedWords: [], firstTryCorrect: 0, awaitingRetype: false, itemId: null, streak: 0 };
