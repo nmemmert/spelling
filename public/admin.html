@@ -407,7 +407,17 @@
       <section id="panel-spelling" class="panel">
         <h1>Spelling</h1>
 
-        <h2>Practice Activity</h2>
+        <h2>Practice Sessions</h2>
+        <div class="inline-form">
+          <label>Period <select id="sessions-since">
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="">All time</option>
+          </select></label>
+        </div>
+        <div id="practice-sessions-table"></div>
+
+        <h2>Practice Activity (word-by-word)</h2>
         <div class="inline-form">
           <label>Period <select id="practice-since">
             <option value="30">Last 30 days</option>

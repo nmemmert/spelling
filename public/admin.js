@@ -2088,7 +2088,47 @@ async function loadSpelling() {
   cachedStudents = overview.students;
   renderAssignRows(overview.students);
   renderLists(lists);
+  loadPracticeSessions();
   loadPracticeActivity();
+}
+
+async function loadPracticeSessions() {
+  const since = $('#sessions-since').value;
+  const url = since ? `/api/spelling-sessions?since=${since}` : '/api/spelling-sessions';
+  const container = $('#practice-sessions-table');
+  try {
+    const { sessions } = await api(url);
+    if (!sessions.length) {
+      container.innerHTML = `<p class="hint">No course practice sessions recorded yet. Sessions are tracked when students complete a Spelling Practice item in a course.</p>`;
+      return;
+    }
+    const rows = sessions.map((s) => {
+      const pct = s.points_possible > 0 ? Math.round((s.score / s.points_possible) * 100) : null;
+      const scoreHtml = pct !== null
+        ? `<span class="${pct >= appSettings.passingPct ? 'score-good' : 'score-bad'}">${s.score}/${s.points_possible} (${pct}%)</span>`
+        : '<span class="hint">—</span>';
+      const dt = new Date(s.completed_at + 'Z');
+      const dateLabel = dt.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+      const timeLabel = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `<tr style="cursor:pointer" data-student="${s.student_id}" data-date="${s.completed_at.slice(0, 10)}">
+        <td>${esc(s.emoji)} ${esc(s.student_name)}</td>
+        <td>${dateLabel} <span class="hint">${timeLabel}</span></td>
+        <td>${esc(s.course_name)}</td>
+        <td>${esc(s.item_title)}</td>
+        <td>${esc(s.list_name || '—')}</td>
+        <td>${scoreHtml}</td>
+      </tr>`;
+    }).join('');
+    container.innerHTML = `<table class="results">
+      <tr><th>Student</th><th>Date</th><th>Course</th><th>Item</th><th>List</th><th>Score</th></tr>
+      ${rows}
+    </table>`;
+    container.querySelectorAll('[data-student][data-date]').forEach((row) =>
+      row.addEventListener('click', () => showPracticeDetail(row.dataset.student, row.dataset.date))
+    );
+  } catch (e) {
+    container.innerHTML = `<p class="hint">Could not load practice sessions.</p>`;
+  }
 }
 
 async function loadPracticeActivity() {
@@ -2166,6 +2206,7 @@ async function showPracticeDetail(studentId, date) {
 }
 
 $('#practice-modal-close').addEventListener('click', () => { $('#practice-modal').hidden = true; });
+$('#sessions-since').addEventListener('change', loadPracticeSessions);
 $('#practice-since').addEventListener('change', loadPracticeActivity);
 
 function renderAssignRows(students) {

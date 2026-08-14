@@ -2164,7 +2164,15 @@ async function nextPracticeWord() {
   $('#practice-progress').textContent = 'Done!';
   $('#practice-card').hidden = true;
   if (practice.itemId) {
-    await api(`/api/items/${practice.itemId}/complete`, { method: 'POST', body: { studentId: currentStudent.id, date: todayStr() } });
+    await api(`/api/items/${practice.itemId}/complete`, {
+      method: 'POST',
+      body: {
+        studentId: currentStudent.id,
+        date: todayStr(),
+        sessionAttempted: practice.words.length,
+        sessionCorrect: practice.firstTryCorrect,
+      },
+    });
   }
   const missedWords = practice.missedWords.slice();
   const missedHtml = practice.missed.length

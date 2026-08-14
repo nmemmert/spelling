@@ -597,6 +597,30 @@ app.get('/api/spelling-activity/:studentId/:date', requirePin, (req, res) => {
   res.json({ words });
 });
 
+// Per-session records for spelling_practice course items (one row per completed pass)
+app.get('/api/spelling-sessions', requirePin, (req, res) => {
+  const sinceArg = req.query.since ? Math.max(1, Math.min(365, Number(req.query.since))) : null;
+  const sinceDate = sinceArg ? new Date(Date.now() - sinceArg * 86400000).toISOString().slice(0, 10) : null;
+  const base = `
+    SELECT sh.id, sh.student_id, sh.item_id, sh.score, sh.points_possible, sh.completed_at,
+           s.name AS student_name, s.emoji,
+           i.title AS item_title,
+           l.name AS list_name,
+           c.name AS course_name
+    FROM submission_history sh
+    JOIN students s ON s.id = sh.student_id
+    JOIN items i ON i.id = sh.item_id
+    JOIN units u ON u.id = i.unit_id
+    JOIN courses c ON c.id = u.course_id
+    LEFT JOIN lists l ON l.id = i.ref_id
+    WHERE i.type = 'spelling_practice'
+  `;
+  const sessions = sinceDate
+    ? db.prepare(base + ` AND date(sh.completed_at) >= ? ORDER BY sh.completed_at DESC LIMIT 500`).all(sinceDate)
+    : db.prepare(base + ` ORDER BY sh.completed_at DESC LIMIT 500`).all();
+  res.json({ sessions });
+});
+
 // ---------- word lists (read is public, kids never write) ----------
 
 app.get('/api/lists', (req, res) => {
@@ -1512,8 +1536,8 @@ app.get('/api/items/:id', (req, res) => {
 // Mark a lesson viewed, an assignment done, or a practice/flashcards session finished.
 // Never downgrades an already-graded submission unless allow_retakes is set.
 app.post('/api/items/:id/complete', (req, res) => {
-  const { studentId, date, evidenceNotes, evidencePhoto, studentNote } = req.body;
-  const item = db.prepare(`SELECT id, points, allow_retakes FROM items WHERE id = ?`).get(req.params.id);
+  const { studentId, date, evidenceNotes, evidencePhoto, studentNote, sessionAttempted, sessionCorrect } = req.body;
+  const item = db.prepare(`SELECT id, type, points, allow_retakes FROM items WHERE id = ?`).get(req.params.id);
   if (!item) return res.status(404).json({ error: 'No such item' });
 
   if (item.allow_retakes) {
@@ -1540,6 +1564,13 @@ app.post('/api/items/:id/complete', (req, res) => {
   }
 
   markScheduleDone.run(studentId, req.params.id, isDateStr(date) ? date : today());
+
+  // Each spelling_practice pass gets its own history entry so the parent sees individual attempts
+  if (item.type === 'spelling_practice' && sessionAttempted != null) {
+    db.prepare(`INSERT INTO submission_history (student_id, item_id, score, points_possible) VALUES (?, ?, ?, ?)`)
+      .run(studentId, req.params.id, sessionCorrect != null ? sessionCorrect : 0, sessionAttempted);
+  }
+
   res.json({ ok: true });
 });
 
