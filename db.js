@@ -206,6 +206,15 @@ db.exec(`
     answers TEXT,
     completed_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    sender TEXT NOT NULL,
+    body TEXT NOT NULL,
+    sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+    read_at TEXT
+  );
 `);
 
 function tryAlter(sql) {

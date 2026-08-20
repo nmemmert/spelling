@@ -78,6 +78,7 @@ async function unlock() {
   $('#console').hidden = false;
   showPanel('kids');
   loadGradingBadge();
+  loadMessagesBadge();
 }
 
 async function loadGradingBadge() {
@@ -110,7 +111,7 @@ function showPanel(name) {
   document.querySelectorAll('.admin-nav .nav-pill').forEach((p) => p.classList.toggle('active', p.dataset.panel === name));
   const loaders = {
     kids: loadKids, courses: loadCourses, planner: loadPlannerPanel,
-    grading: loadGrading, gradebook: loadGradebookPanel, spelling: loadSpelling, decks: loadDecks,
+    grading: loadGrading, messages: loadMessages, gradebook: loadGradebookPanel, spelling: loadSpelling, decks: loadDecks,
     settings: loadSettings,
   };
   if (loaders[name]) loaders[name]();
@@ -1863,6 +1864,26 @@ async function loadGrading() {
 
   const rows = filterEl.value ? allRows.filter((r) => String(r.studentId) === filterEl.value) : allRows;
 
+  function renderShortAnswerBlock(r) {
+    if (r.itemType !== 'worksheet' || !r.body || !r.answers) return '';
+    let wd, answers;
+    try { wd = JSON.parse(r.body); } catch { return ''; }
+    try { answers = JSON.parse(r.answers); } catch { answers = {}; }
+    const rows = [];
+    (wd.sections || []).forEach((section, si) => {
+      (section.questions || []).forEach((q, qi) => {
+        if (q.type !== 'short') return;
+        const response = (answers[`${si}:${qi}`] || '').trim();
+        rows.push(`<div class="sa-row">
+          <div class="sa-question">${esc(q.text)}</div>
+          <div class="sa-response">${response ? esc(response) : '<em class="hint">No answer written</em>'}</div>
+        </div>`);
+      });
+    });
+    if (!rows.length) return '';
+    return `<div class="sa-block"><strong style="font-size:.85rem;color:var(--muted)">Short answers</strong>${rows.join('')}</div>`;
+  }
+
   $('#grading-empty').hidden = rows.length > 0;
   $('#grading-rows').innerHTML = rows
     .map((r) => {
@@ -1879,6 +1900,7 @@ async function loadGrading() {
           <span class="hint">${esc(r.courseName)} · ${esc(r.unitName)}</span>
           ${noteTag}
         </div>
+        ${renderShortAnswerBlock(r)}
         ${evidenceBtn}
         <div class="grading-footer">
           <div class="grade-score-row">
@@ -1926,6 +1948,98 @@ async function loadGrading() {
 }
 
 $('#grading-student-filter').addEventListener('change', loadGrading);
+
+// ============================================================
+// Messages
+// ============================================================
+
+async function loadMessagesBadge() {
+  try {
+    const { count } = await api('/api/admin/messages/count');
+    const pill = document.querySelector('.nav-pill[data-panel="messages"]');
+    if (!pill) return;
+    let badge = pill.querySelector('.msg-nav-badge');
+    if (count > 0) {
+      if (!badge) { badge = document.createElement('span'); badge.className = 'msg-nav-badge'; pill.appendChild(badge); }
+      badge.textContent = count;
+      pill.classList.add('grading-pending');
+    } else {
+      badge?.remove();
+      pill.classList.remove('grading-pending');
+    }
+  } catch { /* non-critical */ }
+}
+
+let activeMessageStudentId = null;
+
+async function loadMessages() {
+  const threads = await api('/api/admin/messages');
+  const listEl = $('#msg-thread-list');
+  if (!threads.length) {
+    listEl.innerHTML = '<p class="hint" style="padding:1rem">No messages yet.</p>';
+    return;
+  }
+  listEl.innerHTML = threads.map((t) => `
+    <button class="msg-student-btn${t.unread > 0 ? ' msg-has-unread' : ''}" data-student-id="${t.studentId}">
+      <span class="msg-student-avatar">${esc(t.emoji)}</span>
+      <span class="msg-student-info">
+        <strong>${esc(t.studentName)}</strong>
+        ${t.unread > 0 ? `<span class="feedback-badge">${t.unread} new</span>` : ''}
+        <span class="msg-preview">${esc((t.lastBody || '').slice(0, 60))}</span>
+      </span>
+    </button>
+  `).join('');
+  listEl.querySelectorAll('[data-student-id]').forEach((btn) =>
+    btn.addEventListener('click', () => openAdminThread(Number(btn.dataset.studentId), threads.find((t) => t.studentId === Number(btn.dataset.studentId))))
+  );
+  if (activeMessageStudentId) openAdminThread(activeMessageStudentId, threads.find((t) => t.studentId === activeMessageStudentId));
+}
+
+async function openAdminThread(studentId, meta) {
+  activeMessageStudentId = studentId;
+  const msgs = await api(`/api/admin/messages/${studentId}`);
+  loadMessagesBadge();
+
+  const threadEl = $('#msg-admin-thread');
+  const name = meta ? `${esc(meta.emoji)} ${esc(meta.studentName)}` : 'Student';
+  threadEl.innerHTML = `
+    <div class="msg-admin-thread-header"><strong>${name}</strong></div>
+    <div class="msg-admin-msgs" id="msg-admin-msgs">${renderAdminMsgs(msgs)}</div>
+    <form class="msg-admin-compose" id="msg-admin-compose">
+      <input class="comment-input" id="msg-admin-input" placeholder="Reply to ${meta?.studentName || 'student'}…">
+      <button type="submit">Send</button>
+    </form>
+  `;
+  const msgsEl = $('#msg-admin-msgs');
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+
+  $('#msg-admin-compose').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = $('#msg-admin-input');
+    const body = input.value.trim();
+    if (!body) return;
+    const lastMsgId = msgs[msgs.length - 1]?.id;
+    if (!lastMsgId) return;
+    input.value = '';
+    await api(`/api/messages/${lastMsgId}/reply`, { method: 'POST', body: { body } });
+    const updated = await api(`/api/admin/messages/${studentId}`);
+    msgsEl.innerHTML = renderAdminMsgs(updated);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    loadMessagesBadge();
+  });
+}
+
+function renderAdminMsgs(msgs) {
+  if (!msgs.length) return '<p class="hint" style="padding:.75rem;text-align:center">No messages yet.</p>';
+  return msgs.map((m) => {
+    const isParent = m.sender === 'parent';
+    const time = new Date(m.sent_at + 'Z').toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return `<div class="msg-bubble-wrap ${isParent ? 'msg-mine' : 'msg-theirs'}">
+      <div class="msg-bubble">${esc(m.body)}</div>
+      <div class="msg-time">${time}</div>
+    </div>`;
+  }).join('');
+}
 
 // ============================================================
 // Gradebook

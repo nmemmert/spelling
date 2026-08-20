@@ -1727,6 +1727,7 @@ app.get('/api/grading-queue', requirePin, (req, res) => {
   res.json(db.prepare(`
     SELECT sub.id AS submissionId, sub.completed_at, sub.points_possible,
            sub.evidence_notes, sub.evidence_photo, sub.student_note,
+           sub.answers, i.body,
            s.id AS studentId, s.name AS studentName, s.emoji,
            i.id AS itemId, i.title AS itemTitle, i.type AS itemType,
            c.name AS courseName, u.name AS unitName
@@ -1752,6 +1753,76 @@ app.put('/api/submissions/:id/grade', requirePin, (req, res) => {
   vals.push(req.params.id);
   db.prepare(`UPDATE submissions SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
   res.json({ ok: true });
+});
+
+// ---------- messages ----------
+
+app.get('/api/students/:id/messages', (req, res) => {
+  const msgs = db.prepare(`SELECT id, sender, body, sent_at, read_at FROM messages WHERE student_id = ? ORDER BY sent_at`).all(req.params.id);
+  // Mark parent messages as read when student loads the thread
+  db.prepare(`UPDATE messages SET read_at = datetime('now') WHERE student_id = ? AND sender = 'parent' AND read_at IS NULL`).run(req.params.id);
+  res.json(msgs);
+});
+
+app.post('/api/students/:id/messages', (req, res) => {
+  const body = String(req.body.body || '').trim();
+  if (!body) return res.status(400).json({ error: 'Message cannot be empty' });
+  const student = db.prepare(`SELECT id FROM students WHERE id = ?`).get(req.params.id);
+  if (!student) return res.status(404).json({ error: 'No such student' });
+  const { lastInsertRowid } = db.prepare(`INSERT INTO messages (student_id, sender, body) VALUES (?, 'student', ?)`).run(req.params.id, body);
+  res.json({ id: lastInsertRowid });
+});
+
+app.post('/api/messages/:id/reply', requirePin, (req, res) => {
+  const body = String(req.body.body || '').trim();
+  if (!body) return res.status(400).json({ error: 'Reply cannot be empty' });
+  const msg = db.prepare(`SELECT student_id FROM messages WHERE id = ?`).get(req.params.id);
+  if (!msg) return res.status(404).json({ error: 'No such message' });
+  const { lastInsertRowid } = db.prepare(`INSERT INTO messages (student_id, sender, body) VALUES (?, 'parent', ?)`).run(msg.student_id, body);
+  db.prepare(`UPDATE messages SET read_at = datetime('now') WHERE id = ?`).run(req.params.id);
+  res.json({ id: lastInsertRowid });
+});
+
+app.get('/api/admin/messages', requirePin, (req, res) => {
+  const threads = db.prepare(`
+    SELECT s.id AS studentId, s.name AS studentName, s.emoji,
+           COUNT(CASE WHEN m.sender = 'student' AND m.read_at IS NULL THEN 1 END) AS unread,
+           MAX(m.sent_at) AS lastAt,
+           (SELECT body FROM messages WHERE student_id = s.id ORDER BY sent_at DESC LIMIT 1) AS lastBody
+    FROM students s
+    JOIN messages m ON m.student_id = s.id
+    GROUP BY s.id
+    ORDER BY lastAt DESC
+  `).all();
+  res.json(threads);
+});
+
+app.get('/api/admin/messages/count', requirePin, (req, res) => {
+  const { n } = db.prepare(`SELECT COUNT(*) AS n FROM messages WHERE sender = 'student' AND read_at IS NULL`).get();
+  res.json({ count: n });
+});
+
+app.get('/api/admin/messages/:studentId', requirePin, (req, res) => {
+  const msgs = db.prepare(`SELECT id, sender, body, sent_at, read_at FROM messages WHERE student_id = ? ORDER BY sent_at`).all(req.params.studentId);
+  db.prepare(`UPDATE messages SET read_at = datetime('now') WHERE student_id = ? AND sender = 'student' AND read_at IS NULL`).run(req.params.studentId);
+  res.json(msgs);
+});
+
+// ---------- student inbox ----------
+
+app.get('/api/students/:id/inbox', (req, res) => {
+  const items = db.prepare(`
+    SELECT sub.id AS submissionId, sub.score, sub.points_possible, sub.graded_at, sub.parent_comment,
+           i.title AS itemTitle, c.name AS courseName, u.name AS unitName
+    FROM submissions sub
+    JOIN items i ON i.id = sub.item_id
+    JOIN units u ON u.id = i.unit_id
+    JOIN courses c ON c.id = u.course_id
+    WHERE sub.student_id = ? AND sub.status = 'graded' AND sub.graded_at IS NOT NULL
+    ORDER BY sub.graded_at DESC
+    LIMIT 50
+  `).all(req.params.id);
+  res.json(items);
 });
 
 // ---------- gradebook (parent) ----------

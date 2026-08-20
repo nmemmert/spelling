@@ -304,7 +304,7 @@ document.querySelectorAll('.nav-pill').forEach((pill) =>
   pill.addEventListener('click', () => switchTab(pill.dataset.tab))
 );
 
-const TAB_ORDER = ['today', 'courses', 'spelling'];
+const TAB_ORDER = ['today', 'courses', 'spelling', 'inbox'];
 let currentTab = 'today';
 
 function switchTab(name) {
@@ -321,6 +321,91 @@ function switchTab(name) {
       panel.classList.add(dir === 'right' ? 'sliding-right' : 'sliding-left');
     }
   });
+  if (name === 'inbox') loadInbox();
+}
+
+function inboxSeenKey(studentId) { return `inbox_seen_${studentId}`; }
+function getSeenIds(studentId) {
+  try { return new Set(JSON.parse(localStorage.getItem(inboxSeenKey(studentId)) || '[]')); } catch { return new Set(); }
+}
+function markAllSeen(studentId, ids) {
+  localStorage.setItem(inboxSeenKey(studentId), JSON.stringify([...ids]));
+}
+
+async function loadInbox() {
+  const sid = currentStudent?.id;
+  if (!sid) return;
+  const [items, msgs] = await Promise.all([
+    api(`/api/students/${sid}/inbox`),
+    api(`/api/students/${sid}/messages`),
+  ]);
+  const seen = getSeenIds(sid);
+
+  $('#inbox-empty').hidden = items.length > 0;
+  $('#inbox-list').innerHTML = items.map((r) => {
+    const pct = r.points_possible ? Math.round((r.score / r.points_possible) * 100) : null;
+    const isNew = !seen.has(r.submissionId);
+    const scoreClass = pct !== null ? (pct >= 80 ? 'score-good' : 'score-bad') : '';
+    const date = new Date(r.graded_at + 'Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return `<div class="inbox-card${isNew ? ' inbox-new' : ''}">
+      <div class="inbox-card-header">
+        <span class="inbox-item-title">${esc(r.itemTitle)}</span>
+        ${isNew ? '<span class="feedback-badge">New!</span>' : ''}
+      </div>
+      <div class="inbox-meta">${esc(r.courseName)} · ${esc(r.unitName)} · ${date}</div>
+      ${r.points_possible !== null ? `<div class="inbox-score ${scoreClass}">🌟 ${r.score} / ${r.points_possible}${pct !== null ? ` (${pct}%)` : ''}</div>` : ''}
+      ${r.parent_comment ? `<div class="parent-comment">💬 ${esc(r.parent_comment)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  markAllSeen(sid, items.map((r) => r.submissionId));
+  updateInboxBadge(sid, 0);
+  renderMsgThread(msgs);
+}
+
+function renderMsgThread(msgs) {
+  const thread = $('#msg-thread');
+  if (!thread) return;
+  if (!msgs.length) {
+    thread.innerHTML = '<p class="hint" style="text-align:center;padding:.75rem">No messages yet. Say hi to your parent!</p>';
+    return;
+  }
+  thread.innerHTML = msgs.map((m) => {
+    const isStudent = m.sender === 'student';
+    const time = new Date(m.sent_at + 'Z').toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return `<div class="msg-bubble-wrap ${isStudent ? 'msg-mine' : 'msg-theirs'}">
+      <div class="msg-bubble">${esc(m.body)}</div>
+      <div class="msg-time">${time}</div>
+    </div>`;
+  }).join('');
+  thread.scrollTop = thread.scrollHeight;
+}
+
+$('#msg-compose')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = $('#msg-input');
+  const body = input.value.trim();
+  if (!body || !currentStudent) return;
+  input.value = '';
+  await api(`/api/students/${currentStudent.id}/messages`, { method: 'POST', body: { body } });
+  const msgs = await api(`/api/students/${currentStudent.id}/messages`);
+  renderMsgThread(msgs);
+});
+
+function updateInboxBadge(studentId, count) {
+  const badge = $('#inbox-badge');
+  if (!badge) return;
+  badge.hidden = count === 0;
+  badge.textContent = count;
+}
+
+async function refreshInboxBadge(studentId) {
+  try {
+    const items = await api(`/api/students/${studentId}/inbox`);
+    const seen = getSeenIds(studentId);
+    const unseen = items.filter((r) => !seen.has(r.submissionId)).length;
+    updateInboxBadge(studentId, unseen);
+  } catch { /* non-critical */ }
 }
 
 async function openKid(id, tab = 'today', welcome = false) {
@@ -330,6 +415,7 @@ async function openKid(id, tab = 'today', welcome = false) {
     api(`/api/courses/mine/${id}`),
     api(`/api/students/${id}/tests`),
   ]);
+  refreshInboxBadge(id);
   currentStudent = state.student;
   youngLearnerMode = !!currentStudent.young_learner;
   applyTheme(currentStudent.theme || 'blue');

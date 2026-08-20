@@ -78,6 +78,7 @@
       <button class="nav-pill active" data-tab="today">📋 Today</button>
       <button class="nav-pill" data-tab="courses">📚 My Courses</button>
       <button class="nav-pill" data-tab="spelling">✏️ Spelling</button>
+      <button class="nav-pill" data-tab="inbox">📬 Inbox<span id="inbox-badge" class="feedback-badge" hidden></span></button>
     </div>
 
     <div id="tab-today" class="tab-panel">
@@ -98,6 +99,20 @@
         <button id="btn-print-list" class="big-btn print-list">🖨 Print my words</button>
       </div>
       <div id="kid-test-history"></div>
+    </div>
+
+    <div id="tab-inbox" class="tab-panel" hidden>
+      <div id="inbox-list"></div>
+      <p id="inbox-empty" class="hint" hidden>No grades yet — check back after your parent reviews your work!</p>
+
+      <div class="msg-thread-wrap">
+        <h2 class="msg-thread-title">💬 Messages</h2>
+        <div id="msg-thread" class="msg-thread"></div>
+        <form id="msg-compose" class="msg-compose">
+          <textarea id="msg-input" class="msg-input" placeholder="Write a message to your parent…" rows="2"></textarea>
+          <button type="submit" class="msg-send-btn">Send ➤</button>
+        </form>
+      </div>
     </div>
   </section>
 
