@@ -2018,13 +2018,12 @@ async function openAdminThread(studentId, meta) {
     const input = $('#msg-admin-input');
     const body = input.value.trim();
     if (!body) return;
-    const lastMsgId = msgs[msgs.length - 1]?.id;
-    if (!lastMsgId) return;
     input.value = '';
-    await api(`/api/messages/${lastMsgId}/reply`, { method: 'POST', body: { body } });
+    await api(`/api/admin/messages/${studentId}`, { method: 'POST', body: { body } });
     const updated = await api(`/api/admin/messages/${studentId}`);
     msgsEl.innerHTML = renderAdminMsgs(updated);
     msgsEl.scrollTop = msgsEl.scrollHeight;
+    loadMessages();
     loadMessagesBadge();
   });
 }

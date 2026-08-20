@@ -1773,13 +1773,12 @@ app.post('/api/students/:id/messages', (req, res) => {
   res.json({ id: lastInsertRowid });
 });
 
-app.post('/api/messages/:id/reply', requirePin, (req, res) => {
+app.post('/api/admin/messages/:studentId', requirePin, (req, res) => {
   const body = String(req.body.body || '').trim();
-  if (!body) return res.status(400).json({ error: 'Reply cannot be empty' });
-  const msg = db.prepare(`SELECT student_id FROM messages WHERE id = ?`).get(req.params.id);
-  if (!msg) return res.status(404).json({ error: 'No such message' });
-  const { lastInsertRowid } = db.prepare(`INSERT INTO messages (student_id, sender, body) VALUES (?, 'parent', ?)`).run(msg.student_id, body);
-  db.prepare(`UPDATE messages SET read_at = datetime('now') WHERE id = ?`).run(req.params.id);
+  if (!body) return res.status(400).json({ error: 'Message cannot be empty' });
+  const student = db.prepare(`SELECT id FROM students WHERE id = ?`).get(req.params.studentId);
+  if (!student) return res.status(404).json({ error: 'No such student' });
+  const { lastInsertRowid } = db.prepare(`INSERT INTO messages (student_id, sender, body) VALUES (?, 'parent', ?)`).run(req.params.studentId, body);
   res.json({ id: lastInsertRowid });
 });
 
@@ -1790,9 +1789,9 @@ app.get('/api/admin/messages', requirePin, (req, res) => {
            MAX(m.sent_at) AS lastAt,
            (SELECT body FROM messages WHERE student_id = s.id ORDER BY sent_at DESC LIMIT 1) AS lastBody
     FROM students s
-    JOIN messages m ON m.student_id = s.id
+    LEFT JOIN messages m ON m.student_id = s.id
     GROUP BY s.id
-    ORDER BY lastAt DESC
+    ORDER BY lastAt DESC NULLS LAST
   `).all();
   res.json(threads);
 });
