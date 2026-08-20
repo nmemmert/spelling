@@ -102,8 +102,18 @@
     </div>
 
     <div id="tab-inbox" class="tab-panel" hidden>
-      <div id="inbox-list"></div>
-      <p id="inbox-empty" class="hint" hidden>No grades yet — check back after your parent reviews your work!</p>
+      <div class="inbox-subtabs">
+        <button class="inbox-subtab active" data-sub="new">📬 New<span id="inbox-new-badge" class="feedback-badge" hidden></span></button>
+        <button class="inbox-subtab" data-sub="graded">📂 Graded</button>
+      </div>
+      <div id="inbox-sub-new">
+        <div id="inbox-list"></div>
+        <p id="inbox-empty" class="hint" hidden>No new grades — check back after your parent reviews your work!</p>
+      </div>
+      <div id="inbox-sub-graded" hidden>
+        <div id="graded-list"></div>
+        <p id="graded-empty" class="hint" hidden>No graded items yet.</p>
+      </div>
 
       <div class="msg-thread-wrap">
         <h2 class="msg-thread-title">💬 Messages</h2>

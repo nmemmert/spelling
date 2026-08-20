@@ -1251,6 +1251,9 @@ body.bg-bubbles {
   border-left: 4px solid var(--good);
   font-size: 1.05rem;
 }
+.inbox-subtabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.inbox-subtab { flex: 1; padding: 0.5rem 1rem; border: 1.5px solid #e2dccf; border-radius: 999px; background: var(--card); color: var(--text); font-size: 0.9rem; font-weight: 600; cursor: pointer; position: relative; }
+.inbox-subtab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .inbox-card { background: var(--card); border: 1.5px solid #e2dccf; border-radius: 14px; padding: 1rem; margin-bottom: 0.75rem; }
 .inbox-card.inbox-new { border-color: var(--accent); }
 .inbox-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }

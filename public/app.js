@@ -332,6 +332,21 @@ function markAllSeen(studentId, ids) {
   localStorage.setItem(inboxSeenKey(studentId), JSON.stringify([...ids]));
 }
 
+function renderGradeCard(r, isNew) {
+  const pct = r.points_possible ? Math.round((r.score / r.points_possible) * 100) : null;
+  const scoreClass = pct !== null ? (pct >= 80 ? 'score-good' : 'score-bad') : '';
+  const date = new Date(r.graded_at + 'Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return `<div class="inbox-card${isNew ? ' inbox-new' : ''}">
+    <div class="inbox-card-header">
+      <span class="inbox-item-title">${esc(r.itemTitle)}</span>
+      ${isNew ? '<span class="feedback-badge">New!</span>' : ''}
+    </div>
+    <div class="inbox-meta">${esc(r.courseName)} · ${esc(r.unitName)} · ${date}</div>
+    ${r.points_possible !== null ? `<div class="inbox-score ${scoreClass}">🌟 ${r.score} / ${r.points_possible}${pct !== null ? ` (${pct}%)` : ''}</div>` : ''}
+    ${r.parent_comment ? `<div class="parent-comment">💬 ${esc(r.parent_comment)}</div>` : ''}
+  </div>`;
+}
+
 async function loadInbox() {
   const sid = currentStudent?.id;
   if (!sid) return;
@@ -340,28 +355,32 @@ async function loadInbox() {
     api(`/api/students/${sid}/messages`),
   ]);
   const seen = getSeenIds(sid);
+  const newItems = items.filter((r) => !seen.has(r.submissionId));
+  const gradedItems = items.filter((r) => seen.has(r.submissionId));
 
-  $('#inbox-empty').hidden = items.length > 0;
-  $('#inbox-list').innerHTML = items.map((r) => {
-    const pct = r.points_possible ? Math.round((r.score / r.points_possible) * 100) : null;
-    const isNew = !seen.has(r.submissionId);
-    const scoreClass = pct !== null ? (pct >= 80 ? 'score-good' : 'score-bad') : '';
-    const date = new Date(r.graded_at + 'Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    return `<div class="inbox-card${isNew ? ' inbox-new' : ''}">
-      <div class="inbox-card-header">
-        <span class="inbox-item-title">${esc(r.itemTitle)}</span>
-        ${isNew ? '<span class="feedback-badge">New!</span>' : ''}
-      </div>
-      <div class="inbox-meta">${esc(r.courseName)} · ${esc(r.unitName)} · ${date}</div>
-      ${r.points_possible !== null ? `<div class="inbox-score ${scoreClass}">🌟 ${r.score} / ${r.points_possible}${pct !== null ? ` (${pct}%)` : ''}</div>` : ''}
-      ${r.parent_comment ? `<div class="parent-comment">💬 ${esc(r.parent_comment)}</div>` : ''}
-    </div>`;
-  }).join('');
+  $('#inbox-list').innerHTML = newItems.map((r) => renderGradeCard(r, true)).join('');
+  $('#inbox-empty').hidden = newItems.length > 0;
+
+  $('#graded-list').innerHTML = gradedItems.map((r) => renderGradeCard(r, false)).join('');
+  $('#graded-empty').hidden = gradedItems.length > 0;
+
+  const newBadge = $('#inbox-new-badge');
+  if (newBadge) { newBadge.hidden = newItems.length === 0; newBadge.textContent = newItems.length; }
 
   markAllSeen(sid, items.map((r) => r.submissionId));
   updateInboxBadge(sid, 0);
   renderMsgThread(msgs);
 }
+
+document.querySelectorAll('.inbox-subtab').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.inbox-subtab').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    const sub = btn.dataset.sub;
+    $('#inbox-sub-new').hidden = sub !== 'new';
+    $('#inbox-sub-graded').hidden = sub !== 'graded';
+  });
+});
 
 function renderMsgThread(msgs) {
   const thread = $('#msg-thread');
