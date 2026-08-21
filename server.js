@@ -485,8 +485,8 @@ app.post('/api/test/:studentId', (req, res) => {
   });
   const score = graded.filter((g) => g.correct).length;
 
-  const testId = db.prepare(`INSERT INTO tests (student_id, list_id, score, total) VALUES (?, ?, ?, ?)`)
-    .run(studentId, listId, score, graded.length).lastInsertRowid;
+  const testId = db.prepare(`INSERT INTO tests (student_id, list_id, score, total, item_id) VALUES (?, ?, ?, ?, ?)`)
+    .run(studentId, listId, score, graded.length, itemId || null).lastInsertRowid;
   const insAnswer = db.prepare(`INSERT INTO test_answers (test_id, word_id, typed, correct) VALUES (?, ?, ?, ?)`);
   for (const g of graded) {
     insAnswer.run(testId, g.wordId, String(g.typed), g.correct ? 1 : 0);
@@ -520,12 +520,43 @@ app.get('/api/test-report/:testId', (req, res) => {
   if (!test) return res.status(404).json({ error: 'No such test' });
 
   test.answers = db.prepare(`
-    SELECT w.word, ta.typed, ta.correct
+    SELECT w.id AS word_id, w.word, ta.typed, ta.correct
     FROM test_answers ta JOIN words w ON w.id = ta.word_id
     WHERE ta.test_id = ?
     ORDER BY w.word
   `).all(req.params.testId);
   res.json(test);
+});
+
+// Correct individual answers on an existing test (admin only)
+app.patch('/api/tests/:testId/correct', requirePin, (req, res) => {
+  const { corrections } = req.body; // [{ wordId, correct }]
+  if (!Array.isArray(corrections) || corrections.length === 0) {
+    return res.status(400).json({ error: 'No corrections provided' });
+  }
+  const testId = Number(req.params.testId);
+  const test = db.prepare(`SELECT id, student_id, total, item_id FROM tests WHERE id = ?`).get(testId);
+  if (!test) return res.status(404).json({ error: 'Test not found' });
+
+  const upd = db.prepare(`UPDATE test_answers SET correct = ? WHERE test_id = ? AND word_id = ?`);
+  db.transaction(() => {
+    for (const c of corrections) {
+      upd.run(c.correct ? 1 : 0, testId, c.wordId);
+    }
+  })();
+
+  const newScore = db.prepare(`SELECT COUNT(*) AS n FROM test_answers WHERE test_id = ? AND correct = 1`).get(testId).n;
+  db.prepare(`UPDATE tests SET score = ? WHERE id = ?`).run(newScore, testId);
+
+  // Keep linked course submission in sync
+  if (test.item_id) {
+    db.prepare(`
+      UPDATE submissions SET score = ?, points_possible = ?, graded_at = datetime('now')
+      WHERE student_id = ? AND item_id = ?
+    `).run(newScore, test.total, test.student_id, test.item_id);
+  }
+
+  res.json({ score: newScore, total: test.total });
 });
 
 // ---------- spelling practice activity (parent view) ----------

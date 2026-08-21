@@ -242,6 +242,7 @@ tryAlter(`ALTER TABLE students ADD COLUMN young_learner INTEGER NOT NULL DEFAULT
 tryAlter(`ALTER TABLE students ADD COLUMN birthday TEXT`);
 tryAlter(`ALTER TABLE lists ADD COLUMN group_name TEXT NOT NULL DEFAULT ''`);
 tryAlter(`ALTER TABLE decks ADD COLUMN group_name TEXT NOT NULL DEFAULT ''`);
+tryAlter(`ALTER TABLE tests ADD COLUMN item_id INTEGER`);
 
 export const sha256 = (s) => createHash('sha256').update(String(s)).digest('hex');
 

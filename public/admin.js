@@ -2071,7 +2071,10 @@ async function loadSpellingTests() {
             <td>${new Date(t.at + 'Z').toLocaleDateString()}</td>
             <td>${esc(t.list)}</td>
             <td class="${pct >= appSettings.passingPct ? 'score-good' : 'score-bad'}">${t.score}/${t.total} (${pct}%)</td>
-            <td><button data-print="${t.id}">🖨 Print</button></td>
+            <td>
+              <button data-print="${t.id}">🖨 Print</button>
+              <button class="secondary small" data-correct="${t.id}">✏ Correct</button>
+            </td>
           </tr>`;
         })
         .join('');
@@ -2082,7 +2085,49 @@ async function loadSpellingTests() {
   container.querySelectorAll('[data-print]').forEach((btn) =>
     btn.addEventListener('click', () => printSpellingReport(btn.dataset.print))
   );
+  container.querySelectorAll('[data-correct]').forEach((btn) =>
+    btn.addEventListener('click', () => openCorrectTestModal(btn.dataset.correct))
+  );
 }
+
+// ---- correction modal ----
+let correctTestId = null;
+
+async function openCorrectTestModal(testId) {
+  correctTestId = testId;
+  const r = await api(`/api/test-report/${testId}`);
+  $('#correct-test-meta').textContent =
+    `${r.student} · ${r.list} · ${new Date(r.at + 'Z').toLocaleDateString()}`;
+  const tbody = r.answers.map((a) => `
+    <tr>
+      <td>${esc(a.word)}</td>
+      <td>${a.typed ? esc(a.typed) : '<em class="hint">blank</em>'}</td>
+      <td style="text-align:center">
+        <input type="checkbox" data-word-id="${a.word_id}" ${a.correct ? 'checked' : ''}>
+      </td>
+    </tr>`).join('');
+  $('#correct-test-table').innerHTML =
+    `<tr><th>Word</th><th>Typed</th><th>Mark correct</th></tr>${tbody}`;
+  $('#correct-test-modal').hidden = false;
+}
+
+$('#correct-test-cancel').addEventListener('click', () => { $('#correct-test-modal').hidden = true; });
+
+$('#correct-test-save').addEventListener('click', async () => {
+  const checkboxes = $('#correct-test-table').querySelectorAll('input[type=checkbox]');
+  const corrections = Array.from(checkboxes).map((cb) => ({
+    wordId: Number(cb.dataset.wordId),
+    correct: cb.checked,
+  }));
+  const { score, total } = await api(`/api/tests/${correctTestId}/correct`, {
+    method: 'PATCH',
+    body: { corrections },
+  });
+  $('#correct-test-modal').hidden = true;
+  msg(`Score updated: ${score}/${total}`);
+  loadSpellingTests();
+});
+
 $('#gradebook-course').addEventListener('change', () => renderGradebook($('#gradebook-course').value));
 $('#gradebook-csv-btn').addEventListener('click', () => {
   if (!gradebookCourseId) return;
