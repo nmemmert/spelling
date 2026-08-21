@@ -413,17 +413,10 @@ app.get('/api/state/:studentId', (req, res) => {
     `).get(id, assignment.id);
   }
 
-  // only words outside this week's list count as "old reviews"
-  const dueReviews = db.prepare(`
-    SELECT COUNT(*) AS n FROM progress p JOIN words w ON w.id = p.word_id
-    WHERE p.student_id = ? AND w.list_id <> ? AND p.box < ${MASTERED_BOX}
-      AND date(p.due) <= date('now')
-  `).get(id, assignment ? assignment.id : -1).n;
-
-  res.json({ student: { ...student, isBirthdayWeek: isBirthdayWeek(student.birthday) }, assignment, listProgress, dueReviews });
+  res.json({ student: { ...student, isBirthdayWeek: isBirthdayWeek(student.birthday) }, assignment, listProgress });
 });
 
-// Build a practice session: the target list's unmastered words + due reviews.
+// Build a practice session: the target list's unmastered words only.
 // listId overrides the student's pinned weekly assignment (used when launched from a course item).
 app.get('/api/session/:studentId', (req, res) => {
   const id = req.params.studentId;
@@ -441,16 +434,7 @@ app.get('/api/session/:studentId', (req, res) => {
     ORDER BY box, RANDOM()
   `).all(id, listId);
 
-  const reviews = db.prepare(`
-    SELECT w.id, w.word, w.sentence, w.definition, p.box
-    FROM progress p JOIN words w ON w.id = p.word_id
-    WHERE p.student_id = ? AND w.list_id <> ? AND p.box < ${MASTERED_BOX}
-      AND date(p.due) <= date('now')
-    ORDER BY p.due
-    LIMIT 5
-  `).all(id, listId);
-
-  res.json({ words: shuffle([...weekWords, ...reviews]) });
+  res.json({ words: shuffle(weekWords) });
 });
 
 // Grade one practice answer. firstTry attempts move the Leitner box;

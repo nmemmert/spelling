@@ -902,9 +902,6 @@ function renderSpellingTab(state, tests = []) {
     html = `No list assigned yet — ask a parent to pick one!`;
     currentSpellingListId = null;
   }
-  if (state.dueReviews > 0) {
-    html += `<div>🔁 ${state.dueReviews} old ${state.dueReviews === 1 ? 'word' : 'words'} due for review</div>`;
-  }
   $('#kid-week').innerHTML = html;
   $('#btn-test').disabled = !state.assignment;
   $('#btn-print-list').disabled = !state.assignment;
