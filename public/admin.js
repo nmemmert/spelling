@@ -2119,13 +2119,17 @@ $('#correct-test-save').addEventListener('click', async () => {
     wordId: Number(cb.dataset.wordId),
     correct: cb.checked,
   }));
-  const { score, total } = await api(`/api/tests/${correctTestId}/correct`, {
-    method: 'PATCH',
-    body: { corrections },
-  });
-  $('#correct-test-modal').hidden = true;
-  msg(`Score updated: ${score}/${total}`);
-  loadSpellingTests();
+  try {
+    const { score, total } = await api(`/api/tests/${correctTestId}/correct`, {
+      method: 'PATCH',
+      body: { corrections },
+    });
+    $('#correct-test-modal').hidden = true;
+    msg(`Score updated: ${score}/${total}`);
+    loadSpellingTests();
+  } catch (err) {
+    msg(err.message || 'Failed to save corrections', 'error');
+  }
 });
 
 $('#gradebook-course').addEventListener('change', () => renderGradebook($('#gradebook-course').value));

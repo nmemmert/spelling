@@ -539,11 +539,9 @@ app.patch('/api/tests/:testId/correct', requirePin, (req, res) => {
   if (!test) return res.status(404).json({ error: 'Test not found' });
 
   const upd = db.prepare(`UPDATE test_answers SET correct = ? WHERE test_id = ? AND word_id = ?`);
-  db.transaction(() => {
-    for (const c of corrections) {
-      upd.run(c.correct ? 1 : 0, testId, c.wordId);
-    }
-  })();
+  for (const c of corrections) {
+    upd.run(c.correct ? 1 : 0, testId, c.wordId);
+  }
 
   const newScore = db.prepare(`SELECT COUNT(*) AS n FROM test_answers WHERE test_id = ? AND correct = 1`).get(testId).n;
   db.prepare(`UPDATE tests SET score = ? WHERE id = ?`).run(newScore, testId);
